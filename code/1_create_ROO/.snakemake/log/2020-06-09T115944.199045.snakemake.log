@@ -1,0 +1,27 @@
+Building DAG of jobs...
+Using shell: /usr/local/bin/bash
+Provided cores: 1
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	110	make_roo_files
+	111
+
+[Tue Jun  9 11:59:45 2020]
+rule make_roo_files:
+    input: ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt
+    output: ../../data/roo/Skin-Melanoma.cutaneous_signatures_ROO.RDS
+    jobid: 97
+    wildcards: cancer_type=Skin-Melanoma.cutaneous, feature_type=signatures
+
+Rscript create_ROO_split.R --pcawg_data ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt --cancer_type Skin-Melanoma.cutaneous --feature_type signatures --output ../../data/roo/Skin-Melanoma.cutaneous_signatures_ROO.RDS
+Terminating processes on user request, this might take some time.
+[Tue Jun  9 12:00:45 2020]
+Error in rule make_roo_files:
+    jobid: 97
+    output: ../../data/roo/Skin-Melanoma.cutaneous_signatures_ROO.RDS
+    shell:
+        Rscript create_ROO_split.R --pcawg_data ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt --cancer_type Skin-Melanoma.cutaneous --feature_type signatures --output ../../data/roo/Skin-Melanoma.cutaneous_signatures_ROO.RDS
+
+Complete log: /Users/morril01/Documents/PhD/GlobalDA/code/1_create_ROO/.snakemake/log/2020-06-09T115944.199045.snakemake.log

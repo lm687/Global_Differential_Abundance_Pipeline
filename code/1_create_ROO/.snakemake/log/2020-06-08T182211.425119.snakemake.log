@@ -1,0 +1,28 @@
+Building DAG of jobs...
+Using shell: /usr/local/bin/bash
+Provided cores: 1
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	117	make_roo_files
+	118
+
+[Mon Jun  8 18:22:12 2020]
+rule make_roo_files:
+    input: ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt
+    output: ../../data/roo/Liver-HCC_features3_ROO.RDS
+    jobid: 63
+    wildcards: cancer_type=Liver-HCC, feature_type=features3
+
+Rscript create_ROO_split.R --pcawg_data ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt --cancer_type Liver-HCC --feature_type features3 --output ../../data/roo/Liver-HCC_features3_ROO.RDS
+[Mon Jun  8 18:22:12 2020]
+Error in rule make_roo_files:
+    jobid: 63
+    output: ../../data/roo/Liver-HCC_features3_ROO.RDS
+    shell:
+        Rscript create_ROO_split.R --pcawg_data ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt --cancer_type Liver-HCC --feature_type features3 --output ../../data/roo/Liver-HCC_features3_ROO.RDS
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: /Users/morril01/Documents/PhD/GlobalDA/code/1_create_ROO/.snakemake/log/2020-06-08T182211.425119.snakemake.log

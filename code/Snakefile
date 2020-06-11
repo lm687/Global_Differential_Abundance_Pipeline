@@ -1,0 +1,24 @@
+configfile: "config_PCAWG.yaml"
+
+rule all:
+    input:
+      expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
+      expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
+
+rule index_vcf:
+    input:
+        "../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz"
+    output:
+        "../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi"
+    shell:
+        "tabix -f {input}"
+
+rule embed_counts:
+    input:
+        vcf="../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz",
+        vcf_index="../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi",
+    	ccf="../data/restricted/pcawg/consensus_subclonal_reconstruction_mutccf_20170325/{sample}_mutation_ccf.txt"
+    output:
+        "../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}"
+    shell:
+        "sh 0_embed_in_count_space/0_get_flanking_and_mut_individual.sh {input.vcf} {input.vcf_index} {input.ccf} {output}"

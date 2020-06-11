@@ -1,0 +1,19 @@
+configfile: "../config_PCAWG.yaml"
+
+# cancer_type = config["sample_groups"]
+# feature_type = config["feature_types"]
+#
+rule all:
+    input:
+        expand("../../data/roo/{cancer_type}_{feature_type}_ROO.RDS", cancer_type=config["sample_groups"], feature_type=config["feature_types"])
+
+rule make_roo_files:
+    input:
+       "../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt"
+    output:
+         "../../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
+    params:
+       ct="{cancer_type}",
+       f="{feature_type}"
+    shell:
+        "Rscript create_ROO_split.R --pcawg_data {input} --cancer_type {params.ct} --feature_type {params.f} --output {output}"

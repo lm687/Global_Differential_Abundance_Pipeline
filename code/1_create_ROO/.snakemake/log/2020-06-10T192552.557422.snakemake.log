@@ -1,0 +1,28 @@
+Building DAG of jobs...
+Using shell: /usr/local/bin/bash
+Provided cores: 1
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	114	make_roo_files
+	115
+
+[Wed Jun 10 19:25:53 2020]
+rule make_roo_files:
+    input: ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt
+    output: ../../data/roo/CNS-Medullo_nucleotide_substitution3_ROO.RDS
+    jobid: 30
+    wildcards: cancer_type=CNS-Medullo_nucleotide, feature_type=substitution3
+
+Rscript create_ROO_split.R --pcawg_data ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt --cancer_type CNS-Medullo_nucleotide --feature_type substitution3 --output ../../data/roo/CNS-Medullo_nucleotide_substitution3_ROO.RDS
+[Wed Jun 10 19:25:53 2020]
+Error in rule make_roo_files:
+    jobid: 30
+    output: ../../data/roo/CNS-Medullo_nucleotide_substitution3_ROO.RDS
+    shell:
+        Rscript create_ROO_split.R --pcawg_data ../../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt --cancer_type CNS-Medullo_nucleotide --feature_type substitution3 --output ../../data/roo/CNS-Medullo_nucleotide_substitution3_ROO.RDS
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: /Users/morril01/Documents/PhD/GlobalDA/code/1_create_ROO/.snakemake/log/2020-06-10T192552.557422.snakemake.log
