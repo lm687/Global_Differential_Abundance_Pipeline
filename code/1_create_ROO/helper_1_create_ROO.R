@@ -58,15 +58,14 @@ change_muts <- function(mut){
 }
 
 createRDS_ROOSigs_object <- function(pre_path="",
-                                     vcf_path="../../data/restricted/pcawg/pcawg_restricted_snv_counts/",
+                                     vcf_path="../data/restricted/pcawg/pcawg_restricted_snv_counts/",
                                      ccf_threshold=NULL,
                                      type_features=NULL,
                                      active_sigs_version="active_signatures_transposed_clonesig2",
                                      outfolder=NULL,
                                      cancer_type=NULL,
                                      in_dataframe=NULL){
-  # pre_path=""; vcf_path="../../data/restricted/pcawg/pcawg_restricted_snv/"; ccf_threshold=NA; type_features=opt$feature_type; outfolder=basename(opt$output); active_sigs_version="active_signatures_transposed_clonesig2"; cancer_type=opt$cancer_type; in_dataframe=merged  
-  
+
   if(is.null(cancer_type)){stop('Cancer type cannot be null')}
 
   # source(paste0(pre_path, "../../../../other_repos/Pseudo-Ordering-Signatures/code/binning_functions.R"))
@@ -81,7 +80,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
   ## 2. cancer type it belongs to for active signatures
   
   if(type_features == 'signatures'){
-    sigs_cosmic <- read.table(paste0(pre_path, "../../data/cosmic/sigProfiler_SBS_signatures_2019_05_22.csv"),
+    sigs_cosmic <- read.table(paste0("../data/cosmic/sigProfiler_SBS_signatures_2019_05_22.csv"),
                               stringsAsFactors = FALSE, sep = ',', header = TRUE)
     # sigs_cosmic <- read.table(paste0(pre_path, "../../data/cosmic/signatures_probabilities.txt"),
     #                           stringsAsFactors = FALSE, sep = '\t', header = TRUE)
@@ -92,7 +91,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
     sigs_cosmic <- sigs_cosmic[,-c(1:2)]
     
     ## read in active signatures
-    active <- read.table(paste0(pre_path, "../../data/cosmic/", active_sigs_version),
+    active <- read.table(paste0("../data/cosmic/", active_sigs_version),
                          stringsAsFactors = FALSE, sep = '\t', header = TRUE)
     subset_active <- active[,-c(1, 2, ncol(active))]
     
@@ -182,7 +181,7 @@ createROO_ROOSigs <- function(savefolder, type_features='nucleotidesubstitution3
   library(reshape2)
   source(paste0(pre_path, "roo_functions.R"))
   
-  outfolder="../../data/roo/"
+  outfolder="../data/roo/"
   getname <- function(j)  gsub("−", "-", gsub('out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', j))))
   
   ## Cancer types
@@ -253,7 +252,18 @@ createROO_ROOSigs_object <- function(type_features='nucleotidesubstitution3',
   # source(paste0(pre_path, "../../../../other_repos/Pseudo-Ordering-Signatures/code/pcawg/helper_functions_pcawg.R"))
   library(dplyr)
   library(reshape2)
+
+  type_features=opt$feature_type
+  all_objs=rds_object
+  all_objs_activesigs=all_objs_activesigs
+  save_bool=FALSE
+  outfiles=names(rds_object)
+  pre_path="1_create_ROO/"
+  cancer_type_given = rep(opt$cancer_type, length(rds_object))
+  file_name_given=NULL
+  
   source(paste0(pre_path, "roo_functions.R"))
+  
   
   outfolder <- "../../data/roo/"
   getname <- function(j)  gsub("−", "-", gsub('out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', j))))
@@ -267,45 +277,47 @@ createROO_ROOSigs_object <- function(type_features='nucleotidesubstitution3',
     stop()
   }
   names(cancer_types) <- outfiles_name
-  
+  stopifnot(length(unique(cancer_types)) == 1)
   ## iterate over cancer types
   ##   iterate over samples from this cancer type
   
   objects_sigs_per_CT <- list()
-  for(i in unique(cancer_types)){
-    i_matrix_all <- list(do.call('rbind', lapply(all_objs[names(subset(cancer_types, cancer_types==i))], function(k) k[[1]])),
-                         do.call('rbind', lapply(all_objs[names(subset(cancer_types, cancer_types==i))], function(k) k[[2]])))
-    i_matrix_active <- list(do.call('rbind', lapply(all_objs_activesigs[paste0(names(subset(cancer_types, cancer_types==i)), '_active')], function(k) k[[1]])),
-                            do.call('rbind', lapply(all_objs_activesigs[paste0(names(subset(cancer_types, cancer_types==i)), '_active')], function(k) k[[2]])))
-    nulls_active <- (sapply(i_matrix_active, is.null))
-    if(sum(nulls_active) == 2){
-      is_null_active <- TRUE
-    }else if(sum(nulls_active) == 1){
-      stop('You should not have active signatures for only one of the categories')
-    }else{
-      is_null_active <- FALSE
-    }
-    objects_sigs_per_CT[[i]] <- new("exposures_cancertype",
-                                    cancer_type=i,
-                                    type_classification = "trunk_vs_branch",
-                                    number_categories = 2,
-                                    id_categories = c('trunk', 'branch'),
-                                    active_signatures = "character", ## active signatures for this cancer type
-                                    count_matrices_all = i_matrix_all,
-                                    count_matrices_active = i_matrix_active,
-                                    fitted_distrib_count_matrices_all = vector("list", 2),
-                                    fitted_distrib_count_matrices_active = vector("list", 2),
-                                    sample_names = names(subset(cancer_types, cancer_types==i)),
-                                    modification = "none",
-                                    is_null_active = is_null_active
-    )
+  
+  i_matrix_all <- list(do.call('rbind', lapply(all_objs, function(k) k[[1]])),
+                       do.call('rbind', lapply(all_objs, function(k) k[[2]])))
+  i_matrix_active <- list(do.call('rbind', lapply(all_objs_activesigs, function(k) k[[1]])),
+                          do.call('rbind', lapply(all_objs_activesigs, function(k) k[[2]])))
+  if(sum(sapply(all_objs_activesigs, function(i) length(i[[1]]) + length(i[[2]]))) == 0){
+    ## no active signatures
+    i_matrix_active <- list(list(), list())
   }
+  nulls_active <- (sapply(i_matrix_active, is.null))
+  if(sum(nulls_active) == 2){
+    is_null_active <- TRUE
+  }else if(sum(nulls_active) == 1){
+    stop('You should not have active signatures for only one of the categories')
+  }else{
+    is_null_active <- FALSE
+  }
+  objects_sigs_per_CT <- new("exposures_cancertype",
+                                  cancer_type=cancer_types,
+                                  type_classification = "trunk_vs_branch",
+                                  number_categories = 2,
+                                  id_categories = c('trunk', 'branch'),
+                                  active_signatures = "character", ## active signatures for this cancer type
+                                  count_matrices_all = i_matrix_all,
+                                  count_matrices_active = i_matrix_active,
+                                  fitted_distrib_count_matrices_all = vector("list", 2),
+                                  fitted_distrib_count_matrices_active = vector("list", 2),
+                                  sample_names = names(cancer_types),
+                                  modification = "none",
+                                  is_null_active = is_null_active
+  )
+
   
   ## save
   if(save_bool){
-    for(fle_it in 1:length(objects_sigs_per_CT)){
-      saveRDS(objects_sigs_per_CT[[fle_it]], file = paste0(savefolder, names(objects_sigs_per_CT)[fle_it], '_ROOSigs.RDS'))
-    }
+      saveRDS(objects_sigs_per_CT, file = paste0(savefolder, names(objects_sigs_per_CT)[fle_it], '_ROOSigs.RDS'))
   }else{
     objects_sigs_per_CT
   }

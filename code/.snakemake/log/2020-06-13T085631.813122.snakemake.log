@@ -1,0 +1,18 @@
+Building DAG of jobs...
+Using shell: /usr/local/bin/bash
+Provided cores: 1
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	75	inference
+	76
+
+[Sat Jun 13 08:56:34 2020]
+rule inference:
+    input: ../data/roo/Prost-AdenoCA_signatures_ROO.RDS
+    output: ../data/inference/M_6000_Prost-AdenoCA_signatures.Rdata
+    jobid: 31
+    wildcards: model=M, Nits=6000, cancer_type=Prost-AdenoCA, feature_type=signatures
+
+Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype Prost-AdenoCA --typedata signatures         --infile ../data/roo/Prost-AdenoCA_signatures_ROO.RDS --output ../data/inference/M_6000_Prost-AdenoCA_signatures.Rdata --niterations 6000 --model M

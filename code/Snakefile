@@ -1,9 +1,21 @@
 configfile: "config_PCAWG.yaml"
+cancer_types = config["sample_groups"]
+# cancer_type = "Cervix-SCC"
+grouped_samples = config["grouped_samples"]
+
+samples_list = dict(zip(cancer_types, [grouped_samples[ct].split() for ct in cancer_types]))
+models = ['M']
+num_iterations = 6000
 
 rule all:
     input:
-      expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
-      expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
+      # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
+      # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
+      # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
+      expand("../data/inference/{model}_{Nits}_{cancer_type}_{feature_type}.Rdata",\
+       model=models, Nits=num_iterations, feature_type=config["feature_types"], cancer_type=cancer_types)
+      # expand("../data/inference/{cancer_type}_{feature_type}.Rdata",\
+       # cancer_type=cancer_types, feature_type=config["feature_types"])
 
 rule index_vcf:
     input:
@@ -22,3 +34,38 @@ rule embed_counts:
         "../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}"
     shell:
         "sh 0_embed_in_count_space/0_get_flanking_and_mut_individual.sh {input.vcf} {input.vcf_index} {input.ccf} {output}"
+
+
+rule make_roo_files:
+    input:
+        lambda wildcards: expand("{sample_from_group}",
+        sample_from_group=grouped_samples[wildcards.cancer_type].split())
+    output:
+         "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
+    params:
+       ct="{cancer_type}",
+       f="{feature_type}"
+    shell:
+        "Rscript 1_create_ROO/create_ROO_split.R --input_files '{input}' --cancer_type {params.ct} --feature_type {params.f} --output {output}"
+
+rule inference:
+    input:
+        "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
+    # params:
+    #     model="{model}",
+    #     Nits="{Nits}"
+    # output:
+    #     "../data/inference/{params.model}_PCAWG_Nits{params.Nits}_{cancer_type}_{feature_type}.Rdata"
+    # shell:
+    #     "Rscript --vanilla 2_inference/fit_{params.model}_PCAWG.R --cancer_type {cancer_type} --type_data {feature_type}\
+    #      --in_file {input} --output {output} --niterations {params.Nits}"
+    params:
+       ct="{cancer_type}",
+       f="{feature_type}",
+       mdel="{model}",
+       nits="{Nits}"
+    output:
+        "../data/inference/{model}_{Nits}_{cancer_type}_{feature_type}.Rdata"
+    shell:
+        "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.ct} --typedata {params.f}\
+         --infile {input} --output {output} --niterations {params.nits} --model {params.mdel}"

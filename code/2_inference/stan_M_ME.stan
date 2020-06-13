@@ -12,21 +12,23 @@ data {
 
 parameters {
   matrix[p,d-1] beta; // coefficients for fixed effects
-  matrix[n,1] u; // coefficients for random effects
+  vector[n] u; // coefficients for random effects
   real<lower=0> sigma_u; // sd for random effect coefficients
 }
 
 
 
 transformed parameters {
-  // real hyper_rate_sigma_u = 5;
-  // real hyper_shape_sigma_u = 5;
-  
+  // matrix[n,d-1] u_trans = rep_matrix(u, d-1);
   matrix[2*n,d-1] thetaprime;
   simplex[d] theta[2*n];
 
-  thetaprime = (x'*beta + Z'*u);
+  for(j in 1:(d-1)){
+    thetaprime[,j] = x'*beta[,j] + Z'*u;
+  }
+  // thetaprime = (x'*beta + Z'*u_trans);
   for(l in 1:(2*n)){
+    // thetaprime[l] = (x[,l]'*beta + repeat(Z[,l]'*u);
     theta[l] = softmax(append_row(to_vector(thetaprime[l,]), 0));
   }
 }
@@ -37,7 +39,7 @@ model {
   sigma_u ~ gamma(5, 5);
   
   // prior for random effects
-  u ~ normal(0, sqrt(sigma_u));
+  to_vector(u) ~ normal(0, sqrt(sigma_u));
 
 
   for(d_it in 1:(d-1)){

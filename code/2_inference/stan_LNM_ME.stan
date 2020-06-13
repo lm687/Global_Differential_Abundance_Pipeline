@@ -11,9 +11,9 @@ data{
 parameters{
   cov_matrix[d-1] Sigma; // covariance matrix for the normal
   vector[d-1] v[2*n]; // a realisation of the multivariate normal
-  real<lower=0> sigmasqrt_uk; // variance for random effects
+  real<lower=0> sigma_u; // variance for random effects
   matrix[2,d-1] beta; // FE coefficients
-  matrix[n,d-1] u; // RE coeffcicients
+  vector[n] u; // RE coeffcicients
 }
 
 transformed parameters{
@@ -32,16 +32,21 @@ transformed parameters{
     theta[i,] = softmax(full_v[i,]);
   }
 
-  mu = x'*beta + Z'*u;
+  mu = x'*beta + Z'*rep_matrix(u, d-1);
 
 }
 
 model {
   // prior for random effects
-  for(j in 1:(d-1)){
-    u[,j] ~ normal(0, sigmasqrt_uk);
-  }
+    sigma_u ~ gamma(5, 5);
   
+  // prior for random effects
+  u ~ normal(0, sqrt(sigma_u));
+
+  for(d_it in 1:(d-1)){
+    beta[,d_it] ~ uniform(-5, 5);
+  }
+
   for(i in 1:2*n){
     v[i,] ~ multi_normal(mu[i,], Sigma);
   }
