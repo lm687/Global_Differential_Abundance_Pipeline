@@ -6,7 +6,7 @@ import os
 #print(os.listdir("../data/roo/"))
 
 for i in ['../data/roo/'+x for x in os.listdir("../data/roo/") if 'ROO' in x]:
-    script = "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {} --typedata {} --infile {} -- output {} --iterations 10000 --model M".format(i.split('_')[0], (i.split('_')[1]), i, i.replace("roo/", "inference/").replace(".RDS", ".RData"))
+    script = "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {} --typedata {} --infile {} --output {} --iterations 10000 --model M".format(i.split('_')[0], (i.split('_')[1]), i, i.replace("roo/", "inference/").replace(".RDS", ".RData"))
 
     fileout="sbatches/"+os.path.basename(i).replace(".RDS", ".sh")
     a = open(fileout, "w")
@@ -22,10 +22,10 @@ for i in ['../data/roo/'+x for x in os.listdir("../data/roo/") if 'ROO' in x]:
 
 source activate {}
 
-Rscript --vanilla  {}
+{}
 
 conda deactivate
-'''.format(i, os.path.basename(i).replace(".RDS", ".out"), "5:00:00", "rstan_env", script))
+'''.format(i, os.path.basename(i).replace(".RDS", ".out"), "9:00:00", "rstan_env", script))
     a.close()
 
     print("sbatch "+fileout)
