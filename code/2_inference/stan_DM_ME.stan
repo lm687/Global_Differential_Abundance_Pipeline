@@ -37,21 +37,19 @@ transformed parameters {
 model {
   
   for(j in 1:(d-1)){
-    sigma_u[j] ~ gamma(2,2);
+    sigma_u ~ gamma(5, 5);
   }
   
   for(g in 1:2){
       overdispersion_scalar[g] ~ normal(1,1);
   }
 
-  for(j in 1:(d-1)){
-    beta[,j] ~ uniform(-10, 10);
+  for(d_it in 1:(d-1)){
+    beta[,d_it] ~ uniform(-5, 5);
   }
   
 // prior for random effects
-  for(j in 1:(d-1)){
-    u[,j] ~ normal(0, square(sigma_u[j]));
-  }
+  to_vector(u) ~ normal(0, sqrt(sigma_u));
   
   for (l in 1:(2*n) ) {
     w[l,] ~ dirichlet_multinomial(to_vector(alpha[l,]));

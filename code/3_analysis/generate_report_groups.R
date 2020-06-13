@@ -55,41 +55,68 @@ table_characteristics$Number.of.features = as.numeric(table_characteristics$Numb
 table_characteristics = table_characteristics %>% group_by(Feature_type) %>% dplyr::mutate(sum_all_ct=sum(Number.of.samples, na.rm = TRUE))
 filename = "../results/reports/report_PCAWG.tex"
 
+save_plots = function(names_roo_files, slot_name){
+  sapply(names_roo_files, function(roo_file_name){
+    i = roo_files[[roo_file_name]]
+    png_name = paste0("../results/reports/figure_roo_summary/", paste0( paste0(gsub("[.]", "_", gsub(".RDS", "", basename(roo_file_name))), slot_name, collapse = "")), ".png")
+    if(typeof(i) == "logical"){ if(is.na(i)){
+      png(png_name, width=6, height=3, unit="in", res=300)
+      par(mfrow=c(1,2))
+      plot(0,0)
+      plot(0,0)
+      dev.off()
+    }}else{
+      x = slot(i, slot_name)
+      if(length(x[[1]]) == 0){
+        png(png_name, width=6, height=3, unit="in", res=300)
+        par(mfrow=c(1,2))
+        plot(0,0,)
+        plot(0,0)
+        dev.off()
+      }else{
+        png(png_name, width=6, height=3, unit="in", res=300)
+        par(mfrow=c(1,2))
+        image(t(as(x[[1]], 'matrix')))
+        image(t(as(x[[2]], 'matrix')))
+        dev.off()
+      }
+    }
+  png_name
+  })
+}
+
+pngnames1 = save_plots(names(roo_files), "count_matrices_all")
+pngnames2 = save_plots(names(roo_files)[grepl("signatures", names(roo_files))], "count_matrices_active")
+
+pngs = as.character(sort(c(pngnames1, pngnames2)))
+
+write_pdfs = sapply(as.character(sort(unique(table_characteristics$Cancer_type))), function(ct){
+  
+  paste0(c("\\begin{figure}", sapply(paste0("figure_roo_summary/", basename(pngs[grepl(pattern = ct, x = pngs)])), function(i) paste0("\\begin{minipage}{.24\\textwidth}\\includegraphics[width=\\textwidth]{", i, "}\\end{minipage}")),
+         "\\caption{", ct, "}\\end{figure}"), collapse = "")
+})
+
+
+#---#---#---#---#---#---#---#---#---#---#---#---#---#
+
 write_append = paste0("\\documentclass{article}\\usepackage{longtable}\\usepackage{graphicx}\\usepackage{array}\\date{\\today}\\newcolumntype{L}[1]{>{\\raggedright\\let\\newline\\\\\\arraybackslash\\hspace{0pt}}m{#1}}\\newcolumntype{C}[1]{>{\\centering\\let\\newline\\\\\\arraybackslash\\hspace{0pt}}m{#1}}\\newcolumntype{R}[1]{>{\\raggedleft\\let\\newline\\\\\\arraybackslash\\hspace{0pt}}m{#1}}\\setlength{\\textwidth}{7.1in}\\setlength{\\oddsidemargin}{-0.4in}\\setlength{\\textheight}{9.6in}\\setlength{\\topmargin}{-0.8in}\\begin{document}\\today\\section{Report of PCAWG objects}\\tiny ")
 write_append = paste0(write_append, "\n\n", print(xtable::xtable(table_characteristics)), "\n\n")
 # write_append = gsub("\\begin\\{table\\}[ht]\n\\centering\n\\begin\\{tabular\\}\\{rllrrllr\\}",
 #      "\\begin\\{longtable\\}{R\\{.2in\\}L\\{1in\\}L\\{1in\\}R\\{.6in\\}R\\{.6in\\}L\\{1in\\}L\\{1in\\}R\\{1in\\}\\}",
 #      write_append)
 
-write_append = gsub("rllrrllr", "R{.2in}L{1in}L{1in}R{.6in}R{.6in}L{1in}L{1in}R{1in}", write_append)
+write_append = gsub("rllrrllr", "R{.2in}L{1in}L{.5in}R{.2in}R{.2in}L{1in}L{1in}R{1in}", write_append)
 
 write_append = gsub("begin\\{table\\}", "begin\\{longtable\\}", write_append)
 write_append = gsub("\\\\centering", "", write_append)
-write_append = gsub("\\n\\n\\\\begin\\{", "", write_append)
+# write_append = gsub("\\n\\n\\\\begin\\{", "", write_append)
 write_append = gsub("end\\{table\\}", "end\\{longtable\\}", write_append)
+write_append = gsub("\\[ht\\]\n\n", "", write_append)
+write_append = gsub("\\\\begin\\{tabular\\}", "", write_append)
+write_append = gsub("\\\\end\\{tabular\\}", "", write_append)
+
+substr(write_append, 1, 1000)
+write_append = paste0(write_append, "\\clearpage", paste0(write_pdfs, collapse = ""))
 write_append = paste0(write_append, "\\end{document}")
+
 write(file = filename, x = write_append)
-
-
-sapply(names(roo_files), function(roo_file_name){
-  i = roo_files[[roo_file_name]]
-  png_name = paste0("../results/reports/figure_roo_summary/", gsub(".RDS", ".png", basename(roo_file_name)))
-  if(typeof(i) == "logical"){ if(is.na(i)){
-    png(png_name, width=6, height=3, unit="in", res=300)
-    par(mfrow=c(1,2))
-    plot(0,0, main=roo_file_name)
-    plot(0,0, main=roo_file_name)
-    dev.off()
-  }}else{
-    x = i@count_matrices_all
-    png(png_name, width=6, height=3, unit="in", res=300)
-    par(mfrow=c(1,2))
-    image(as(x[[1]], 'matrix'), main=roo_file_name)
-    image(as(x[[2]], 'matrix'), main=roo_file_name)
-    dev.off()
-  }
-})
-
-
-
-
