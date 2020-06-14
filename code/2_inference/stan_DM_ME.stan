@@ -30,7 +30,7 @@ transformed parameters {
   
   alpha_mean = append_col( (x'*beta + Z'*rep_matrix(u, d-1)), rep_vector(0, 2*n));
   for(l in 1:(2*n)){
-    alpha[l,] = to_row_vector(softmax(to_vector(alpha_mean[l,])))* 2; //overdispersion_scalars[l];
+    alpha[l,] = to_row_vector(softmax(to_vector(alpha_mean[l,])))* overdispersion_scalars[l];
   }
 }
 
@@ -40,9 +40,8 @@ model {
     sigma_u ~ gamma(5, 5);
   }
   
-  for(g in 1:2){
-      overdispersion_scalar[g] ~ normal(1,1);
-  }
+    overdispersion_scalar ~ normal(1,1);
+  
 
   for(d_it in 1:(d-1)){
     beta[,d_it] ~ uniform(-5, 5);
