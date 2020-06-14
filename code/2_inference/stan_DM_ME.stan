@@ -19,7 +19,7 @@ data {
 parameters {
   matrix[p,d-1] beta; // coefficients for fixed effects
   vector[n] u; // coefficients for random effects
-  real<lower=0> sigma_u[d-1]; // sd for random effect coefficients
+  real<lower=0> sigma_u; // sd for random effect coefficients
   real<lower=0> overdispersion_scalar[2]; // for the dirichlet
 }
 
@@ -36,10 +36,8 @@ transformed parameters {
 
 model {
   
-  for(j in 1:(d-1)){
-    sigma_u ~ gamma(5, 5);
-  }
-  
+  sigma_u ~ gamma(5, 5);
+
     overdispersion_scalar ~ normal(1,1);
   
 
