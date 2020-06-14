@@ -29,7 +29,7 @@ opt = parse_args(opt_parser);
 opts = opt
 load(opt$file_posterior)
 opt = c(opt, opts)
-name = gsub("-", "_", gsub(".Rdata", "", basename(opt$file_posterior)))
+name = gsub("[.]", "_", gsub("-", "_", gsub(".Rdata", "", basename(opt$file_posterior))))
 
 folder_pdfs = "../results/convergence/pdfs/"
 pdf_name = paste0(folder_pdfs, "convergence_report_", name, ".tex")
