@@ -5,9 +5,10 @@
 
 library(rstan)
 library(reshape2)
-library(ggplot2)
 library(gridExtra)
 library(uuid)
+library(bayesplot)
+library(ggplot2)
 
 data_inference = list.files("../data/inference/", full.names = TRUE)
 data_inference = data_inference[grepl("20000ROO", data_inference)]
@@ -26,13 +27,16 @@ posteriors_betas = lapply(data_inference,
                       }
                     })
 names(posteriors_betas) = gsub(".RData", "", basename(data_inference))
+posteriors_betas = posteriors_betas[!is.na(posteriors_betas)]
 
 sapply(names(posteriors_betas), function(nme){
-  names_slope_betas = colnames(posteriors_betas[[1]])[c(F,T)]
-  names_intersect_betas = colnames(posteriors_betas[[1]])[c(T,F)]
+  print(nme)
+  print(dim(posteriors_betas[[nme]])) 
+  names_slope_betas = colnames(posteriors_betas[[nme]])[c(F,T)]
+  names_intersect_betas = colnames(posteriors_betas[[nme]])[c(T,F)]
   png(paste0("../results/betas/", nme, "_betas.png"))
-  grid.arrange(bayesplot::mcmc_areas(posteriors_betas[[1]], pars = names_slope_betas)+ggtitle('Slope'),
-               bayesplot::mcmc_areas(posteriors_betas[[1]], pars = names_intersect_betas)+ggtitle('Intersect'))
+  grid.arrange(bayesplot::mcmc_areas(posteriors_betas[[nme]], pars = names_slope_betas)+ggtitle('Slope'),
+               bayesplot::mcmc_areas(posteriors_betas[[nme]], pars = names_intersect_betas)+ggtitle('Intersect'))
   dev.off()
 })
 
