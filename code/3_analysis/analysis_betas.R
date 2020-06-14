@@ -58,3 +58,4 @@ ggplot(melt(cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) st
                            features=sapply(posteriors_betas_slope, function(i) dim(i)[2]))),
        aes(x=ct, y=value, fill=variable))+
   geom_bar(stat='identity', position = "identity", alpha=.3)
+ggsave(filename = "../results/betas/all_betas_zeros.png")
