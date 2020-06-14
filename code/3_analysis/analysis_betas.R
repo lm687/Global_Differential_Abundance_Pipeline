@@ -8,6 +8,7 @@ library(reshape2)
 library(ggplot2)
 library(gridExtra)
 library(uuid)
+library(bayesplot)
 
 data_inference = list.files("../data/inference/", full.names = TRUE)
 data_inference = data_inference[grepl("20000ROO", data_inference)]
@@ -26,6 +27,7 @@ posteriors_betas = lapply(data_inference,
                       }
                     })
 names(posteriors_betas) = gsub(".RData", "", basename(data_inference))
+posteriors_betas = posteriors_betas[!is.na(posteriors_betas)]
 
 sapply(names(posteriors_betas), function(nme){
   names_slope_betas = colnames(posteriors_betas[[1]])[c(F,T)]
