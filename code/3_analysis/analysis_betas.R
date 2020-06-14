@@ -9,6 +9,8 @@ library(gridExtra)
 library(uuid)
 library(bayesplot)
 library(ggplot2)
+library(dplyr)
+library(ggrepel)
 
 data_inference = list.files("../data/inference/", full.names = TRUE)
 data_inference = data_inference[grepl("20000ROO", data_inference)]
@@ -59,3 +61,25 @@ ggplot(melt(cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) st
        aes(x=ct, y=value, fill=variable))+
   geom_bar(stat='identity', position = "identity", alpha=.3)
 ggsave(filename = "../results/betas/all_betas_zeros.png")
+
+load=F
+if(load){
+  load("../data/robjects_cache/betas91ecb3fe-4ff0-4e91-b6f0-a2eaf027f91e.Rdata")
+  df_betas_zeros = cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) strsplit(i, '_')[[1]][1]),
+                   nonzero_features= unlist(num_not_containing_zero),
+                   features=sapply(posteriors_betas_slope, function(i) dim(i)[2]))
+  df_betas_zeros_melt = melt(df_betas_zeros)
+  ggplot(df_betas_zeros_melt,
+         aes(x=ct, y=value, fill=variable))+
+    geom_bar(stat='identity', position = "identity", alpha=.3)
+  df_betas_zeros_ratio = data.frame(ct=df_betas_zeros$ct, ratio=df_betas_zeros$nonzero_features/df_betas_zeros$features,
+                                    stringsAsFactors = FALSE)
+  ggplot(df_betas_zeros_ratio,
+         aes(x=factor(ct, levels=as.character(ct)[order(ratio)]),
+             y=ratio, label=ct ))+geom_point()+geom_label_repel()+lims(c(min(df_betas_zeros_ratio$ratio, 1.4))
+  ggsave(filename = "../results/betas/all_betas_zeros2.png", width = 14)
+}
+
+as.character(df_betas_zeros_ratio$ct)[order(df_betas_zeros_ratio$ratio)]
+
+
