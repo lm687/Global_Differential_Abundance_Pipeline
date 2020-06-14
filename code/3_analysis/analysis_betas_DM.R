@@ -11,7 +11,8 @@ library(bayesplot)
 library(ggplot2)
 
 data_inference = list.files("../data/inference/", full.names = TRUE)
-data_inference = data_inference[grepl("20000_DMROO", data_inference)]
+
+data_inference = data_inference[grepl("signatures_20000_DMROO.RData", data_inference)]
 
 posteriors_betas = lapply(data_inference,
                     function(f){
