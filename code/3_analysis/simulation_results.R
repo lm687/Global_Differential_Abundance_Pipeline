@@ -24,12 +24,12 @@ files_donors = read.table("../data/restricted/pcawg/repository_1567600367.tsv",
 
 ## Read in ROO objects
 list_CT = suggested_list_ct()
-source("../helper/load_objects_ROO.R")
+source("3_analysis/load_ROO.R")
 
 opt=list();
 opt$uuid_folder_DM = "/home/morril01/DifferentialAbundance_stan_out/DM_PCAWG_15000_subclonalPCAWG/"
 opt$uuid_folder_M = "/home/morril01/DifferentialAbundance_stan_out/M_PCAWG_12000_subclonalPCAWG/"
-opt$uuid_folder_LNM = "/home/morril01/DifferentialAbundance_stan_out/LNM_PCAWG_15000subclonalPCAWG/"
+# opt$uuid_folder_LNM = "/home/morril01/DifferentialAbundance_stan_out/LNM_PCAWG_15000subclonalPCAWG/"
 
 # fles = paste0(flder, opt$file_in)
 
@@ -45,8 +45,10 @@ opt$uuid_folder_LNM = "/home/morril01/DifferentialAbundance_stan_out/LNM_PCAWG_1
 ## Checking dimensions of posteriors (number of features should be the same in M and DM)
 ####################################################################################################
 ## check when this happens
-all_fles = lapply(c(opt$uuid_folder_DM, opt$uuid_folder_M, opt$uuid_folder_LNM), list.files)
-df = cbind(model=rep(c('DM', 'M', 'LNM'), sapply(all_fles, length)),
+all_fles = lapply(c(opt$uuid_folder_DM, opt$uuid_folder_M#, opt$uuid_folder_LNM
+                    ), list.files)
+# df = cbind(model=rep(c('DM', 'M', 'LNM'), sapply(all_fles, length)),
+df = cbind(model=rep(c('DM', 'M'), sapply(all_fles, length)),
            feature_type=sapply(all_fles, function(j) sapply(j, function(i) strsplit(i, "_")[[1]][4])) %>% unlist,
            ct=sapply(all_fles, function(j) sapply(j, function(i) strsplit(i, "_")[[1]][5])) %>% unlist)
 
@@ -145,7 +147,8 @@ plot_whole_contour = function(group_idx, model_name, true_contour=TRUE){
   }
 }
 
-listfles = lapply(c(opt$uuid_folder_M, opt$uuid_folder_DM, opt$uuid_folder_LNM), function(uuid_flder){
+# listfles = lapply(c(opt$uuid_folder_M, opt$uuid_folder_DM, opt$uuid_folder_LNM), function(uuid_flder){
+listfles = lapply(c(opt$uuid_folder_M, opt$uuid_folder_DM), function(uuid_flder){
   listfles = list.files(uuid_flder)
   if(length(listfles) == 0){
     listfles = list.files(uuid_flder) ## retry
@@ -155,7 +158,7 @@ listfles = lapply(c(opt$uuid_folder_M, opt$uuid_folder_DM, opt$uuid_folder_LNM),
 
 listfM = listfles[[1]]
 listfDM = listfles[[2]]
-listfLNM = listfles[[3]]
+# listfLNM = listfles[[3]]
 
 ####################################################################################################
 ## Simulate data with inferred parameters
@@ -177,10 +180,12 @@ for (type_feature in type_features){
     
     posteriorsM = listfM[grepl(ct, listfM) & grepl(type_feature, listfM)][1]
     posteriorsDM = listfDM[grepl(ct, listfDM) & grepl(type_feature, listfDM)][1]
-    posteriorsLNM = listfLNM[grepl(ct, listfLNM) & grepl(type_feature, listfLNM)][1]
+    # posteriorsLNM = listfLNM[grepl(ct, listfLNM) & grepl(type_feature, listfLNM)][1]
     
-    names_models = c('DM', 'M', 'LNM')
-    files_rdata = c(paste0(opt$uuid_folder_DM, posteriorsDM), paste0(opt$uuid_folder_M,posteriorsM), paste0(opt$uuid_folder_LNM, posteriorsLNM))
+    # names_models = c('DM', 'M', 'LNM')
+    names_models = c('DM', 'M')
+    files_rdata = c(paste0(opt$uuid_folder_DM, posteriorsDM), paste0(opt$uuid_folder_M,posteriorsM)#, paste0(opt$uuid_folder_LNM, posteriorsLNM)
+                    )
     posteriors = lapply(files_rdata,
                         function(f){
                           if(substr(f, nchar(f), nchar(f)) == "/" | basename(f) == "NA"){
@@ -189,7 +194,7 @@ for (type_feature in type_features){
                           }else{
                             print(f)
                             load(f)
-                            tryCatch(extract(fit_LNM))
+                            tryCatch(extract(fit_stan))
                           }
                         })
     
@@ -223,7 +228,7 @@ for (type_feature in type_features){
     posteriors_subset_beta_slope = do.call('cbind', lapply(posteriors_subset_beta, function(i) i[,2]))
     colnames(posteriors_subset_beta_intercept) = colnames(posteriors_subset_beta_slope) = names_models
     
-    pdf(paste0('../../../../results/ProjectDA/stan_DA_tidy/comparison_models/beta_pairs_', ct, '_', type_feature, '.pdf'))
+    pdf(paste0('../results/comparison_models/beta_pairs_', ct, '_', type_feature, '.pdf'))
     if(dim(posteriors_subset_beta_intercept)[2] == 1){
       plot(0, 0, main='Only one model - no comparison')
     }else{
@@ -249,7 +254,7 @@ for (type_feature in type_features){
     age_donors = age_donors[!is.na(age_donors$icgc_donor_id),c('icgc_donor_id', 'donor_age_at_last_followup')]
     
     nfeatures = dim(posteriors[[1]]$u)[3]
-    png(paste0("../../../../results/ProjectDA/stan_DA_tidy/link_clinical/age_u_", ct, '_', type_feature, '.png'),
+    png(paste0("../results/link_clinical/age_u_", ct, '_', type_feature, '.png'),
         width = nfeatures*1.7, height = length(posteriors)*1.7, units = "in", res = 300)
     par(mfrow=c(length(posteriors),nfeatures))
     for(idx_model in 1:length(posteriors)){
@@ -326,30 +331,30 @@ for (type_feature in type_features){
       }
       
       
-      if(bool_data_avilable[3]){
-        npatientsx2 = dim(posteriors[[3]]$theta)[2]
-        
-        ## Simulate with the total number of mutations for Logistic-normal multinomial
-        sim_counts_LNM = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[3]]$theta, patient_idx)),
-                                                                                        1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
-        
-        sim_counts_LNM = do.call('rbind', sim_counts_LNM)
-        sim_counts_LNM = sim_counts_LNM[! (colSums(apply(sim_counts_LNM, 1, is.na)) > 0),]
-        
-        cols_LNM = rep(1:npatientsx2, each=dim(sim_counts_LNM)[1]/npatientsx2)
-        subset_LNM = unlist(lapply(unique(cols_LNM), function(i) sample(x = which(cols_LNM == i),
-                                                                        size = 1000,
-                                                                        replace = FALSE )))
-        sim_counts_LNM = sim_counts_LNM[subset_LNM,]
-        cols_LNM = cols_LNM[subset_LNM]
-        prcomp_all_LNM = prcomp((sim_counts_LNM), scale. = FALSE, center=TRUE)
-        prcomp_res_LNM = prcomp_all_LNM$x[,c(1,2)]
-        projected_observed_LNM = (scale(normalise_rw(do.call('rbind', objects_sigs_per_CT[[type_feature]][[ct]])),
-                                        center = TRUE, scale = FALSE) %*% prcomp_all_LNM$rotation)[,1:2]
-        
-      }else{
-        sim_counts_LNM = prcomp_all_LNM = prcomp_res_LNM = projected_observed_LNM = cols_LNM = NA
-      }
+      # if(bool_data_avilable[3]){
+      #   npatientsx2 = dim(posteriors[[3]]$theta)[2]
+      #   
+      #   ## Simulate with the total number of mutations for Logistic-normal multinomial
+      #   sim_counts_LNM = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[3]]$theta, patient_idx)),
+      #                                                                                   1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+      #   
+      #   sim_counts_LNM = do.call('rbind', sim_counts_LNM)
+      #   sim_counts_LNM = sim_counts_LNM[! (colSums(apply(sim_counts_LNM, 1, is.na)) > 0),]
+      #   
+      #   cols_LNM = rep(1:npatientsx2, each=dim(sim_counts_LNM)[1]/npatientsx2)
+      #   subset_LNM = unlist(lapply(unique(cols_LNM), function(i) sample(x = which(cols_LNM == i),
+      #                                                                   size = 1000,
+      #                                                                   replace = FALSE )))
+      #   sim_counts_LNM = sim_counts_LNM[subset_LNM,]
+      #   cols_LNM = cols_LNM[subset_LNM]
+      #   prcomp_all_LNM = prcomp((sim_counts_LNM), scale. = FALSE, center=TRUE)
+      #   prcomp_res_LNM = prcomp_all_LNM$x[,c(1,2)]
+      #   projected_observed_LNM = (scale(normalise_rw(do.call('rbind', objects_sigs_per_CT[[type_feature]][[ct]])),
+      #                                   center = TRUE, scale = FALSE) %*% prcomp_all_LNM$rotation)[,1:2]
+      #   
+      # }else{
+      #   sim_counts_LNM = prcomp_all_LNM = prcomp_res_LNM = projected_observed_LNM = cols_LNM = NA
+      # }
       
       select_rows = function(df, colours){
         if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
@@ -357,10 +362,11 @@ for (type_feature in type_features){
       
       ## plotting the contours for all patients
       splits_df = list(select_rows(sim_counts, cols),
-                       select_rows(sim_counts_M, cols_M),
-                       select_rows(sim_counts_LNM, cols_LNM))
+                       select_rows(sim_counts_M, cols_M)#,
+                       #select_rows(sim_counts_LNM, cols_LNM)
+                       )
       
-      names(splits_df) = c('DM', 'M', 'LNM')
+      names(splits_df) = c('DM', 'M')#c('DM', 'M', 'LNM')
       # plot((scale(splits_df[[1]][[1]],
       #             center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2], main='Dirichlet-Multinomial')
       # plot((scale(splits_df[[2]][[1]],
@@ -371,14 +377,15 @@ for (type_feature in type_features){
       # plot_whole_contour(group_idx = 1, model_name = 1, true_contour = FALSE)
       # plot_whole_contour(group_idx = 1, model_name = 1, true_contour = TRUE)
       
-      png(paste0("../../../../results/ProjectDA/stan_DA_tidy/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
-      par(mfrow=c(3,2))
+      png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
+      # par(mfrow=c(3,2))
+      par(mfrow=c(2,2))
       plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
       plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
       plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
       plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
-      plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
-      plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
+      # plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
+      # plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
       dev.off()
     }
     # })
@@ -443,7 +450,7 @@ fraction_in_credint = mclapply(type_features, function(type_feature){
                         function(f){
                           print(f)
                           load(f)
-                          tryCatch(extract(fit_LNM))
+                          tryCatch(extract(fit_stan))
                         })
     
     ### Check overdispersion
@@ -480,7 +487,7 @@ fraction_in_credint = mclapply(type_features, function(type_feature){
     comparison_overdispersion2[is.na(comparison_overdispersion2[,1]),1] = 0 ## these were zeros. turn into zeros
     # })
     
-    png(paste0("../../../../results/ProjectDA/stan_DA_tidy/overdispersion/overdispersion_", paste0(ct, type_feature), ".png"))
+    png(paste0("../results/overdispersion/overdispersion_", paste0(ct, type_feature), ".png"))
     plot(comparison_overdispersion2[,1], comparison_overdispersion2[,2],
          xlab="True value", ylab = "Inferred value", main=paste0(ct, type_feature),
          col=rep(1:2, each=nrow(comparison_overdispersion2)/2), pch=19, cex=0.2)
@@ -500,7 +507,7 @@ fraction_in_credint = mclapply(type_features, function(type_feature){
   return(fraction_in_credint)
 })
 
-saveRDS(fraction_in_credint , file = "../../../../out/DA_stan_Robjects/simulation_fraction_in_credint.RDS")
+saveRDS(fraction_in_credint , file = "../data/robjects_cache/simulation_fraction_in_credint.RDS")
 
 names(fraction_in_credint[[1]]) = ct_in_inference_results_list[[1]]
 names(fraction_in_credint[[2]]) = ct_in_inference_results_list[[2]]
@@ -509,8 +516,8 @@ names(fraction_in_credint) = type_features
 ggplot(melt(fraction_in_credint), aes(x=factor(L2, levels=names(sort(unlist(fraction_in_credint[[1]]), decreasing = TRUE))),
                                       y=value, shape=L1))+geom_point()+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(x="")
-ggsave("../../../../results/ProjectDA/stan_DA_tidy/overdispersion/fraction_in_credint.pdf", width = 10)
-fraction_in_credint = readRDS("../../../../out/DA_stan_Robjects/simulation_fraction_in_credint.RDS")
+ggsave("../results/overdispersion/fraction_in_credint.pdf", width = 10)
+fraction_in_credint = readRDS(".../data/robjects_cache/simulation_fraction_in_credint.RDS")
 
 # apen = c()
 # apen = c(apen, ("\\begin{figure}[h]\\centering"))

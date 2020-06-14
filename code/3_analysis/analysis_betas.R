@@ -24,9 +24,12 @@ posteriors_betas = lapply(data_inference,
                         print(f)
                         load(f)
                         fit_mat = as.matrix(fit_stan)
-                        tryCatch(fit_mat[,grepl('beta', colnames(fit_mat))])
-                        # tryCatch(extract(fit_stan)$beta)
-                      }
+                        if(length(fit_mat) == 0){
+                          NA
+                        }else{
+                          tryCatch(fit_mat[,grepl('beta', colnames(fit_mat))])
+                        }                      
+		      }
                     })
 names(posteriors_betas) = gsub(".RData", "", basename(data_inference))
 posteriors_betas = posteriors_betas[!is.na(posteriors_betas)]
