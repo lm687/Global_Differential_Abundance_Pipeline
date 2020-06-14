@@ -76,7 +76,10 @@ if(load){
                                     stringsAsFactors = FALSE)
   ggplot(df_betas_zeros_ratio,
          aes(x=factor(ct, levels=as.character(ct)[order(ratio)]),
-             y=ratio, label=ct ))+geom_point()+geom_label_repel()+lims(c(min(df_betas_zeros_ratio$ratio, 1.4))
+             y=ratio, label=ct ))+geom_point()+geom_label_repel()+lims(y=c(min(df_betas_zeros_ratio$ratio), 1.2))+
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank())
   ggsave(filename = "../results/betas/all_betas_zeros2.png", width = 14)
 }
 
