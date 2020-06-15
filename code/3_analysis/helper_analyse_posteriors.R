@@ -156,5 +156,6 @@ split_chains = function(posteriors, nchains, length_single_chain){
 }
 
 suggested_list_ct = function(){
-  sort(unique(gsub("_ROOSigs.RDS", "", list.files("/home/morril01/git_phd/out/ROO_PCAWG/deconvolution_clonal_subclonal_features1_ROO/"))))
+  # sort(unique(gsub("_ROOSigs.RDS", "", list.files("/home/morril01/git_phd/out/ROO_PCAWG/deconvolution_clonal_subclonal_features1_ROO/"))))
+  sort(unique(sapply(list.files("../data/roo/"), function(i) strsplit(i, '_')[[1]][1])))
 }

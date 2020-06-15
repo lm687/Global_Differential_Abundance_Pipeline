@@ -2,7 +2,7 @@
 data{
   int<lower=1> d; // number of compositions
   int<lower=1> n; // number of samples
-  int W[2*n,d]; // this is the matrix of observations, which are counts (or count-like)
+  int w[2*n,d]; // this is the matrix of observations, which are counts (or count-like)
   matrix[2, 2*n] x; // predictor
   matrix[n,2*n] Z; // random effects id
 }
@@ -52,7 +52,7 @@ model {
   }
   
   for(i in 1:2*n){
-    W[i,] ~ multinomial(theta[i,]);
+    w[i,] ~ multinomial(theta[i,]);
   }
   
 }
