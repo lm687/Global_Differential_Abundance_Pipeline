@@ -24,6 +24,8 @@ files_donors = read.table("../data/restricted/pcawg/repository_1567600367.tsv",
 
 ## Read in ROO objects
 list_CT = suggested_list_ct()
+#it_features = c('nucleotidesubstitution1', 'nucleotidesubstitution3', 'signatures')
+it_features = c('signatures')
 source("3_analysis/load_ROO.R")
 
 opt=list();
@@ -164,7 +166,8 @@ listfDM = listfles[[2]]
 ## Simulate data with inferred parameters
 ####################################################################################################
 
-type_features = c('features1', 'signatures')
+#type_features = c('features1', 'signatures')
+type_features="signatures"
 ct_in_inference_results_list = list(unique(sort(as.character(sapply(list.files(opt$uuid_folder_DM), function(strng) strsplit(strng, '_')[[1]][5])))),
                                     unique(sort(as.character(sapply(list.files(opt$uuid_folder_M), function(strng) strsplit(strng, '_')[[1]][5])))))
 names(ct_in_inference_results_list) = type_features
