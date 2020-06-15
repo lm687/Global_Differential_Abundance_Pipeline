@@ -13,7 +13,7 @@ library(reshape2)
 library(MCMCpack)
 library(plyr)
 library(CompSign)
-library(parallel)
+# library(parallel)
 
 source("3_analysis/helper_analyse_posteriors.R")
 
@@ -428,10 +428,10 @@ names(ct_in_inference_results_list) = type_features
 plot_bool = TRUE
 
 
-fraction_in_credint = mclapply(type_features, function(type_feature){
+fraction_in_credint = lapply(type_features, function(type_feature){
   ct_in_inference_results = (ct_in_inference_results_list[[type_feature]])
   
-  fraction_in_credint = mclapply(ct_in_inference_results, function(ct){
+  fraction_in_credint = lapply(ct_in_inference_results, function(ct){
     cat(type_feature, '\t', ct, '\n')
     
     listfM = list.files(opt$uuid_folder_M)
@@ -468,7 +468,7 @@ fraction_in_credint = mclapply(type_features, function(type_feature){
     npeople = dim(posteriors[[2]]$theta)[2]/2 ## n people x 2
     stopifnot(npeople == nrow(objects_sigs_per_CT[[type_feature]][[ct]][[1]]))
     
-    comparison_overdispersion = mclapply(1:2, function(group_idx){
+    comparison_overdispersion = lapply(1:2, function(group_idx){
       x0 = lapply(1:npeople, function(person_idx){
         
         x1 = lapply(1:dim(posteriors[[2]]$theta)[3], function(signature_idx){
