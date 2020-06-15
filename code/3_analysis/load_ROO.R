@@ -2,21 +2,21 @@
 ################### Work in progress ####################
 #########################################################
 
-it_features = c('nucleotidesubstitution1', 'nucleotidesubstitution3', 'signatures')
 objects_sigs_per_CT = lapply(it_features, function(type_data){
   .x = lapply(list_CT, function(cancer_type){
     savefolder_features = "../data/roo/"
     objects_sigs_per_CT_features <- list()
-    fle <- paste0(savefolder_features, cancer_type, '_ROOSigs.RDS')
+    fle <- paste0(savefolder_features, cancer_type, '_', it_features, '_ROO.RDS')
+    print(fle)
     if(file.exists(fle)){
       objects_sigs_per_CT_features <- readRDS(fle)
     }else{
       cat('Object for cancer type', cancer_type, 'was not found')
     }
     
-    if(type_data == "features1"){
+    if(type_data == "nucleotidesubstitution1"){
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
-    }else if(type_data == "features3"){
+    }else if(type_data == "nucleotidesubstitution3"){
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
     }else if(type_data == "signatures"){
       if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]])){
