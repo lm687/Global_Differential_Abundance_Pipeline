@@ -19,9 +19,14 @@ objects_sigs_per_CT = lapply(it_features, function(type_data){
     }else if(type_data == "nucleotidesubstitution3"){
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
     }else if(type_data == "signatures"){
-      if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]])){
+      if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0){
         ## no active signatures
-        objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+        if(! (is.null(attr(objects_sigs_per_CT_features,"count_matrices_all")[[1]]) | length(attr(objects_sigs_per_CT_features,"count_matrices_all")[[1]]) == 0)){
+          objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+        }else{
+          ## no type of exposure, either all or active
+          return(NULL)
+        }
       }else{
         objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_active")
       }

@@ -3,8 +3,12 @@
 #########################################################
 
 ## Comparison of simulated results from the inferred parameters, for D-M vs simpler Multinomial
-
-rm(list = ls())
+debug = TRUE
+if(debug){
+  rm(list = ls())
+  setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
+}
+  
 library(optparse)
 library(rstan)
 library(ggplot2)
@@ -15,7 +19,10 @@ library(plyr)
 library(CompSign)
 # library(parallel)
 
-source("3_analysis/helper_analyse_posteriors.R")
+source("3_analysis/helper/helper_analyse_posteriors.R")
+
+vector_models = c('M', 'DM')
+nits = 20000
 
 donors = read.table("../data/restricted/pcawg/icgc-dataset-1591612699408/donor.tsv",
                     stringsAsFactors = FALSE, sep = "\t", header = TRUE)
@@ -26,12 +33,13 @@ files_donors = read.table("../data/restricted/pcawg/repository_1567600367.tsv",
 list_CT = suggested_list_ct()
 #it_features = c('nucleotidesubstitution1', 'nucleotidesubstitution3', 'signatures')
 it_features = c('signatures')
-source("3_analysis/load_ROO.R")
+source("3_analysis/helper/load_ROO.R")
 
 opt=list();
-opt$uuid_folder_DM = "/home/morril01/DifferentialAbundance_stan_out/DM_PCAWG_15000_subclonalPCAWG/"
-opt$uuid_folder_M = "/home/morril01/DifferentialAbundance_stan_out/M_PCAWG_12000_subclonalPCAWG/"
-# opt$uuid_folder_LNM = "/home/morril01/DifferentialAbundance_stan_out/LNM_PCAWG_15000subclonalPCAWG/"
+uuid_flder =  "../data/inference/"
+opt$uuid_folder_DM = "../data/inference/"
+opt$uuid_folder_M = "../data/inference/"
+# opt$uuid_folder_LNM = "../data/inference/"
 
 # fles = paste0(flder, opt$file_in)
 
@@ -50,12 +58,11 @@ opt$uuid_folder_M = "/home/morril01/DifferentialAbundance_stan_out/M_PCAWG_12000
 all_fles = lapply(c(opt$uuid_folder_DM, opt$uuid_folder_M#, opt$uuid_folder_LNM
                     ), list.files)
 # df = cbind(model=rep(c('DM', 'M', 'LNM'), sapply(all_fles, length)),
-df = cbind(model=rep(c('DM', 'M'), sapply(all_fles, length)),
-           feature_type=sapply(all_fles, function(j) sapply(j, function(i) strsplit(i, "_")[[1]][4])) %>% unlist,
-           ct=sapply(all_fles, function(j) sapply(j, function(i) strsplit(i, "_")[[1]][5])) %>% unlist)
+df = cbind(model=rep(vector_models, sapply(all_fles, length)),
+           feature_type=sapply(unlist(all_fles), function(j) sapply(j, function(i) gsub("ROO.RData", "", strsplit(i, "_")[[1]][2]))) %>% unlist,
+           ct=sapply(unlist(all_fles), function(j) sapply(j, function(i) strsplit(i, "_")[[1]][1])) %>% unlist)
 
 t(table(df[df[,'feature_type'] == "signatures",'ct'], df[df[,'feature_type'] == "signatures", 'model']))
-t(table(df[df[,'feature_type'] == "features1",'ct'], df[df[,'feature_type'] == "features1", 'model']))
 
 for(i in unique(df[,'ct'])){
   .x = (df[df[,'ct'] == i,c('model', 'feature_type')])
@@ -66,7 +73,7 @@ for(i in unique(df[,'ct'])){
 which_both_signature = sapply(unique(df[,'ct']), function(i){
   subset_df = df[(df[,'feature_type'] == "signatures") & (df[,'ct'] == i),]
   if(!is.null(dim(subset_df))){
-    all(c('DM', 'M') %in% subset_df[,'model'])
+    all(vector_models %in% subset_df[,'model'])
   }else{
     FALSE
   }
@@ -150,11 +157,19 @@ plot_whole_contour = function(group_idx, model_name, true_contour=TRUE){
 }
 
 # listfles = lapply(c(opt$uuid_folder_M, opt$uuid_folder_DM, opt$uuid_folder_LNM), function(uuid_flder){
-listfles = lapply(c(opt$uuid_folder_M, opt$uuid_folder_DM), function(uuid_flder){
+listfles = lapply(vector_models, function(model){
   listfles = list.files(uuid_flder)
   if(length(listfles) == 0){
     listfles = list.files(uuid_flder) ## retry
   }
+  if(model == 'M'){
+    listfles = listfles[grepl(paste0(nits, 'ROO'), listfles)]
+  }else if(model == 'DM'){
+    listfles = listfles[grepl(paste0(nits, '_DMROO'), listfles)]
+  }else if(model == 'DM'){
+    listfles = listfles[grepl(paste0(nits, '_LNMROO'), listfles)]
+  }
+  
   return(listfles)
 })
 
@@ -168,8 +183,8 @@ listfDM = listfles[[2]]
 
 #type_features = c('features1', 'signatures')
 type_features="signatures"
-ct_in_inference_results_list = list(unique(sort(as.character(sapply(list.files(opt$uuid_folder_DM), function(strng) strsplit(strng, '_')[[1]][5])))),
-                                    unique(sort(as.character(sapply(list.files(opt$uuid_folder_M), function(strng) strsplit(strng, '_')[[1]][5])))))
+ct_in_inference_results_list = list(unique(sort(as.character(sapply(list.files(opt$uuid_folder_DM), function(strng) strsplit(strng, '_')[[1]][1])))),
+                                    unique(sort(as.character(sapply(list.files(opt$uuid_folder_M), function(strng) strsplit(strng, '_')[[1]][1])))))
 names(ct_in_inference_results_list) = type_features
 
 plot_bool = FALSE
@@ -185,8 +200,7 @@ for (type_feature in type_features){
     posteriorsDM = listfDM[grepl(ct, listfDM) & grepl(type_feature, listfDM)][1]
     # posteriorsLNM = listfLNM[grepl(ct, listfLNM) & grepl(type_feature, listfLNM)][1]
     
-    # names_models = c('DM', 'M', 'LNM')
-    names_models = c('DM', 'M')
+    # vector_models = c('DM', 'M', 'LNM')
     files_rdata = c(paste0(opt$uuid_folder_DM, posteriorsDM), paste0(opt$uuid_folder_M,posteriorsM)#, paste0(opt$uuid_folder_LNM, posteriorsLNM)
                     )
     posteriors = lapply(files_rdata,
@@ -197,7 +211,13 @@ for (type_feature in type_features){
                           }else{
                             print(f)
                             load(f)
-                            tryCatch(extract(fit_stan))
+                            x = tryCatch(extract(fit_stan))
+                            if(is.null(x)){
+                              ## no samples
+                              NA
+                            }else{
+                              x
+                            }
                           }
                         })
     
@@ -219,7 +239,7 @@ for (type_feature in type_features){
     ## Compare the coefficients beta
     ## since not all have been run for the same number of iterations, subset the posteriors
     lengths_beta = sapply(posteriors, function(i) if(length(i) == 1){if(is.na(i)){NA}} else{dim(i$beta)[3]})
-    names_models = names_models[!is.na(lengths_beta)]
+    vector_models = vector_models[!is.na(lengths_beta)]
     posteriors = posteriors[!is.na(lengths_beta)]
     lengths_beta = lengths_beta[!is.na(lengths_beta)]
     if(length(lengths_beta) == 0){next}
@@ -229,7 +249,7 @@ for (type_feature in type_features){
     sapply(posteriors_subset_beta, function(i) dim(i)[1])
     posteriors_subset_beta_intercept = do.call('cbind', lapply(posteriors_subset_beta, function(i) i[,1]))
     posteriors_subset_beta_slope = do.call('cbind', lapply(posteriors_subset_beta, function(i) i[,2]))
-    colnames(posteriors_subset_beta_intercept) = colnames(posteriors_subset_beta_slope) = names_models
+    colnames(posteriors_subset_beta_intercept) = colnames(posteriors_subset_beta_slope) = vector_models
     
     pdf(paste0('../results/comparison_models/beta_pairs_', ct, '_', type_feature, '.pdf'))
     if(dim(posteriors_subset_beta_intercept)[2] == 1){
