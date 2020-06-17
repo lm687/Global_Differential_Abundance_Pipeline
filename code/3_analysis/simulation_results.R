@@ -3,7 +3,7 @@
 #########################################################
 
 ## Comparison of simulated results from the inferred parameters, for D-M vs simpler Multinomial
-debug = TRUE
+debug = FALSE
 if(debug){
   rm(list = ls())
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
