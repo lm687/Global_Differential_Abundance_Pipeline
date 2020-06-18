@@ -11,11 +11,8 @@ rule all:
     input:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
       # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
-      # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
-      expand("../data/inference/{model}_{Nits}_{cancer_type}_{feature_type}.Rdata",\
-       model=models, Nits=num_iterations, feature_type=config["feature_types"], cancer_type=cancer_types)
-      # expand("../data/inference/{cancer_type}_{feature_type}.Rdata",\
-       # cancer_type=cancer_types, feature_type=config["feature_types"])
+      expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
+      # expand("../data/inference/{model}_{Nits}_{cancer_type}_{feature_type}.Rdata",\
 
 rule index_vcf:
     input:
@@ -51,14 +48,6 @@ rule make_roo_files:
 rule inference:
     input:
         "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
-    # params:
-    #     model="{model}",
-    #     Nits="{Nits}"
-    # output:
-    #     "../data/inference/{params.model}_PCAWG_Nits{params.Nits}_{cancer_type}_{feature_type}.Rdata"
-    # shell:
-    #     "Rscript --vanilla 2_inference/fit_{params.model}_PCAWG.R --cancer_type {cancer_type} --type_data {feature_type}\
-    #      --in_file {input} --output {output} --niterations {params.Nits}"
     params:
        ct="{cancer_type}",
        f="{feature_type}",

@@ -9,9 +9,10 @@ library(gridExtra)
 library(uuid)
 library(bayesplot)
 library(ggplot2)
+library(dplyr)
+library(ggrepel)
 
 data_inference = list.files("../data/inference/", full.names = TRUE)
-
 data_inference = data_inference[grepl("signatures_20000_DMROO.RData", data_inference)]
 
 posteriors_betas = lapply(data_inference,
@@ -63,8 +64,6 @@ ggplot(melt(cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) st
        aes(x=ct, y=value, fill=variable))+
   geom_bar(stat='identity', position = "identity", alpha=.3)
 ggsave(filename = "../results/betas/all_betas_zeros_DM.png")
-
-
 
 load=F
 if(load){

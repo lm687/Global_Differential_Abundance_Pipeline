@@ -57,6 +57,13 @@ change_muts <- function(mut){
   }
 }
 
+bases = c('T', 'C', 'G', 'A')
+
+## dataframe with mutation equivalencies (for the purposes of speeding up code)
+grid_trinucleotides = expand.grid(data.frame(replicate(3, list('A', 'C', 'G', 'T')) ))
+grid_mutations = sort(as.vector(apply(grid_trinucleotides, 1, function(i){sapply(bases[i[2] != bases], function(j){ return(paste0(c(i[1], '[', i[2], '>', j, ']', i[3]), collapse = ""))})})))
+grid_mutations_df = cbind(grid_mutations, sapply(grid_mutations, change_muts))
+
 createRDS_ROOSigs_object <- function(pre_path="",
                                      vcf_path="../data/restricted/pcawg/pcawg_restricted_snv_counts/",
                                      ccf_threshold=NULL,
@@ -68,10 +75,6 @@ createRDS_ROOSigs_object <- function(pre_path="",
 
   if(is.null(cancer_type)){stop('Cancer type cannot be null')}
 
-  # source(paste0(pre_path, "../../../../other_repos/Pseudo-Ordering-Signatures/code/binning_functions.R"))
-  # source(paste0(pre_path, "../../../../other_repos/Pseudo-Ordering-Signatures/code/plotting.R"))
-  # source(paste0(pre_path, "../../../../other_repos/Pseudo-Ordering-Signatures/code/pcawg/helper_functions_pcawg.R"))
-  
   j = outfolder
   cancer_types = cancer_type
   
@@ -111,7 +114,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
     x = in_dataframe
     
     x$mutation <- gsub('/', '>', x$mutation)
-    x$mutation <- sapply(x$mutation, change_muts)
+    x$mutation <- grid_mutations_df[match(x$mutation, grid_mutations_df[,1]),2]
     
     if(type_features == "nucleotidesubstitution1"){
       x$mutation <- sapply(x$mutation, function(i){strsplit(i, "\\[|\\]")[[1]][2]})
@@ -168,81 +171,64 @@ createRDS_ROOSigs_object <- function(pre_path="",
 
 
 
-## ROO for PCAWG data
-createROO_ROOSigs <- function(savefolder, type_features='nucleotidesubstitution3', read_in=TRUE, all_objs_activesigs=NULL, save_bool){
-  # rm(list = ls())
-  # setwd(dirname(rstudioapi::getSourceEditorContext()$path))
-  # Sys.setenv(LANG='en')
-  
-  # cat('*Info*\tThis function is meant to be used in folders. For the equivalent of using them all in R objects, or within R, use <createROO_ROOSigs_object> instead.\n')
-  
-  # source("../../../../other_repos/Pseudo-Ordering-Signatures/code/pcawg/helper_functions_pcawg.R")
-  library(dplyr)
-  library(reshape2)
-  source(paste0(pre_path, "roo_functions.R"))
-  
-  outfolder="../data/roo/"
-  getname <- function(j)  gsub("−", "-", gsub('out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', j))))
-  
-  ## Cancer types
-  # pcawg_data <- read.table("../../data/pcawg/repository_1567600367.tsv", stringsAsFactors = FALSE, sep = '\t', header = T)
-  # pcawg_data <- pcawg_data[!duplicated(pcawg_data$Specimen.ID),]
-  # outfiles <- list.files(outfolder, full.names = TRUE)
-  # outfiles <- outfiles[grep('merged', outfiles)]
-  # pcawg_data <- pcawg_data[order(pcawg_data$Project),]
-  # outfiles_name <- gsub('/out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', outfiles)))
-  # mtch <- match(gsub("\\..*","",pcawg_data$File.Name), outfiles_name)
-  # outfiles <- outfiles[mtch]
-  # outfiles_name <- gsub('/out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', outfiles)))
-  # outfiles_name <- outfiles_name[!is.na(outfiles_name)]
-  # outfiles <- outfiles[!is.na(outfiles)]
-  # cancer_types <- sapply(outfiles_name, function(i) pcawg_data[grep(i, pcawg_data$File.Name),][1,'Project']) ## not optimal; v slow
-  # names(cancer_types) <- outfiles_name
-  
-  
-  ## iterate over cancer types
-  ##   iterate over samples from this cancer type
-  
-  objects_sigs_per_CT <- list()
-  for(i in unique(cancer_types)){
-    i_matrix_all <- list(do.call('rbind', lapply(all_objs[names(subset(cancer_types, cancer_types==i))], function(k) k[[1]])),
-                         do.call('rbind', lapply(all_objs[names(subset(cancer_types, cancer_types==i))], function(k) k[[2]])))
-    i_matrix_active <- list(do.call('rbind', lapply(all_objs_activesigs[paste0(names(subset(cancer_types, cancer_types==i)), '_active')], function(k) k[[1]])),
-                            do.call('rbind', lapply(all_objs_activesigs[paste0(names(subset(cancer_types, cancer_types==i)), '_active')], function(k) k[[2]])))
-    nulls_active <- (sapply(i_matrix_active, is.null))
-    if(sum(nulls_active) == 2){
-      is_null_active <- TRUE
-    }else if(sum(nulls_active) == 1){
-      stop('You should not have active signatures for only one of the categories')
-    }else{
-      is_null_active <- FALSE
-    }
-    objects_sigs_per_CT[[i]] <- new("exposures_cancertype",
-                                    cancer_type=i,
-                                    type_classification = "trunk_vs_branch",
-                                    number_categories = 2,
-                                    id_categories = c('trunk', 'branch'),
-                                    active_signatures = "character", ## active signatures for this cancer type
-                                    count_matrices_all = i_matrix_all,
-                                    count_matrices_active = i_matrix_active,
-                                    fitted_distrib_count_matrices_all = vector("list", 2),
-                                    fitted_distrib_count_matrices_active = vector("list", 2),
-                                    sample_names = names(subset(cancer_types, cancer_types==i)),
-                                    modification = "none",
-                                    is_null_active = is_null_active
-    )
-  }
-  
-  ## save
-  if(save_bool){
-    for(fle_it in 1:length(objects_sigs_per_CT)){
-      saveRDS(objects_sigs_per_CT[[fle_it]], file = paste0(savefolder, names(objects_sigs_per_CT)[fle_it], '_ROOSigs.RDS'))
-    }
-  }else{
-    objects_sigs_per_CT
-  }
-  
-}
+# ## ROO for PCAWG data
+# createROO_ROOSigs <- function(savefolder, type_features='nucleotidesubstitution3', read_in=TRUE, all_objs_activesigs=NULL, save_bool){
+#   # rm(list = ls())
+#   # setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+#   # Sys.setenv(LANG='en')
+#   
+#   library(dplyr)
+#   library(reshape2)
+#   source(paste0(pre_path, "roo_functions.R"))
+#   
+#   outfolder="../data/roo/"
+#   getname <- function(j)  gsub("−", "-", gsub('out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', j))))
+#   
+#   ## Cancer types
+#   
+#   ## iterate over cancer types
+#   ##   iterate over samples from this cancer type
+#   
+#   objects_sigs_per_CT <- list()
+#   for(i in unique(cancer_types)){
+#     i_matrix_all <- list(do.call('rbind', lapply(all_objs[names(subset(cancer_types, cancer_types==i))], function(k) k[[1]])),
+#                          do.call('rbind', lapply(all_objs[names(subset(cancer_types, cancer_types==i))], function(k) k[[2]])))
+#     i_matrix_active <- list(do.call('rbind', lapply(all_objs_activesigs[paste0(names(subset(cancer_types, cancer_types==i)), '_active')], function(k) k[[1]])),
+#                             do.call('rbind', lapply(all_objs_activesigs[paste0(names(subset(cancer_types, cancer_types==i)), '_active')], function(k) k[[2]])))
+#     nulls_active <- (sapply(i_matrix_active, is.null))
+#     if(sum(nulls_active) == 2){
+#       is_null_active <- TRUE
+#     }else if(sum(nulls_active) == 1){
+#       stop('You should not have active signatures for only one of the categories')
+#     }else{
+#       is_null_active <- FALSE
+#     }
+#     objects_sigs_per_CT[[i]] <- new("exposures_cancertype",
+#                                     cancer_type=i,
+#                                     type_classification = "trunk_vs_branch",
+#                                     number_categories = 2,
+#                                     id_categories = c('trunk', 'branch'),
+#                                     active_signatures = "character", ## active signatures for this cancer type
+#                                     count_matrices_all = i_matrix_all,
+#                                     count_matrices_active = i_matrix_active,
+#                                     fitted_distrib_count_matrices_all = vector("list", 2),
+#                                     fitted_distrib_count_matrices_active = vector("list", 2),
+#                                     sample_names = names(subset(cancer_types, cancer_types==i)),
+#                                     modification = "none",
+#                                     is_null_active = is_null_active
+#     )
+#   }
+#   
+#   ## save
+#   if(save_bool){
+#     for(fle_it in 1:length(objects_sigs_per_CT)){
+#       saveRDS(objects_sigs_per_CT[[fle_it]], file = paste0(savefolder, names(objects_sigs_per_CT)[fle_it], '_ROOSigs.RDS'))
+#     }
+#   }else{
+#     objects_sigs_per_CT
+#   }
+#   
+# }
 
 
 createROO_ROOSigs_object <- function(type_features='nucleotidesubstitution3',
@@ -307,11 +293,10 @@ createROO_ROOSigs_object <- function(type_features='nucleotidesubstitution3',
                                   active_signatures = "character", ## active signatures for this cancer type
                                   count_matrices_all = i_matrix_all,
                                   count_matrices_active = i_matrix_active,
-                                  fitted_distrib_count_matrices_all = vector("list", 2),
-                                  fitted_distrib_count_matrices_active = vector("list", 2),
                                   sample_names = names(cancer_types),
                                   modification = "none",
-                                  is_null_active = is_null_active
+                                  is_null_active = is_null_active,
+                                  is_empty="Non-empty"
   )
 
   
