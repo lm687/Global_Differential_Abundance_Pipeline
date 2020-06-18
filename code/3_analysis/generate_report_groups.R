@@ -1,24 +1,11 @@
 
 setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
-library(optparse)
 library(dplyr)
 
-option_list = list(
-  make_option(c("--file_ROO"), type="character", default=NA, 
-              help="File with the posterior, with directory included", metavar="character")
-); 
-
-opt_parser = OptionParser(option_list=option_list)
-opt = parse_args(opt_parser)
-
-opt = list(); opt$file_ROO = "../data/roo/Biliary-AdenoCA_nucleotidesubstitution1_ROO.RDS"
-
-roo_file = readRDS(opt$file_ROO)
 fles_in = list.files("../data/roo/", full.names=TRUE)
 roo_files = sapply(fles_in, readRDS)
 
-nrow(roo_file@count_matrices_all[[1]])
-roo_file@count_matrices_active
+
 
 types = do.call('rbind', sapply(gsub("_ROO.RDS", "", basename(fles_in)), strsplit, split = '_'))
 types = data.frame(types, stringsAsFactors=FALSE)
@@ -52,7 +39,7 @@ table_characteristics$Number.of.samples = as.numeric(table_characteristics$Numbe
 table_characteristics$Number.of.features = as.numeric(table_characteristics$Number.of.features)
 
 ### why are there so few samples?
-table_characteristics = table_characteristics %>% group_by(Feature_type) %>% dplyr::mutate(sum_all_ct=sum(Number.of.samples, na.rm = TRUE))
+table_characteristics = table_characteristics %>% group_by(Feature_type) %>% dplyr::mutate(Number_samples_total=sum(Number.of.samples, na.rm = TRUE))
 filename = "../results/reports/report_PCAWG.tex"
 
 save_plots = function(names_roo_files, slot_name){

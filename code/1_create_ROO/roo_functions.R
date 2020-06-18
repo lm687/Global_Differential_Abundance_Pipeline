@@ -14,12 +14,10 @@ setClass("exposures_cancertype",
            active_signatures = "character", ## active signatures for this cancer type
            count_matrices_all = "list", ## for each of the categories
            count_matrices_active = "list", ## for each of the categories, only active signatures
-           fitted_distrib_count_matrices_all = "list", ## fitted distrib for the data in the category
-           fitted_distrib_count_matrices_active = "list", ## fitted distrib for the data in the category
            sample_names = "character",
-           modification = "character",
-           is_null_active = "logical"
-#           perturbation = 'data.frame'
+           is_null_active = "logical",
+           is_empty = "character",
+           modification = "character"
          ))
 
 
@@ -718,18 +716,17 @@ new_object <- function(){
   ## let's create an object that h
   
   new(Class = "exposures_cancertype",
-    cancer_type="simulated",
-    type_classification = "character",
+    cancer_type="simulation",
+    type_classification = "simulation",
     number_categories = 2,
     id_categories = c('SimTrunk', 'SimBranch'),
     active_signatures = "character", ## active signatures for this cancer type
     count_matrices_all = "list", ## for each of the categories
     count_matrices_active = "list", ## for each of the categories, only active signatures
-    fitted_distrib_count_matrices_all = "list", ## fitted distrib for the data in the category
-    fitted_distrib_count_matrices_active = "list", ## fitted distrib for the data in the category
     sample_names = "character",
     modification = "",
-    is_null_active = FALSE
+    is_null_active = FALSE,
+    is_empty = "Non-empty"
 )
   
 }
