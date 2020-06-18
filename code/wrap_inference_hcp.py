@@ -7,7 +7,7 @@ import os
 
 nits = 20000
 for i in ['../data/roo/'+x for x in os.listdir("../data/roo/") if 'ROO' in x]:
-    script = "~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {} --typedata {} --infile {} --output {} --iterations {} --model M".format(i.split('_')[0], (i.split('_')[1]), i, i.replace("roo/", "inference/").replace("_ROO", "_"+str(nits)+"ROO").replace(".RDS", ".RData"), str(nits))
+    script = "~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {} --typedata {} --infile {} --output {} --iterations {} --model M".format(i.split('_')[0], (i.split('_')[1]), i, i.replace("roo/", "inference/").replace("_ROO", "_"+str(nits)+"_MROO").replace(".RDS", ".RData"), str(nits))
 
     fileout="sbatches/"+os.path.basename(i).replace(".RDS", "_v2.sh")
     a = open(fileout, "w")

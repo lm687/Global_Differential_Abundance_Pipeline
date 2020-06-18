@@ -12,6 +12,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env
 
- ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype ../data/roo/Bladder-TCC --typedata nucleotidesubstitution3 --infile ../data/roo/Bladder-TCC_nucleotidesubstitution3_ROO.RDS --output ../data/inference/Bladder-TCC_nucleotidesubstitution3_20000ROO.RData --iterations 20000 --model M
+ ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype ../data/roo/Bladder-TCC --typedata nucleotidesubstitution3 --infile ../data/roo/Bladder-TCC_nucleotidesubstitution3_ROO.RDS --output ../data/inference/Bladder-TCC_nucleotidesubstitution3_20000_MROO.RData --iterations 20000 --model M
 
 conda deactivate

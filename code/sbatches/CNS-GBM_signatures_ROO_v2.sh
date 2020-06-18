@@ -12,6 +12,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env
 
- ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype ../data/roo/CNS-GBM --typedata signatures --infile ../data/roo/CNS-GBM_signatures_ROO.RDS --output ../data/inference/CNS-GBM_signatures_20000ROO.RData --iterations 20000 --model M
+ ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype ../data/roo/CNS-GBM --typedata signatures --infile ../data/roo/CNS-GBM_signatures_ROO.RDS --output ../data/inference/CNS-GBM_signatures_20000_MROO.RData --iterations 20000 --model M
 
 conda deactivate
