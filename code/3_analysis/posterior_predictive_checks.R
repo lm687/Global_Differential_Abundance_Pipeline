@@ -20,23 +20,23 @@ library(optparse)
 debug = TRUE
 if(debug){
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
-  opt = list(); opt$file_posterior = c("../data/inference/Skin-Melanoma.acral_signatures_20000_MROO.RData", "../data/inference/Skin-Melanoma.acral_signatures_20000_DMROO.RData")
+  opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData")
 }else{
   option_list = list(
-    make_option(c("--file_posterior"), type="character", default=NA, 
+    make_option(c("--files_posterior"), type="character", default=NA, 
                 help="File with the posterior, with directory included", metavar="character")
   ); 
+  opt$files_posterior = strsplit(opt$files_posterior, " ")
 }
 
 source("3_analysis/helper/helper_analyse_posteriors.R")
 source("3_analysis/helper/helper_simulation.R")
-nits = 20000
-file_posterior_split = sapply(opt$file_posterior, function(i) strsplit(i, "_")[[1]])
-ct = unique(basename(file_posterior_split[1,]))
-type_feature = unique(file_posterior_split[2,])
-nits =  file_posterior_split[3,]
-model = gsub("ROO.RData", "",file_posterior_split[4,])
-
+files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
+ct = unique(basename(files_posterior_split[1,]))
+type_feature = unique(files_posterior_split[2,])
+nits =  as.numeric(files_posterior_split[3,])
+model = gsub("ROO.RData", "",files_posterior_split[4,])
+names(nits) = model
 donors = read.table("../data/restricted/pcawg/icgc-dataset-1591612699408/donor.tsv",
                     stringsAsFactors = FALSE, sep = "\t", header = TRUE)
 files_donors = read.table("../data/restricted/pcawg/repository_1567600367.tsv",
@@ -52,11 +52,7 @@ give_roo_wrapper = function(.it_features, .list_CT){
 ROO_object = give_roo_wrapper(type_feature, ct)
 
 
-####################################################################################################
-## Simulate data with inferred parameters
-####################################################################################################
-
-posteriors = lapply(opt$file_posterior,
+posteriors = lapply(opt$files_posteriors,
                     function(f){
                       if(substr(f, nchar(f), nchar(f)) == "/" | basename(f) == "NA" ){
                         # no file
@@ -73,210 +69,217 @@ posteriors = lapply(opt$file_posterior,
                         }
                       }
                     })
-posteriors = posteriors[[1]]
+names(posteriors) = model
 
 ## Simulate with the total number of mutations for DM
 rowsums_toll = unlist(lapply(ROO_object, rowSums))
 length(rowsums_toll) ## number of patients*2
   
-bool_data_avilable = TRUE
-if(is.null(posteriors)){
-  ## either no samples in rstan object, or no file
-  bool_data_avilable = FALSE
-}else if(length(posteriors) == 1){
-  if(all(is.na(posteriors))){
-    bool_data_avilable = FALSE
+bool_data_avilable = rep(TRUE, length(posteriors))
+for(i in 1:length(posteriors)){
+  if(is.null(posteriors[[i]])){
+    ## either no samples in rstan object, or no file
+    bool_data_avilable[i] = FALSE
+  }else if(length(posteriors[[i]]) == 1){
+    if(is.na(posteriors[[i]])){ bool_data_avilable[i] = FALSE }
   }
 }
+names(bool_data_avilable) = model
   
-## Compare the coefficients beta
 ## since not all have been run for the same number of iterations, subset the posteriors
 lengths_beta_all = sapply(posteriors, function(i) if(length(i) == 1){if(is.na(i)){NA}} else{dim(i$beta)[3]})
-# vector_models = vector_models[!is.na(lengths_beta_all)]
 
-  posteriors_all = posteriors
-  posteriors = posteriors[!is.na(lengths_beta_all)]
-  lengths_beta = lengths_beta_all[!is.na(lengths_beta_all)]
-  if(length(lengths_beta) == 0){
-    return(NA)
-  }else{
-      dim_beta = unique(lengths_beta); stopifnot(length(dim_beta) == 1)
-      selected_rows = lapply(posteriors, function(i) sample(dim(i$beta)[1], 1000, replace = FALSE))
-      selected_rows_all = rep(NA, length(posteriors_all)); selected_rows_all[!is.na(lengths_beta_all)] = selected_rows
-      posteriors_subset_beta = lapply(1:length(posteriors), function(idx_posterior) do.call('rbind', lapply(1:dim_beta, function(idx_feature) select_feature(df_with_slices = posteriors[[idx_posterior]]$beta, idx_select = idx_feature)[selected_rows[[idx_posterior]],])))
-      posteriors_subset_beta_all = rep(NA, length(posteriors_all)); posteriors_subset_beta_all[!is.na(lengths_beta_all)] = posteriors_subset_beta
-      posteriors_subset_beta_intercept = do.call('cbind', lapply(posteriors_subset_beta_all, function(i){if(is.na(i)){NA}else{i[,1]}}))
-      posteriors_subset_beta_slope = do.call('cbind', lapply(posteriors_subset_beta_all, function(i){if(is.na(i)){NA}else{i[,2]}}))
-      colnames(posteriors_subset_beta_intercept) = colnames(posteriors_subset_beta_slope) = vector_models
-      
-      pdf(paste0('../results/comparison_models/beta_pairs_', ct, '_', type_feature, '.pdf'))
-      if(sum(!(apply(posteriors_subset_beta_intercept, 2, function(i) all(is.na(i))))) == 1){
-        plot(0, 0, main='Only one model - no comparison')
-      }else{
-        par(mfrow=c(2,1))
-        pairs(posteriors_subset_beta_intercept, main='Beta intercept pairs plot')
-        pairs(posteriors_subset_beta_slope, main='Beta slope pairs plot')
-      }
-      dev.off()
-      
-      dim(posteriors[[1]]$u) ## [nits, n, d-1]
-      dim(posteriors[[1]]$beta) ### [nits, 2, d-1]
-      dim(objects_sigs_per_CT[[type_feature]][[ct]][[1]]) ## [n,d]
-      
-      ## as many columns as patients
-      # dim(select_feature(posteriors[[1]]$u, 1))
-      
-      match_file = match(gsub("_active", "", rownames(objects_sigs_per_CT[[type_feature]][[ct_raw]][[1]])),
-                         sapply(files_donors$File.Name, function(i) strsplit(i, '[.]')[[1]][1]))
-      rownames(objects_sigs_per_CT[[type_feature]][[ct]][[1]])
-      files_donors[match_file,c('ICGC.Donor','File.Name') ]
-      age_donors = donors[match(files_donors[match_file,]$ICGC.Donor, donors$icgc_donor_id),]
-      age_donors = age_donors[!is.na(age_donors$icgc_donor_id),c('icgc_donor_id', 'donor_age_at_last_followup')]
-      
-      nfeatures = dim(posteriors[[1]]$u)[3]
-      png(paste0("../results/link_clinical/age_u_", ct, '_', type_feature, '.png'),
-          width = 3*1.7, height = 3*length(posteriors)*1.7, units = "in", res = 300)
-      par(mfrow=c(length(posteriors),1))
-      for(idx_model in 1:length(posteriors)){
-          if(length(rep(age_donors$donor_age_at_last_followup, each=dim(posteriors[[idx_model]]$u)[1])) != length(as.vector(posteriors[[idx_model]]$u))){stop()}
-          plt_age = cbind(rep(age_donors$donor_age_at_last_followup, each=dim(posteriors[[idx_model]]$u)[1]),
-                          as.vector(posteriors[[idx_model]]$u))
-          plt_age = plt_age[!is.na(plt_age[,1]),]
-          if(dim(plt_age)[1] > 0){
-            plt_age = plt_age[sample(1:nrow(plt_age), 2000),]
-            plot(plt_age)
-          }else{
-            plot(0,0)
-          }
-        }
-      dev.off()
-      
-      #########################################################################################################
-      ################# Lower-dimensional representation of posteriors and of observed values ################# 
-      #########################################################################################################
-      
-      list_for_model = lapply(vector_models, function(name_model){
-        if(bool_data_avilable[name_model]){
-          npatients = dim(posteriors_all[[name_model]]$u)[2]
-          npatientsx2 = npatients*2
-          patient_idx = 1
-          if(name_model == 'DM'){
-            sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, patient_idx)),
-                                                                                                1, MCMCpack::rdirichlet, n=1)),
-                                                                                        1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
-          }else{
-            sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[name_model]]$theta, patient_idx)),
-                                                                                            1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
-          }
-          
-          sim_counts = do.call('rbind', sim_counts)
-          
-          sim_counts = sim_counts[! (colSums(apply(sim_counts, 1, is.na)) > 0),]
-          
-          par(mfrow=c(1,1))
-          cols = rep(1:npatientsx2, each=dim(sim_counts)[1]/npatientsx2)
-          subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
-                                                                  size = 1000,#round(0.1*sum(cols == i)),
-                                                                  replace = FALSE )))
-          sim_counts = sim_counts[subset,]
-          cols = cols[subset]
-          prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
-          prcomp_res = prcomp_all$x[,c(1,2)]
-          projected_observed = (scale(normalise_rw(do.call('rbind', objects_sigs_per_CT[[type_feature]][[ct_raw]])),
-                                      center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
-          
-          }else{
-            sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
-          }
-          return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res, projected_observed=projected_observed, cols=cols, npatientsx2=npatientsx2))
-        })
-        
-        sim_counts = lapply(list_for_model, function(i) i$sim_counts)
-        prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
-        prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
-        prcomp_res = lapply(list_for_model, function(i) i$prcomp_res)
-        projected_observed = lapply(list_for_model, function(i) i$projected_observed)
-        cols = lapply(list_for_model, function(i) i$cols)
-        npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
-        npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
-        if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
-        npatients = npatientsx2/2
-        names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = names(cols) = vector_models
+posteriors_all = posteriors
+posteriors = posteriors[!is.na(lengths_beta_all)]
+lengths_beta = lengths_beta_all[!is.na(lengths_beta_all)]
+if(length(lengths_beta) == 0){ quit() } ## no posteriors to analyse
+if(length(lengths_beta) == 1){bool_comparison=FALSE}else{bool_comparison=TRUE} ## if we are comparing models, we need at least twoz
+
+####################################################################################################
+##################################### Comparison of beta values ####################################
+####################################################################################################
+if(bool_comparison){
+  dim_beta = unique(lengths_beta); stopifnot(length(dim_beta) == 1)
+  selected_rows = lapply(posteriors, function(i) sample(dim(i$beta)[1], 1000, replace = FALSE))
+  selected_rows_all = rep(NA, length(posteriors_all)); selected_rows_all[!is.na(lengths_beta_all)] = selected_rows
+  posteriors_subset_beta = lapply(1:length(posteriors), function(idx_posterior) do.call('rbind', lapply(1:dim_beta, function(idx_feature) select_feature(df_with_slices = posteriors[[idx_posterior]]$beta, idx_select = idx_feature)[selected_rows[[idx_posterior]],])))
+  posteriors_subset_beta_all = rep(NA, length(posteriors_all)); posteriors_subset_beta_all[!is.na(lengths_beta_all)] = posteriors_subset_beta
+  posteriors_subset_beta_intercept = do.call('cbind', lapply(posteriors_subset_beta_all, function(i){if(is.na(i)){NA}else{i[,1]}}))
+  posteriors_subset_beta_slope = do.call('cbind', lapply(posteriors_subset_beta_all, function(i){if(is.na(i)){NA}else{i[,2]}}))
+  colnames(posteriors_subset_beta_intercept) = colnames(posteriors_subset_beta_slope) = model
   
-        select_rows = function(df, colours){
-          if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
-        }
-        
-        ## plotting the contours for all patients
-        splits_df = sapply(1:length(sim_counts), function(i) select_rows(sim_counts[[i]], cols[[i]]) )
-        
-        names(splits_df) = vector_models
-        
-        png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
-        par(mfrow=c(3,2))
-        plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
-        plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
-        plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
-        plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
-        plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
-        plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
-        dev.off()
-      
-      #########################################################################################################
-      
-      #########################################################################################################
-      ###### Plots showing whether the credible intervals of the posteriors capture the observed values  ######
-      #########################################################################################################
-      ## if there is both M and DM
-        
-      subset_models = 'M'
-      fraction_in_credint_bool = sapply(subset_models, function(model){
-        size_subsample = 1e3
-        comparison_overdispersion = lapply(1:2, function(group_idx){
-          x0 = lapply(1:npatients, function(person_idx){
-            
-            x1 = lapply(1:dim(posteriors[[model]]$theta)[3], function(signature_idx){
-              if(model %in% c('M', 'LNM')){
-                cbind(rep(normalise_rw(objects_sigs_per_CT[[type_feature]][[ct_raw]][[group_idx]])[person_idx,signature_idx], size_subsample),
-                      do.call('cbind', select_person(posteriors$M$theta, person_idx+(group_idx-1)*npatients))[sample(1:nits, size_subsample,
-                                                                                                                      replace=FALSE),signature_idx])
-              }else if(model == 'DM'){
-                stop('Not implented')
-                # normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, person_idx)),
-                #                                                                                     1, MCMCpack::rdirichlet, n=1)),
-                #                                                                             1, rmultinom, n=1, size=rowsums_toll[patient_idx]))
-                
-              }
-            })
-            do.call('rbind', x1)
-          })
-          do.call('rbind', x0)
-        })
-        
-        
-        comparison_overdispersion2 = do.call('rbind', comparison_overdispersion)
-        comparison_overdispersion2[is.na(comparison_overdispersion2[,1]),1] = 0 ## these were zeros. turn into zeros
-        
-        fctors = rep(1:(nrow(comparison_overdispersion2)/size_subsample), each=size_subsample)
-        fraction_in_credint_bool = sapply(unique(fctors), function(idx){
-          subst = comparison_overdispersion2[which(fctors == idx),]
-          qntile = quantile(subst[,2], probs = c(0.25, 1-0.25))
-          as.logical((subst[1,1] <= qntile[2]) &  (subst[1,1] >= qntile[1]))
-        })
-        
-        png(paste0("../results/overdispersion/overdispersion_", paste0(ct_raw, type_feature), ".png"))
-        plot(comparison_overdispersion2[,1], comparison_overdispersion2[,2],
-             xlab="True value", ylab = "Inferred value", main=paste0(ct, type_feature),
-             col=alpha(rep(1:2, each=nrow(comparison_overdispersion2)/2), 0.2), pch=19, cex=0.2)
-        abline(0,1, lwd=3, lty=2, col='blue')
-        dev.off()
-        
-        return(sum(fraction_in_credint_bool)/length(fraction_in_credint_bool))
-      })
-      names(fraction_in_credint_bool) = subset_models
-      
-      return(fraction_in_credint_bool)
+  pdf(paste0('../results/comparison_models/beta_pairs_', ct, '_', type_feature, '.pdf'))
+  if(sum(!(apply(posteriors_subset_beta_intercept, 2, function(i) all(is.na(i))))) == 1){
+    plot(0, 0, main='Only one model - no comparison')
+  }else{
+    par(mfrow=c(2,1))
+    pairs(posteriors_subset_beta_intercept, main='Beta intercept pairs plot')
+    pairs(posteriors_subset_beta_slope, main='Beta slope pairs plot')
+  }
+  dev.off()
+}
+
+####################################################################################################
+############################### Correlation of age with random effects #############################
+####################################################################################################
+dim(posteriors[[1]]$u) ## [nits, n, d-1]
+dim(posteriors[[1]]$beta) ### [nits, 2, d-1]
+dim(ROO_object[[1]]) ## [n,d]
+
+match_file = match(gsub("_active", "", rownames(ROO_object[[1]])),
+                   sapply(files_donors$File.Name, function(i) strsplit(i, '[.]')[[1]][1]))
+rownames(ROO_object[[1]])
+files_donors[match_file,c('ICGC.Donor','File.Name') ]
+age_donors = donors[match(files_donors[match_file,]$ICGC.Donor, donors$icgc_donor_id),]
+age_donors = age_donors[!is.na(age_donors$icgc_donor_id),c('icgc_donor_id', 'donor_age_at_last_followup')]
+
+nfeatures = dim(posteriors[[1]]$u)[3]
+png(paste0("../results/link_clinical/age_u_", ct, '_', type_feature, '.png'),
+    width = 3*1.7, height = 3*length(posteriors)*1.7, units = "in", res = 300)
+par(mfrow=c(length(posteriors),1))
+for(idx_model in 1:length(posteriors)){
+    if(length(rep(age_donors$donor_age_at_last_followup, each=dim(posteriors[[idx_model]]$u)[1])) != length(as.vector(posteriors[[idx_model]]$u))){stop()}
+    plt_age = cbind(rep(age_donors$donor_age_at_last_followup, each=dim(posteriors[[idx_model]]$u)[1]),
+                    as.vector(posteriors[[idx_model]]$u))
+    plt_age = plt_age[!is.na(plt_age[,1]),]
+    if(dim(plt_age)[1] > 0){
+      plt_age = plt_age[sample(1:nrow(plt_age), 2000),]
+      plot(plt_age)
+    }else{
+      plot(0,0)
     }
+  }
+dev.off()
+
+
+#########################################################################################################
+################# Lower-dimensional representation of posteriors and of observed values ################# 
+#########################################################################################################
+list_for_model = lapply(model, function(name_model){
+  if(bool_data_avilable[name_model]){
+    npatients = dim(posteriors_all[[name_model]]$u)[2]
+    npatientsx2 = npatients*2
+    patient_idx = 1
+    if(name_model == 'DM'){
+      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, patient_idx)),
+                                                                                          1, MCMCpack::rdirichlet, n=1)),
+                                                                                  1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+    }else{
+      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[name_model]]$theta, patient_idx)),
+                                                                                      1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+    }
+    
+    sim_counts = do.call('rbind', sim_counts)
+    
+    sim_counts = sim_counts[! (colSums(apply(sim_counts, 1, is.na)) > 0),]
+    
+    par(mfrow=c(1,1))
+    cols = rep(1:npatientsx2, each=dim(sim_counts)[1]/npatientsx2)
+    subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
+                                                            size = 1000,#round(0.1*sum(cols == i)),
+                                                            replace = FALSE )))
+    sim_counts = sim_counts[subset,]
+    cols = cols[subset]
+    prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
+    prcomp_res = prcomp_all$x[,c(1,2)]
+    projected_observed = (scale(normalise_rw(do.call('rbind', ROO_object)),
+                                center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
+    
+    }else{
+      sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
+    }
+    return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res, projected_observed=projected_observed, cols=cols, npatientsx2=npatientsx2))
+  })
+  
+sim_counts = lapply(list_for_model, function(i) i$sim_counts)
+prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
+prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
+prcomp_res = lapply(list_for_model, function(i) i$prcomp_res)
+projected_observed = lapply(list_for_model, function(i) i$projected_observed)
+cols = lapply(list_for_model, function(i) i$cols)
+npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
+npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
+if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
+npatients = npatientsx2/2
+names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = names(cols) = model
+
+select_rows = function(df, colours){
+  if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
+}
+
+## plotting the contours for all patients
+splits_df = lapply(1:length(sim_counts), function(i) select_rows(sim_counts[[i]], cols[[i]]) )
+
+names(splits_df) = model
+
+png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
+par(mfrow=c(length(model),2))
+sapply(model, function(model_idx){
+  plot_whole_contour(group_idx = 1, model_name = model_idx, true_contour = FALSE)
+  plot_whole_contour(group_idx = 2, model_name = model_idx, true_contour = FALSE)
+})
+# plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
+# plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
+# plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
+# plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
+# plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
+# plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
+dev.off()
+
+#########################################################################################################
+
+#########################################################################################################
+###### Plots showing whether the credible intervals of the posteriors capture the observed values  ######
+#########################################################################################################
+fraction_in_credint_bool = sapply(model, function(model_idx){
+  size_subsample = 1e3
+  comparison_overdispersion = lapply(1:2, function(group_idx){
+    x0 = lapply(1:npatients, function(patient_idx){
+      
+      if(model_idx %in% c('M', 'LNM')){
+        x1 = lapply(1:dim(posteriors[[model_idx]]$theta)[3], function(signature_idx){
+          cbind(rep(normalise_rw(ROO_object[[group_idx]])[patient_idx,signature_idx], size_subsample),
+                do.call('cbind', select_person(posteriors$M$theta, patient_idx+(group_idx-1)*npatients))[sample(1:nits[[model_idx]], size_subsample,
+                                                                                                                replace=FALSE),signature_idx])
+        })
+      }else if(model_idx == 'DM'){
+        x1 = lapply(1:dim(posteriors[[model_idx]]$alpha)[3], function(signature_idx){
+          cbind(rep(normalise_rw(ROO_object[[group_idx]])[patient_idx,signature_idx], size_subsample),
+                normalise_cl(apply(t(apply(do.call('cbind',
+                                                   lapply(select_person(posteriors_all[[model_idx]]$alpha, patient_idx+(group_idx-1)*npatients),
+                                                          function(i) i[sample(1:nits[[model_idx]], size_subsample, replace=FALSE)])),
+                                                                                              1, MCMCpack::rdirichlet, n=1)),
+                                                                                      1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+          
+        
+        })
+      }
+      do.call('rbind', x1)
+    })
+    unlist(x0) #do.call('rbind', x0)
+  })
+  
+  
+  comparison_overdispersion2 = do.call('rbind', comparison_overdispersion)
+  comparison_overdispersion2[is.na(comparison_overdispersion2[,1]),1] = 0 ## these were zeros. turn into zeros
+  
+  fctors = rep(1:(nrow(comparison_overdispersion2)/size_subsample), each=size_subsample)
+  fraction_in_credint_bool = sapply(unique(fctors), function(idx){
+    subst = comparison_overdispersion2[which(fctors == idx),]
+    qntile = quantile(subst[,2], probs = c(0.25, 1-0.25))
+    as.logical((subst[1,1] <= qntile[2]) &  (subst[1,1] >= qntile[1]))
+  })
+  
+  png(paste0("../results/overdispersion/overdispersion_", paste0(ct, type_feature), ".png"))
+  plot(comparison_overdispersion2[,1], comparison_overdispersion2[,2],
+       xlab="True value", ylab = "Inferred value", main=paste0(ct, type_feature),
+       col=alpha(rep(1:2, each=nrow(comparison_overdispersion2)/2), 0.2), pch=19, cex=0.2)
+  abline(0,1, lwd=3, lty=2, col='blue')
+  dev.off()
+  
+  return(sum(fraction_in_credint_bool)/length(fraction_in_credint_bool))
+})
+
 
 saveRDS(paste0("../data/robjects_cache/fraction_in_credint_",gsub('.RData', '', ct) , ".RDS"))
 
