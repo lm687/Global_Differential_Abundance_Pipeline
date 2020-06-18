@@ -1,0 +1,393 @@
+Loading required package: ggplot2
+Registered S3 methods overwritten by 'ggplot2':
+  method         from 
+  [.quosures     rlang
+  c.quosures     rlang
+  print.quosures rlang
+Loading required package: StanHeaders
+rstan (Version 2.18.2, GitRev: 2e1f913d3ca3)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+options(mc.cores = parallel::detectCores()).
+To avoid recompilation of unchanged Stan programs, we recommend calling
+rstan_options(auto_write = TRUE)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: coda
+
+Attaching package: ‘coda’
+
+The following object is masked from ‘package:rstan’:
+
+    traceplot
+
+Loading required package: MASS
+
+Attaching package: ‘MASS’
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
+##
+## Markov Chain Monte Carlo Package (MCMCpack)
+## Copyright (C) 2003-2020 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
+##
+## Support provided by the U.S. National Science Foundation
+## (Grants SES-0350646 and SES-0350613)
+##
+Warning messages:
+1: package ‘MCMCpack’ was built under R version 4.0.1 
+2: package ‘coda’ was built under R version 4.0.1 
+------------------------------------------------------------------------------
+You have loaded plyr after dplyr - this is likely to cause problems.
+If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
+library(plyr); library(dplyr)
+------------------------------------------------------------------------------
+
+Attaching package: ‘plyr’
+
+The following objects are masked from ‘package:dplyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+
+Attaching package: ‘CompSign’
+
+The following object is masked from ‘package:plyr’:
+
+    summarise
+
+The following object is masked from ‘package:dplyr’:
+
+    summarise
+
+Warning message:
+package ‘CompSign’ was built under R version 4.0.1 
+[1] "../data/roo/Biliary-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Bladder-TCC_signatures_ROO.RDS"
+[1] "../data/roo/Bone-Benign_signatures_ROO.RDS"
+[1] "../data/roo/Bone-Epith_signatures_ROO.RDS"
+[1] "../data/roo/Bone-Osteosarc_signatures_ROO.RDS"
+[1] "../data/roo/Breast-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Breast-DCIS_signatures_ROO.RDS"
+[1] "../data/roo/Breast-LobularCA_signatures_ROO.RDS"
+[1] "../data/roo/Cervix-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Cervix-SCC_signatures_ROO.RDS"
+[1] "../data/roo/CNS-GBM_signatures_ROO.RDS"
+[1] "../data/roo/CNS-Medullo_signatures_ROO.RDS"
+[1] "../data/roo/CNS-Oligo_signatures_ROO.RDS"
+[1] "../data/roo/CNS-PiloAstro_signatures_ROO.RDS"
+[1] "../data/roo/ColoRect-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Eso-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Head-SCC_signatures_ROO.RDS"
+[1] "../data/roo/Kidney-ChRCC_signatures_ROO.RDS"
+[1] "../data/roo/Kidney-RCC.clearcell_signatures_ROO.RDS"
+[1] "../data/roo/Kidney-RCC.papillary_signatures_ROO.RDS"
+[1] "../data/roo/Liver-HCC_signatures_ROO.RDS"
+[1] "../data/roo/Lung-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Lung-SCC_signatures_ROO.RDS"
+[1] "../data/roo/Lymph-BNHL_signatures_ROO.RDS"
+[1] "../data/roo/Lymph-CLL_signatures_ROO.RDS"
+[1] "../data/roo/Myeloid-AML_signatures_ROO.RDS"
+[1] "../data/roo/Myeloid-MPN_signatures_ROO.RDS"
+[1] "../data/roo/Ovary-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Panc-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Panc-Endocrine_signatures_ROO.RDS"
+[1] "../data/roo/Prost-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Skin-Melanoma.acral_signatures_ROO.RDS"
+[1] "../data/roo/Skin-Melanoma.cutaneous_signatures_ROO.RDS"
+[1] "../data/roo/Skin-Melanoma.mucosal_signatures_ROO.RDS"
+[1] "../data/roo/SoftTissue-Leiomyo_signatures_ROO.RDS"
+[1] "../data/roo/SoftTissue-Liposarc_signatures_ROO.RDS"
+[1] "../data/roo/Stomach-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Thy-AdenoCA_signatures_ROO.RDS"
+[1] "../data/roo/Uterus-AdenoCA_signatures_ROO.RDS"
+List object objects_sigs_per_CT loaded
+     
+      Biliary-AdenoCA Bladder-TCC Bone-Benign Bone-Epith Bone-Osteosarc
+  DM                3           6           6          6              6
+  LNM               3           3           3          3              3
+  M                 3           3           3          3              3
+     
+      Breast-AdenoCA Breast-LobularCA Cervix-AdenoCA Cervix-SCC CNS-GBM
+  DM               3                3              3          3       3
+  LNM              0                3              3          3       3
+  M                3                6              6          6       6
+     
+      CNS-Medullo CNS-Oligo CNS-PiloAstro ColoRect-AdenoCA Eso-AdenoCA Head-SCC
+  DM            3         6             6                6           3        3
+  LNM           3         3             3                3           3        6
+  M             3         3             3                3           3        3
+     
+      Kidney-ChRCC Kidney-RCC.clearcell Kidney-RCC.papillary Liver-HCC
+  DM             3                    3                    3         0
+  LNM            6                    3                    3         3
+  M              3                    3                    6         3
+     
+      Lung-AdenoCA Lung-SCC Lymph-BNHL Lymph-CLL Myeloid-AML Myeloid-MPN
+  DM             3        3          3         3           3           3
+  LNM            3        3          3         3           3           3
+  M              6        6          3         6           6           6
+     
+      Ovary-AdenoCA Panc-AdenoCA Panc-Endocrine Prost-AdenoCA
+  DM              3            3              3             3
+  LNM             3            0              3             3
+  M               3            3              3             0
+     
+      Skin-Melanoma.acral Skin-Melanoma.cutaneous SoftTissue-Leiomyo
+  DM                    3                       3                  3
+  LNM                   6                       6                  6
+  M                     3                       3                  3
+     
+      SoftTissue-Liposarc Stomach-AdenoCA Thy-AdenoCA Uterus-AdenoCA
+  DM                    3               3           3              3
+  LNM                   6               6           6              6
+  M                     3               3           3              3
+[1] "Biliary-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          3
+  M                         3                       0          3
+[1] "Bladder-TCC"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "Bone-Benign"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "Bone-Epith"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "Bone-Osteosarc"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "Breast-AdenoCA"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       3          0
+  M                         0          3
+[1] "Breast-DCIS"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3
+  LNM                       3                       0
+  M                         0                       3
+[1] "Breast-LobularCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Cervix-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Cervix-SCC"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "CNS-GBM"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "CNS-Medullo"
+     
+      nucleotidesubstitution1 signatures
+  DM                        3          3
+  LNM                       0          3
+  M                         0          3
+[1] "CNS-Oligo"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "CNS-PiloAstro"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "ColoRect-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       0          6
+  LNM                       3                       0          3
+  M                         0                       3          3
+[1] "Eso-AdenoCA"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       3          3
+  M                         0          3
+[1] "Head-SCC"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "Kidney-ChRCC"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "Kidney-RCC.clearcell"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       0          3
+  M                         3          3
+[1] "Kidney-RCC.papillary"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Liver-HCC"
+     
+      nucleotidesubstitution1 signatures
+  DM                        3          0
+  LNM                       0          3
+  M                         0          3
+[1] "Lung-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Lung-SCC"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Lymph-BNHL"
+     
+      nucleotidesubstitution1 signatures
+  DM                        3          3
+  LNM                       0          3
+  M                         0          3
+[1] "Lymph-CLL"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       3          3
+  M                         0          6
+[1] "Myeloid-AML"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Myeloid-MPN"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        3                       0          3
+  LNM                       0                       3          3
+  M                         0                       0          6
+[1] "Ovary-AdenoCA"
+     
+      nucleotidesubstitution1 signatures
+  DM                        3          3
+  LNM                       0          3
+  M                         0          3
+[1] "Panc-AdenoCA"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       3          0
+  M                         0          3
+[1] "Panc-Endocrine"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       3          3
+  M                         0          3
+[1] "Prost-AdenoCA"
+     
+      nucleotidesubstitution1 signatures
+  DM                        0          3
+  LNM                       0          3
+  M                         3          0
+[1] "Skin-Melanoma.acral"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "Skin-Melanoma.cutaneous"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "SoftTissue-Leiomyo"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "SoftTissue-Liposarc"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "Stomach-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "Thy-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+[1] "Uterus-AdenoCA"
+     
+      nucleotidesubstitution1 nucleotidesubstitution3 signatures
+  DM                        0                       3          3
+  LNM                       0                       0          6
+  M                         3                       0          3
+Biliary-AdenoCA_signatures_20000_MROO.RData 
+signatures 	 Biliary-AdenoCA_signatures_20000_MROO.RData 
+[1] "../data/inference/Biliary-AdenoCA_signatures_20000_MROO.RData"
+Error in unique(npatientsx2) : object 'npatientsx2' not found
+Calls: lapply -> FUN -> na.omit -> unlist -> unique
+In addition: Warning messages:
+1: In if (is.na(i)) { :
+  the condition has length > 1 and only the first element will be used
+2: In if (is.na(i)) { :
+  the condition has length > 1 and only the first element will be used
+Execution halted

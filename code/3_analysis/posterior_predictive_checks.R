@@ -257,6 +257,7 @@ for (type_feature in type_features){
       prcomp_res = lapply(list_for_model, function(i) i$prcomp_res)
       projected_observed = lapply(list_for_model, function(i) i$projected_observed)
       cols = lapply(list_for_model, function(i) i$cols)
+      npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
       npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
       if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
       npatients = npatientsx2/2
