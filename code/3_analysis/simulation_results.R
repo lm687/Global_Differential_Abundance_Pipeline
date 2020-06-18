@@ -3,7 +3,7 @@
 #########################################################
 
 ## Comparison of simulated results from the inferred parameters, for D-M vs simpler Multinomial
-debug = TRUE
+debug = FALSE
 if(debug){
   rm(list = ls())
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
@@ -299,7 +299,7 @@ for (type_feature in type_features){
               cbind(rep(normalise_rw(objects_sigs_per_CT[[type_feature]][[ct_raw]][[group_idx]])[person_idx,signature_idx], size_subsample),
                     do.call('cbind', select_person(posteriors$M$theta, person_idx+(group_idx-1)*npatients))[sample(1:nits, size_subsample,
                                                                                                                     replace=FALSE),signature_idx])
-            }else if(model = 'DM'){
+            }else if(model == 'DM'){
               stop('Not implented')
               # normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, person_idx)),
               #                                                                                     1, MCMCpack::rdirichlet, n=1)),
