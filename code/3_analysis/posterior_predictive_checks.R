@@ -38,7 +38,11 @@ print(opt$files_posteriors)
 
 source("3_analysis/helper/helper_analyse_posteriors.R")
 source("3_analysis/helper/helper_simulation.R")
-files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
+if(length(opt$files_posteriors) == 1){
+  sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
+}else{
+  files_posterior_split = do.call('cbind', sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]]))
+}
 print(files_posterior_split)
 ct = unique(basename(files_posterior_split[1,]))
 type_feature = unique(files_posterior_split[2,])
