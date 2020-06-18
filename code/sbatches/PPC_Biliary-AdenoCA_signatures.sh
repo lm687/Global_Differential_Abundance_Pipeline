@@ -10,6 +10,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
-Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posterior 'Biliary-AdenoCA_signatures_20000_MROO.RData Biliary-AdenoCA_signatures_20000_LNMROO.RData Biliary-AdenoCA_signatures_ROO.RData'
+Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posteriors '../data/inference/Biliary-AdenoCA_signatures_20000_MROO.RData'
 
 conda deactivate

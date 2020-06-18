@@ -23,12 +23,13 @@ if(debug){
   opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData")
 }else{
   option_list = list(
-    make_option(c("--files_posterior"), type="character", default=NA, 
+    make_option(c("--files_posteriors"), type="character", default=NA, 
                 help="File with the posterior, with directory included", metavar="character")
   );
   opt_parser = OptionParser(option_list=option_list);
   opt = parse_args(opt_parser);
-  opt$files_posterior = strsplit(opt$files_posterior, " ")
+  opt$files_posteriors = strsplit(opt$files_posteriors, " ")[[1]]
+  print(opt$files_posteriors)
 }
 
 source("3_analysis/helper/helper_analyse_posteriors.R")

@@ -10,6 +10,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
-Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posterior 'Skin-Melanoma.cutaneous_signatures_ROO.RData Skin-Melanoma.cutaneous_signatures_20000_LNMROO.RData Skin-Melanoma.cutaneous_signatures_20000_DMROO.RData Skin-Melanoma.cutaneous_signatures_20000_MROO.RData'
+Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posteriors '../data/inference/Skin-Melanoma.cutaneous_signatures_20000_MROO.RData'
 
 conda deactivate

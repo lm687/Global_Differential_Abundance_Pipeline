@@ -4,9 +4,9 @@ folder_inference = '../data/inference/'
 subfiles = set([ '_'.join(x.split('_')[0:2]) for x in os.listdir(folder_inference) if 'RData' in x ])
 
 for s in subfiles:
-    all_files = ' '.join([j for j in os.listdir(folder_inference) if str(s) in j])
+    all_files = ' '.join([folder_inference+j for j in os.listdir(folder_inference) if str(s) in j])
 
-    script = "Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posterior '{}'".format(all_files)
+    script = "Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posteriors '{}'".format(all_files)
 
     fileout="sbatches/PPC_"+str(s)+".sh"
     a = open(fileout, "w")
