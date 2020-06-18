@@ -10,6 +10,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
-Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posterior 'Kidney-ChRCC_signatures_ROO.RData Kidney-ChRCC_signatures_20000_LNMROO.RData Kidney-ChRCC_signatures_20000_DMROO.RData Kidney-ChRCC_signatures_20000_MROO.RData'
+Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posteriors '../data/inference/Kidney-ChRCC_signatures_ROO.RData ../data/inference/Kidney-ChRCC_signatures_20000_LNMROO.RData ../data/inference/Kidney-ChRCC_signatures_20000_DMROO.RData ../data/inference/Kidney-ChRCC_signatures_20000_MROO.RData'
 
 conda deactivate

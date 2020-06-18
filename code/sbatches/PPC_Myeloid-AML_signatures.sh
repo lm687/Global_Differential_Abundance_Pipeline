@@ -10,6 +10,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
-Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posterior 'Myeloid-AML_signatures_20000_LNMROO.RData Myeloid-AML_signatures_ROO.RData Myeloid-AML_signatures_20000_MROO.RData Myeloid-AML_signatures_20000_DMROO.RData'
+Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posteriors '../data/inference/Myeloid-AML_signatures_20000_LNMROO.RData ../data/inference/Myeloid-AML_signatures_ROO.RData ../data/inference/Myeloid-AML_signatures_20000_MROO.RData ../data/inference/Myeloid-AML_signatures_20000_DMROO.RData'
 
 conda deactivate

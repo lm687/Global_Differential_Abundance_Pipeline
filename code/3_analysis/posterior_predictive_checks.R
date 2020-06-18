@@ -32,6 +32,10 @@ if(debug){
   print(opt$files_posteriors)
 }
 
+cat('Arguments read')
+print(opt$files_posteriors)
+
+
 source("3_analysis/helper/helper_analyse_posteriors.R")
 source("3_analysis/helper/helper_simulation.R")
 files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
