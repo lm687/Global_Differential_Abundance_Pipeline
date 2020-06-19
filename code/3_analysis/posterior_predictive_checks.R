@@ -39,8 +39,10 @@ print(opt$files_posteriors)
 source("3_analysis/helper/helper_analyse_posteriors.R")
 source("3_analysis/helper/helper_simulation.R")
 if(length(opt$files_posteriors) == 1){
-  sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
-}else{
+  files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
+}else if {length(opt$files_posteriors) == 2){
+  files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
+}else if {length(opt$files_posteriors) > 2){
   files_posterior_split = do.call('cbind', sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]]))
 }
 print(files_posterior_split)
@@ -68,16 +70,16 @@ posteriors = lapply(opt$files_posteriors,
                     function(f){
                       if(substr(f, nchar(f), nchar(f)) == "/" | basename(f) == "NA" ){
                         # no file
-                        NA
+                        list(NA, NA)
                       }else{
                         print(f)
                         load(f)
                         x = tryCatch(rstan::extract(fit_stan))
                         if(is.null(x)){
                           ## no samples
-                          NA
+                          list(NA, NA)
                         }else{
-                          x
+                          list(list, x)
                         }
                       }
                     })
