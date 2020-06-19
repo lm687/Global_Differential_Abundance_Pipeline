@@ -6,7 +6,6 @@
 # Sys.setenv(LANG='en')
 
 library(rstan)
-library(clusterGeneration) ## for sampling covariance matrix sigma
 library(uuid)
 library(optparse)
 source("2_inference/helper/helper_DA_stan.R")

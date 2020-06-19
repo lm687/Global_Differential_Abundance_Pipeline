@@ -9,6 +9,11 @@ softmax = function(v){
   .x/sum(.x)
 }
 
+softmax_mat = function(v){
+  .x = t(apply(v, 1, exp))
+  sweep(.x, 1, rowSums(.x), '/')
+}
+
 normalise_rw = function (x) 
 {
   sweep(x, 1, rowSums(x), "/")

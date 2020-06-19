@@ -28,8 +28,8 @@ transformed parameters{
     full_v[i,d] = 0;
   }
 
-  for(i in 1:2*n){
-    theta[i,] = softmax(full_v[i,]);
+  for(l in 1:2*n){
+    theta[l,] = softmax(full_v[l,]);
   }
 
   mu = x'*beta + Z'*rep_matrix(u, d-1);

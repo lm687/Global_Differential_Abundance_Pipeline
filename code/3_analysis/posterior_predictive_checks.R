@@ -17,7 +17,7 @@ library(CompSign)
 library(scales)
 library(optparse)
 
-debug = FALSE
+debug = TRUE
 if(debug){
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData")
@@ -35,14 +35,15 @@ if(debug){
 cat('Arguments read')
 print(opt$files_posteriors)
 
-
 source("3_analysis/helper/helper_analyse_posteriors.R")
 source("3_analysis/helper/helper_simulation.R")
+source("2_inference/helper/helper_DA_stan.R")
+
 if(length(opt$files_posteriors) == 1){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
-}else if {length(opt$files_posteriors) == 2){
+}else if(length(opt$files_posteriors) == 2){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
-}else if {length(opt$files_posteriors) > 2){
+}else if(length(opt$files_posteriors) > 2){
   files_posterior_split = do.call('cbind', sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]]))
 }
 print(files_posterior_split)
@@ -65,8 +66,8 @@ give_roo_wrapper = function(.it_features, .list_CT){
 
 ROO_object = give_roo_wrapper(type_feature, ct)
 
-
-posteriors = lapply(opt$files_posteriors,
+## Load (1) the posteriors and (2) the covariate matrix Z and the random effect matrix Z
+posteriors_and_covariates = lapply(opt$files_posteriors,
                     function(f){
                       if(substr(f, nchar(f), nchar(f)) == "/" | basename(f) == "NA" ){
                         # no file
@@ -74,16 +75,18 @@ posteriors = lapply(opt$files_posteriors,
                       }else{
                         print(f)
                         load(f)
-                        x = tryCatch(rstan::extract(fit_stan))
-                        if(is.null(x)){
+                        fit = tryCatch(rstan::extract(fit_stan))
+                        if(is.null(fit)){
                           ## no samples
                           list(NA, NA)
                         }else{
-                          list(list, x)
+                          list(fit, list(X=X, Z=Z))
                         }
                       }
                     })
-names(posteriors) = model
+posteriors = lapply(posteriors_and_covariates, function(i) i[[1]])
+covariates = lapply(posteriors_and_covariates, function(i) i[[2]])
+names(posteriors) = names(covariates) = model
 
 ## Simulate with the total number of mutations for DM
 rowsums_toll = unlist(lapply(ROO_object, rowSums))
@@ -103,11 +106,16 @@ names(bool_data_avilable) = model
 ## since not all have been run for the same number of iterations, subset the posteriors
 lengths_beta_all = sapply(posteriors, function(i) if(length(i) == 1){if(is.na(i)){NA}} else{dim(i$beta)[3]})
 
+## <posteriors_all> contains all posteriors. Whenever a posterior is not available we get an NA
+## On the other hand, <posteriors > only contains valid posteriors
 posteriors_all = posteriors
 posteriors = posteriors[!is.na(lengths_beta_all)]
 lengths_beta = lengths_beta_all[!is.na(lengths_beta_all)]
-if(length(lengths_beta) == 0){ quit() } ## no posteriors to analyse
-if(length(lengths_beta) == 1){bool_comparison=FALSE}else{bool_comparison=TRUE} ## if we are comparing models, we need at least twoz
+
+## if there are no posteriors to analyse, quit
+if(length(lengths_beta) == 0){ quit() }
+## if we are comparing models, we need at least two
+if(length(lengths_beta) == 1){bool_comparison=FALSE}else{bool_comparison=TRUE}
 
 ####################################################################################################
 ##################################### Comparison of beta values ####################################
@@ -241,6 +249,97 @@ sapply(model, function(model_idx){
 dev.off()
 
 #########################################################################################################
+
+#########################################################################################################
+############### Lower-dimensional representation of posteriors and of observed values [2] ###############
+#########################################################################################################
+## This time I am sampling from the model (coefficients beta, u) instead of from the posteriors of theta
+## or alpha themselves
+list_for_model = lapply(model, function(name_model){
+  if(bool_data_avilable[name_model]){
+    npatients = dim(posteriors_all[[name_model]]$u)[2]
+    npatientsx2 = npatients*2
+    patient_idx = 1
+    if(name_model == 'DM'){
+      ## For each model, patient and group, simulate data
+      nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
+      sample_posterior_idx = 1
+      softmax_mat(cbind(t(covariates[[name_model]]$X) %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z) %*% posteriors_all[[name_model]]$u[sample_posterior_idx,], simplify = FALSE)),
+            rep(0, dim(covariates[[name_model]]$Z)[2]))) * posteriors_all[[name_model]]$overdispersion_scalars
+      
+      alpha_mean = append_col( (x'*beta + Z'*rep_matrix(u, d-1)), rep_vector(0, 2*n));
+      for(l in 1:(2*n)){
+        alpha[l,] = to_row_vector(softmax(to_vector(alpha_mean[l,])))* overdispersion_scalars[l];
+      }
+    }
+      
+      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, patient_idx)),
+                                                                                          1, MCMCpack::rdirichlet, n=1)),
+                                                                                  1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+    }else{
+      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[name_model]]$theta, patient_idx)),
+                                                                                  1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+    }
+    
+    sim_counts = do.call('rbind', sim_counts)
+    
+    sim_counts = sim_counts[! (colSums(apply(sim_counts, 1, is.na)) > 0),]
+    
+    par(mfrow=c(1,1))
+    cols = rep(1:npatientsx2, each=dim(sim_counts)[1]/npatientsx2)
+    subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
+                                                            size = 1000,#round(0.1*sum(cols == i)),
+                                                            replace = FALSE )))
+    sim_counts = sim_counts[subset,]
+    cols = cols[subset]
+    prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
+    prcomp_res = prcomp_all$x[,c(1,2)]
+    projected_observed = (scale(normalise_rw(do.call('rbind', ROO_object)),
+                                center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
+    
+  }else{
+    sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
+  }
+  return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res, projected_observed=projected_observed, cols=cols, npatientsx2=npatientsx2))
+})
+
+sim_counts = lapply(list_for_model, function(i) i$sim_counts)
+prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
+prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
+prcomp_res = lapply(list_for_model, function(i) i$prcomp_res)
+projected_observed = lapply(list_for_model, function(i) i$projected_observed)
+cols = lapply(list_for_model, function(i) i$cols)
+npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
+npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
+if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
+npatients = npatientsx2/2
+names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = names(cols) = model
+
+select_rows = function(df, colours){
+  if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
+}
+
+## plotting the contours for all patients
+splits_df = lapply(1:length(sim_counts), function(i) select_rows(sim_counts[[i]], cols[[i]]) )
+
+names(splits_df) = model
+
+png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
+par(mfrow=c(length(model),2))
+sapply(model, function(model_idx){
+  plot_whole_contour(group_idx = 1, model_name = model_idx, true_contour = FALSE)
+  plot_whole_contour(group_idx = 2, model_name = model_idx, true_contour = FALSE)
+})
+# plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
+# plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
+# plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
+# plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
+# plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
+# plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
+dev.off()
+
+#########################################################################################################
+
 
 #########################################################################################################
 ###### Plots showing whether the credible intervals of the posteriors capture the observed values  ######
