@@ -17,10 +17,10 @@ library(CompSign)
 library(scales)
 library(optparse)
 
-debug = TRUE
+debug = FALSE
 if(debug){
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
-  opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData")
+  opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_LNMROO.RData")
 }else{
   option_list = list(
     make_option(c("--files_posteriors"), type="character", default=NA, 
@@ -41,7 +41,7 @@ source("2_inference/helper/helper_DA_stan.R")
 
 if(length(opt$files_posteriors) == 1){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
-}else if(length(opt$files_posteriors) == 2){
+}else if(length(opt$files_posteriors) >= 2){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
 }else if(length(opt$files_posteriors) > 2){
   files_posterior_split = do.call('cbind', sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]]))
@@ -260,11 +260,11 @@ list_for_model = lapply(model, function(name_model){
     npatients = dim(posteriors_all[[name_model]]$u)[2]
     npatientsx2 = npatients*2
     patient_idx = 1
+    nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
+    sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3) 
     if(name_model == 'DM'){
       ## For each model, patient and group, simulate data
-      nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
-      sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3) 
-      
+
       ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
       ## We only sample some individuals at each run of the posteriors. The selected individuals are stored in <sample_subset_idxs>
       give_theta = function(sample_posterior_idx){
@@ -281,11 +281,9 @@ list_for_model = lapply(model, function(name_model){
       theta_list = lapply(give_theta_res, function(i) i[[1]])
       individuals_list = lapply(give_theta_res, function(i) i[[2]])
     }else if(name_model == 'M'){
-      nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
 
       ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
       ## We only sample some individuals at each run of the posteriors. The selected individuals are stored in <sample_subset_idxs>
-      sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3)
       give_theta = function(sample_posterior_idx){
         sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
         theta = softmax_mat(cbind(t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
@@ -297,8 +295,19 @@ list_for_model = lapply(model, function(name_model){
       give_theta_res = lapply(sample_posterior_idxs, give_theta)
       theta_list = lapply(give_theta_res, function(i) i[[1]])
       individuals_list = lapply(give_theta_res, function(i) i[[2]])
-    
-      }else{
+    }else if(name_model == 'LNM'){
+      ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
+      ## We only sample some individuals at each run of the posteriors. The selected individuals are stored in <sample_subset_idxs>
+      give_theta = function(sample_posterior_idx){
+        sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
+        mu = t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
+          do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$u[sample_posterior_idx,],
+                                                               simplify = FALSE))
+        v = t(apply(mu, 1, mvrnorm, n = 1, Sigma = posteriors_all[[name_model]]$Sigma[sample_posterior_idx,,]))
+        theta = softmax_mat(cbind(v, rep(0, length(sample_subset_idxs))));
+        list(theta, sample_subset_idxs)
+      }
+    }else{
       stop('Not implemented yet')
     }
     cols = unlist(individuals_list) #rep(rep(sample_subset_idxs, length(sample_posterior_idxs)), ### need to change something here
