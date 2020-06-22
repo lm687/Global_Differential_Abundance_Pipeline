@@ -177,76 +177,76 @@ dev.off()
 #########################################################################################################
 ################# Lower-dimensional representation of posteriors and of observed values ################# 
 #########################################################################################################
-list_for_model = lapply(model, function(name_model){
-  if(bool_data_avilable[name_model]){
-    npatients = dim(posteriors_all[[name_model]]$u)[2]
-    npatientsx2 = npatients*2
-    patient_idx = 1
-    if(name_model == 'DM'){
-      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, patient_idx)),
-                                                                                          1, MCMCpack::rdirichlet, n=1)),
-                                                                                  1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
-    }else{
-      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[name_model]]$theta, patient_idx)),
-                                                                                      1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
-    }
-    
-    sim_counts = do.call('rbind', sim_counts)
-    
-    sim_counts = sim_counts[! (colSums(apply(sim_counts, 1, is.na)) > 0),]
-    
-    par(mfrow=c(1,1))
-    cols = rep(1:npatientsx2, each=dim(sim_counts)[1]/npatientsx2)
-    subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
-                                                            size = 1000,#round(0.1*sum(cols == i)),
-                                                            replace = FALSE )))
-    sim_counts = sim_counts[subset,]
-    cols = cols[subset]
-    prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
-    prcomp_res = prcomp_all$x[,c(1,2)]
-    projected_observed = (scale(normalise_rw(do.call('rbind', ROO_object)),
-                                center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
-    
-    }else{
-      sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
-    }
-    return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res, projected_observed=projected_observed, cols=cols, npatientsx2=npatientsx2))
-  })
-  
-sim_counts = lapply(list_for_model, function(i) i$sim_counts)
-prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
-prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
-prcomp_res = lapply(list_for_model, function(i) i$prcomp_res)
-projected_observed = lapply(list_for_model, function(i) i$projected_observed)
-cols = lapply(list_for_model, function(i) i$cols)
-npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
-npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
-if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
-npatients = npatientsx2/2
-names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = names(cols) = model
-
-select_rows = function(df, colours){
-  if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
-}
-
-## plotting the contours for all patients
-splits_df = lapply(1:length(sim_counts), function(i) select_rows(sim_counts[[i]], cols[[i]]) )
-
-names(splits_df) = model
-
-png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
-par(mfrow=c(length(model),2))
-sapply(model, function(model_idx){
-  plot_whole_contour(group_idx = 1, model_name = model_idx, true_contour = FALSE)
-  plot_whole_contour(group_idx = 2, model_name = model_idx, true_contour = FALSE)
-})
-# plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
-# plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
-# plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
-# plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
-# plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
-# plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
-dev.off()
+# list_for_model = lapply(model, function(name_model){
+#   if(bool_data_avilable[name_model]){
+#     npatients = dim(posteriors_all[[name_model]]$u)[2]
+#     npatientsx2 = npatients*2
+#     patient_idx = 1
+#     if(name_model == 'DM'){
+#       sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, patient_idx)),
+#                                                                                           1, MCMCpack::rdirichlet, n=1)),
+#                                                                                   1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+#     }else{
+#       sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[name_model]]$theta, patient_idx)),
+#                                                                                       1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+#     }
+#     
+#     sim_counts = do.call('rbind', sim_counts)
+#     
+#     sim_counts = sim_counts[! (colSums(apply(sim_counts, 1, is.na)) > 0),]
+#     
+#     par(mfrow=c(1,1))
+#     cols = rep(1:npatientsx2, each=dim(sim_counts)[1]/npatientsx2)
+#     subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
+#                                                             size = 1000,#round(0.1*sum(cols == i)),
+#                                                             replace = FALSE )))
+#     sim_counts = sim_counts[subset,]
+#     cols = cols[subset]
+#     prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
+#     prcomp_res = prcomp_all$x[,c(1,2)]
+#     projected_observed = (scale(normalise_rw(do.call('rbind', ROO_object)),
+#                                 center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
+#     
+#     }else{
+#       sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
+#     }
+#     return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res, projected_observed=projected_observed, cols=cols, npatientsx2=npatientsx2))
+#   })
+#   
+# sim_counts = lapply(list_for_model, function(i) i$sim_counts)
+# prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
+# prcomp_all = lapply(list_for_model, function(i) i$prcomp_all)
+# prcomp_res = lapply(list_for_model, function(i) i$prcomp_res)
+# projected_observed = lapply(list_for_model, function(i) i$projected_observed)
+# cols = lapply(list_for_model, function(i) i$cols)
+# npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
+# npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
+# if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
+# npatients = npatientsx2/2
+# names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = names(cols) = model
+# 
+# select_rows = function(df, colours){
+#   if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
+# }
+# 
+# ## plotting the contours for all patients
+# splits_df = lapply(1:length(sim_counts), function(i) select_rows(sim_counts[[i]], cols[[i]]) )
+# 
+# names(splits_df) = model
+# 
+# png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
+# par(mfrow=c(length(model),2))
+# sapply(model, function(model_idx){
+#   plot_whole_contour(group_idx = 1, model_name = model_idx, true_contour = FALSE)
+#   plot_whole_contour(group_idx = 2, model_name = model_idx, true_contour = FALSE)
+# })
+# # plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
+# # plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
+# # plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
+# # plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
+# # plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
+# # plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
+# dev.off()
 
 #########################################################################################################
 
@@ -263,36 +263,61 @@ list_for_model = lapply(model, function(name_model){
     if(name_model == 'DM'){
       ## For each model, patient and group, simulate data
       nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
-      sample_posterior_idx = 1
-      softmax_mat(cbind(t(covariates[[name_model]]$X) %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z) %*% posteriors_all[[name_model]]$u[sample_posterior_idx,], simplify = FALSE)),
-            rep(0, dim(covariates[[name_model]]$Z)[2]))) * posteriors_all[[name_model]]$overdispersion_scalars
+      sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3) 
+      sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
+      give_theta = function(sample_posterior_idx){
       
-      alpha_mean = append_col( (x'*beta + Z'*rep_matrix(u, d-1)), rep_vector(0, 2*n));
-      for(l in 1:(2*n)){
-        alpha[l,] = to_row_vector(softmax(to_vector(alpha_mean[l,])))* overdispersion_scalars[l];
+        alpha = softmax_mat(cbind(t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
+                                    do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$u[sample_posterior_idx,],
+                                                               simplify = FALSE)),
+              rep(0, length(sample_subset_idxs))) * do.call('cbind', replicate(nfeatures+1, posteriors_all[[name_model]]$overdispersion_scalars[sample_posterior_idx,sample_subset_idxs], simplify = FALSE)))
+        theta = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
+        theta
       }
-    }
+      theta_list = lapply(sample_posterior_idxs, give_theta)
       
-      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(t(apply(do.call('cbind', select_person(posteriors_all[[name_model]]$alpha, patient_idx)),
-                                                                                          1, MCMCpack::rdirichlet, n=1)),
-                                                                                  1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+    }else if(name_model == 'M'){
+      nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
+      # theta = softmax_mat(cbind(t(covariates[[name_model]]$X) %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z) %*% posteriors_all[[name_model]]$u[sample_posterior_idx,], simplify = FALSE)),
+      #                           rep(0, dim(covariates[[name_model]]$Z)[2])))
+      
+      sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3)
+      sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
+      give_theta = function(sample_posterior_idx){
+        
+        theta = softmax_mat(cbind(t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
+                                    do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$u[sample_posterior_idx,],
+                                                               simplify = FALSE)),
+                                  rep(0, length(sample_subset_idxs))))
+        theta
+      }
+      theta_list = lapply(sample_posterior_idxs, give_theta)
     }else{
-      sim_counts = lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(do.call('cbind', select_person(posteriors[[name_model]]$theta, patient_idx)),
-                                                                                  1, rmultinom, n=1, size=rowsums_toll[patient_idx])))
+      stop('Not implemented yet')
     }
+    cols = rep(rep(sample_subset_idxs, length(sample_posterior_idxs)), ### need to change something here
+    print(cols)
+    # subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
+    #                                                         size = 1000,
+    #                                                         replace = FALSE )))
     
+    sim_counts = lapply(1:length(theta_list), function(thetas_idx){
+      do.call('rbind', lapply(1:npatientsx2, function(patient_idx) normalise_cl(apply(theta_list[[thetas_idx]], 1, rmultinom, n=1, size=rowsums_toll[patient_idx]))))
+    })
     sim_counts = do.call('rbind', sim_counts)
     
     sim_counts = sim_counts[! (colSums(apply(sim_counts, 1, is.na)) > 0),]
-    
+    # subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
+    #                                                         size = 1000,
+    #                                                         replace = FALSE )))
+    subset = sample(1:nrow(sim_counts), 1e3, replace = FALSE)
     par(mfrow=c(1,1))
-    cols = rep(1:npatientsx2, each=dim(sim_counts)[1]/npatientsx2)
-    subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
-                                                            size = 1000,#round(0.1*sum(cols == i)),
-                                                            replace = FALSE )))
-    sim_counts = sim_counts[subset,]
+
+    sim_counts_subset = sim_counts[subset,]
+    print(subset)
     cols = cols[subset]
-    prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
+    print(cols)
+    prcomp_all = prcomp(na.omit(sim_counts_subset), scale. = FALSE, center=TRUE)
     prcomp_res = prcomp_all$x[,c(1,2)]
     projected_observed = (scale(normalise_rw(do.call('rbind', ROO_object)),
                                 center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
@@ -300,7 +325,10 @@ list_for_model = lapply(model, function(name_model){
   }else{
     sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
   }
-  return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res, projected_observed=projected_observed, cols=cols, npatientsx2=npatientsx2))
+  return(list(sim_counts=sim_counts_subset, prcomp_all=prcomp_all, prcomp_res=prcomp_res,
+              projected_observed=projected_observed,
+              cols=cols, 
+              npatientsx2=npatientsx2))
 })
 
 sim_counts = lapply(list_for_model, function(i) i$sim_counts)
@@ -313,7 +341,7 @@ npatientsx2 = lapply(list_for_model, function(i) i$npatientsx2)
 npatientsx2 = as.numeric(na.omit(unlist(unique(npatientsx2))))
 if(length(npatientsx2) != 1){stop('The number of patients seems to be different across patients. Stopping.\n')}
 npatients = npatientsx2/2
-names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = names(cols) = model
+names(sim_counts) = names(prcomp_all) = names(prcomp_all) = names(prcomp_res) = names(projected_observed) = model #names(cols) = 
 
 select_rows = function(df, colours){
   if(is.na(colours)){ NA}else{lapply(unique(colours), function(i) df[colours == i,])}
@@ -324,7 +352,7 @@ splits_df = lapply(1:length(sim_counts), function(i) select_rows(sim_counts[[i]]
 
 names(splits_df) = model
 
-png(paste0("../results/simulation_from_params/contourplots_", type_feature, "_", ct, ".png"))
+png(paste0("../results/simulation_from_params/contourplots_v2_", type_feature, "_", ct, ".png"))
 par(mfrow=c(length(model),2))
 sapply(model, function(model_idx){
   plot_whole_contour(group_idx = 1, model_name = model_idx, true_contour = FALSE)
@@ -532,5 +560,7 @@ if(print_latex){
     cat("\n\\newpage\n")
   }
 }
+
+
 
 

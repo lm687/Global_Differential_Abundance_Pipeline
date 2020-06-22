@@ -12,6 +12,10 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
+<<<<<<< HEAD
  ~/.conda/envs/rstan_env/bin/Rscript --vanilla 3_analysis/assess_convergence.R  --file_posterior ../data/inference/Biliary-AdenoCA_signatures_20000_MROO.RData
+=======
+ Rscript --vanilla 3_analysis/assess_convergence.R  --file_posterior ../data/inference/Biliary-AdenoCA_signatures_20000_MROO.RData
+>>>>>>> 6b3ba668aa912fca359d134121e426c2ee2d138a
 
 conda deactivate

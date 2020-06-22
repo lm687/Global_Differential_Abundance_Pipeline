@@ -12,6 +12,6 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
- ~/.conda/envs/rstan_env/bin/Rscript --vanilla 3_analysis/assess_convergence.R  --file_posterior ../data/inference/CNS-GBM_nucleotidesubstitution3_20000_DMROO.RData
+ Rscript --vanilla 3_analysis/assess_convergence.R  --file_posterior ../data/inference/CNS-GBM_nucleotidesubstitution3_20000_DMROO.RData
 
 conda deactivate

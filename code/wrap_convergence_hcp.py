@@ -8,7 +8,7 @@ import os
 nits = 20000
 for i in ['../data/inference/'+x for x in os.listdir("../data/inference/") if 'ROO' in x]:
 
-    script = "~/.conda/envs/rstan_env/bin/Rscript --vanilla 3_analysis/assess_convergence.R  --file_posterior {}".format(i)
+    script = "Rscript --vanilla 3_analysis/assess_convergence.R  --file_posterior {}".format(i)
 
     fileout="sbatches/convergence_"+os.path.basename(i).replace(".RData", ".sh")
     a = open(fileout, "w")
