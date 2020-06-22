@@ -47,23 +47,11 @@ rule make_roo_files:
     shell:
         "Rscript 1_create_ROO/create_ROO_split.R --input_files '{input}' --cancer_type {params.ct} --feature_type {params.f} --output {output}"
 
-# rule inference:
-#     input:
-#         "../data/roo/{{cancer_type}}_{{feature_type}}_ROO.RDS"
-#     params:
-#        #ct="{cancer_type}",
-#        #f="{feature_type}",
-#        mdel="{model}",
-#        nits="{nits}"
-#     output:
-#        "../data/inference/{{cancer_type}}_{{feature_type}}_{{params.nits}}_{{params.mdel}}ROO.RData"
-#     shell:
-#         "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {cancer_type} --typedata {feature_type}\
-#          --infile {input} --output {output} --niterations {params.nits} --model {params.mdel}"
-
 rule inference:
     input:
         "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
+    log:
+        "logs/inference/{cancer_type}_{feature_type}_{nits}_{model}.log"
     params:
        cancer_type="{cancer_type}",
        feature_type="{feature_type}",
@@ -72,4 +60,7 @@ rule inference:
     output:
        "../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData"
     shell:
-        "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}"
+        """module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
+#source activate rstan_env
+~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}
+#conda deactivate"""

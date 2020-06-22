@@ -17,7 +17,7 @@ library(CompSign)
 library(scales)
 library(optparse)
 
-debug = TRUE
+debug = FALSE
 if(debug){
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData")
@@ -41,10 +41,8 @@ source("2_inference/helper/helper_DA_stan.R")
 
 if(length(opt$files_posteriors) == 1){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
-}else if(length(opt$files_posteriors) == 2){
+}else if(length(opt$files_posteriors) >= 2){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
-}else if(length(opt$files_posteriors) > 2){
-  files_posterior_split = do.call('cbind', sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]]))
 }
 print(files_posterior_split)
 ct = unique(basename(files_posterior_split[1,]))
