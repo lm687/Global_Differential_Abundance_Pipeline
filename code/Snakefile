@@ -64,13 +64,12 @@ rule make_roo_files:
 rule inference:
     input:
         "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
-    # params:
-       #ct="{cancer_type}",
-       #f="{feature_type}",
-       # mdel=expand("{mdel}", mdel = models),
-       # nits=expand("{nits}", nits = num_iterations)
+    params:
+       cancer_type="{cancer_type}",
+       feature_type="{feature_type}",
+       model=expand("{model}", model = models),
+       nits=expand("{nits}", nits = num_iterations)
     output:
        "../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData"
     shell:
-        "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {{cancer_type}} --typedata {{feature_type}}\
-         --infile {input} --output {output} --niterations {{nits}} --model {{model}}"
+        "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile {input} --output {output} --niterations {params.nits} --model {params.model}"
