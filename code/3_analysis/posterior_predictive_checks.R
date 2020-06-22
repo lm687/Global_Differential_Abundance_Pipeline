@@ -264,38 +264,44 @@ list_for_model = lapply(model, function(name_model){
       ## For each model, patient and group, simulate data
       nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
       sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3) 
-      sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
-      give_theta = function(sample_posterior_idx){
       
+      ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
+      ## We only sample some individuals at each run of the posteriors. The selected individuals are stored in <sample_subset_idxs>
+      give_theta = function(sample_posterior_idx){
+        sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
+        
         alpha = softmax_mat(cbind(t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
                                     do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$u[sample_posterior_idx,],
                                                                simplify = FALSE)),
               rep(0, length(sample_subset_idxs))) * do.call('cbind', replicate(nfeatures+1, posteriors_all[[name_model]]$overdispersion_scalars[sample_posterior_idx,sample_subset_idxs], simplify = FALSE)))
         theta = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
-        theta
+        list(theta, sample_subset_idxs)
       }
-      theta_list = lapply(sample_posterior_idxs, give_theta)
-      
+      give_theta_res = lapply(sample_posterior_idxs, give_theta)
+      theta_list = lapply(give_theta_res, function(i) i[[1]])
+      individuals_list = lapply(give_theta_res, function(i) i[[2]])
     }else if(name_model == 'M'){
       nfeatures = dim(posteriors_all[[name_model]]$beta)[3]
-      # theta = softmax_mat(cbind(t(covariates[[name_model]]$X) %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z) %*% posteriors_all[[name_model]]$u[sample_posterior_idx,], simplify = FALSE)),
-      #                           rep(0, dim(covariates[[name_model]]$Z)[2])))
-      
+
+      ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
+      ## We only sample some individuals at each run of the posteriors. The selected individuals are stored in <sample_subset_idxs>
       sample_posterior_idxs = sample(1: dim(posteriors_all[[name_model]]$beta)[1], 1e3)
-      sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
       give_theta = function(sample_posterior_idx){
-        
+        sample_subset_idxs = sample(1: dim(covariates[[name_model]]$X)[2], 10)
         theta = softmax_mat(cbind(t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
                                     do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$u[sample_posterior_idx,],
                                                                simplify = FALSE)),
                                   rep(0, length(sample_subset_idxs))))
-        theta
+        list(theta, sample_subset_idxs)
       }
-      theta_list = lapply(sample_posterior_idxs, give_theta)
-    }else{
+      give_theta_res = lapply(sample_posterior_idxs, give_theta)
+      theta_list = lapply(give_theta_res, function(i) i[[1]])
+      individuals_list = lapply(give_theta_res, function(i) i[[2]])
+    
+      }else{
       stop('Not implemented yet')
     }
-    cols = rep(rep(sample_subset_idxs, length(sample_posterior_idxs)), ### need to change something here
+    cols = unlist(individuals_list) #rep(rep(sample_subset_idxs, length(sample_posterior_idxs)), ### need to change something here
     print(cols)
     # subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
     #                                                         size = 1000,
@@ -313,11 +319,12 @@ list_for_model = lapply(model, function(name_model){
     subset = sample(1:nrow(sim_counts), 1e3, replace = FALSE)
     par(mfrow=c(1,1))
 
-    sim_counts_subset = sim_counts[subset,]
-    print(subset)
-    cols = cols[subset]
-    print(cols)
-    prcomp_all = prcomp(na.omit(sim_counts_subset), scale. = FALSE, center=TRUE)
+    ## Moreover, we subset this further (I don't think this is necessary)
+   # sim_counts_subset = sim_counts[subset,]
+   # print(subset)
+   # cols = cols[subset]
+   # print(cols)
+    prcomp_all = prcomp(na.omit(sim_counts), scale. = FALSE, center=TRUE)
     prcomp_res = prcomp_all$x[,c(1,2)]
     projected_observed = (scale(normalise_rw(do.call('rbind', ROO_object)),
                                 center = TRUE, scale = FALSE) %*% prcomp_all$rotation)[,1:2]
@@ -325,7 +332,7 @@ list_for_model = lapply(model, function(name_model){
   }else{
     sim_counts = prcomp_all = prcomp_res = projected_observed = cols = npatientsx2 = NA
   }
-  return(list(sim_counts=sim_counts_subset, prcomp_all=prcomp_all, prcomp_res=prcomp_res,
+  return(list(sim_counts=sim_counts, prcomp_all=prcomp_all, prcomp_res=prcomp_res,
               projected_observed=projected_observed,
               cols=cols, 
               npatientsx2=npatientsx2))
@@ -358,12 +365,6 @@ sapply(model, function(model_idx){
   plot_whole_contour(group_idx = 1, model_name = model_idx, true_contour = FALSE)
   plot_whole_contour(group_idx = 2, model_name = model_idx, true_contour = FALSE)
 })
-# plot_whole_contour(group_idx = 1, model_name = 'DM', true_contour = FALSE)
-# plot_whole_contour(group_idx = 2, model_name = 'DM', true_contour = FALSE)
-# plot_whole_contour(group_idx = 1, model_name = 'M', true_contour = FALSE)
-# plot_whole_contour(group_idx = 2, model_name = 'M', true_contour = FALSE)
-# plot_whole_contour(group_idx = 1, model_name = 'LNM', true_contour = FALSE)
-# plot_whole_contour(group_idx = 2, model_name = 'LNM', true_contour = FALSE)
 dev.off()
 
 #########################################################################################################
