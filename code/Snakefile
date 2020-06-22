@@ -4,15 +4,17 @@ cancer_types = config["sample_groups"]
 grouped_samples = config["grouped_samples"]
 
 samples_list = dict(zip(cancer_types, [grouped_samples[ct].split() for ct in cancer_types]))
+models = ['M', 'DM', 'LNM']
 models = ['M']
-num_iterations = 6000
+num_iterations = 20000
 
 rule all:
     input:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
       # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
       expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
-      # expand("../data/inference/{model}_{Nits}_{cancer_type}_{feature_type}.Rdata",\
+      expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types[0], nits=num_iterations, model=models)
+
 
 rule index_vcf:
     input:
@@ -47,14 +49,14 @@ rule make_roo_files:
 
 rule inference:
     input:
-        "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
+        "../data/roo/{{cancer_type}}_{{feature_type}}_ROO.RDS"
     params:
-       ct="{cancer_type}",
-       f="{feature_type}",
+       #ct="{cancer_type}",
+       #f="{feature_type}",
        mdel="{model}",
-       nits="{Nits}"
+       nits="{nits}"
     output:
-        "../data/inference/{model}_{Nits}_{cancer_type}_{feature_type}.Rdata"
+       "../data/inference/{{cancer_type}}_{{feature_type}}_{{params.nits}}_{{params.mdel}}ROO.RData"
     shell:
-        "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.ct} --typedata {params.f}\
+        "Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {cancer_type} --typedata {feature_type}\
          --infile {input} --output {output} --niterations {params.nits} --model {params.mdel}"
