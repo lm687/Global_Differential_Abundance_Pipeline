@@ -1,0 +1,29 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	inference
+	1
+
+[Mon Jun 22 10:47:19 2020]
+rule inference:
+    input: ../data/roo/Prost-AdenoCA_signatures_ROO.RDS
+    output: ../data/inference/Prost-AdenoCA_signatures_20000_MROO.RData
+    jobid: 0
+    wildcards: cancer_type=Prost-AdenoCA, feature_type=signatures, nits=20000, model=M
+
+Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {cancer_type} --typedata {feature_type} --infile ../data/roo/Prost-AdenoCA_signatures_ROO.RDS --output ../data/inference/Prost-AdenoCA_signatures_20000_MROO.RData --niterations {nits} --model {model}
+Error in library(rstan) : there is no package called ‘rstan’
+Execution halted
+[Mon Jun 22 10:47:19 2020]
+Error in rule inference:
+    jobid: 0
+    output: ../data/inference/Prost-AdenoCA_signatures_20000_MROO.RData
+    shell:
+        Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {cancer_type} --typedata {feature_type} --infile ../data/roo/Prost-AdenoCA_signatures_ROO.RDS --output ../data/inference/Prost-AdenoCA_signatures_20000_MROO.RData --niterations {nits} --model {model}
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
