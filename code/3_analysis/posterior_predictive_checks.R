@@ -277,9 +277,6 @@ list_for_model = lapply(model, function(name_model){
         theta = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
         list(theta, sample_subset_idxs)
       }
-      give_theta_res = lapply(sample_posterior_idxs, give_theta)
-      theta_list = lapply(give_theta_res, function(i) i[[1]])
-      individuals_list = lapply(give_theta_res, function(i) i[[2]])
     }else if(name_model == 'M'){
 
       ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
@@ -292,9 +289,6 @@ list_for_model = lapply(model, function(name_model){
                                   rep(0, length(sample_subset_idxs))))
         list(theta, sample_subset_idxs)
       }
-      give_theta_res = lapply(sample_posterior_idxs, give_theta)
-      theta_list = lapply(give_theta_res, function(i) i[[1]])
-      individuals_list = lapply(give_theta_res, function(i) i[[2]])
     }else if(name_model == 'LNM'){
       ## We sample from the posterior several times. The posterior indices that we use are <sample_posterior_idx>.
       ## We only sample some individuals at each run of the posteriors. The selected individuals are stored in <sample_subset_idxs>
@@ -310,6 +304,9 @@ list_for_model = lapply(model, function(name_model){
     }else{
       stop('Not implemented yet')
     }
+    give_theta_res = lapply(sample_posterior_idxs, give_theta)
+    theta_list = lapply(give_theta_res, function(i) i[[1]])
+    individuals_list = lapply(give_theta_res, function(i) i[[2]])
     cols = unlist(individuals_list) #rep(rep(sample_subset_idxs, length(sample_posterior_idxs)), ### need to change something here
     print(cols)
     # subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
