@@ -20,7 +20,7 @@ library(optparse)
 debug = FALSE
 if(debug){
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
-  opt = list(); opt$files_posteriors = c("../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData", "../data/inference/Kidney-RCC.papillary_signatures_20000_LNMROO.RData")
+  opt = list(); opt$files_posteriors = "../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData ../data/inference/Kidney-RCC.papillary_signatures_20000_DMROO.RData ../data/inference/Kidney-RCC.papillary_signatures_20000_LNMROO.RData"
 }else{
   option_list = list(
     make_option(c("--files_posteriors"), type="character", default=NA, 
@@ -28,9 +28,10 @@ if(debug){
   );
   opt_parser = OptionParser(option_list=option_list);
   opt = parse_args(opt_parser);
-  opt$files_posteriors = strsplit(opt$files_posteriors, " ")[[1]]
-  print(opt$files_posteriors)
 }
+
+opt$files_posteriors = strsplit(opt$files_posteriors, " ")[[1]]
+print(opt$files_posteriors)
 
 cat('Arguments read')
 print(opt$files_posteriors)
