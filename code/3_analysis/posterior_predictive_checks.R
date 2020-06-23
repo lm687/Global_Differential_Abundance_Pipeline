@@ -43,7 +43,7 @@ source("2_inference/helper/helper_DA_stan.R")
 if(length(opt$files_posteriors) == 1){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
 }else if(length(opt$files_posteriors) >= 2){
-  files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
+  files_posterior_split = do.call('cbind', sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]]))
 }
 print(files_posterior_split)
 print(dim(files_posterior_split))
