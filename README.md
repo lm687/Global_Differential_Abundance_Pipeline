@@ -123,7 +123,5 @@ Samples for which there is no VCF file
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/accfc45b-eae0-4991-a488-e217cdb46655
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/bcf858fd-cc3b-4fde-ab10-eb96216f4366
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/c082dc34-457e-40ec-8258-e11e8ed362c2
-
-![betas_tracksig_comparison_M](results/betas/betas_tracksig_comparison_M.pdf "")
-
-![betas_tracksig_comparison_DM](results/betas/betas_tracksig_comparison_DM.pdf "")
+![betas tracksig comparison M](results/betas/betas_tracksig_comparison_M.pdf "")
+![betas tracksig comparison DM](results/betas/betas_tracksig_comparison_DM.pdf "") 
