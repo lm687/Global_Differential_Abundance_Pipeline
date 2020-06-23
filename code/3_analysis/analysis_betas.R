@@ -1,7 +1,7 @@
 ### Analyse the betas
 
-# setwd(dirname(rstudioapi::getSourceEditorContext()$path))
-# setwd("../")
+
+
 
 library(rstan)
 library(reshape2)
@@ -12,8 +12,29 @@ library(ggplot2)
 library(dplyr)
 library(ggrepel)
 
-data_inference = list.files("../data/inference/", full.names = TRUE)
-data_inference = data_inference[grepl("20000ROO", data_inference)]
+debug = FALSE
+if(debug){
+  setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+  setwd("../")
+  opt = list(); opt$files_posteriors = "../data/inference/Biliary-AdenoCA_signatures_20000_MROO.RData	../data/inference/Skin-Melanoma.acral_signatures_20000_MROO.RData ../data/inference/Kidney-RCC.papillary_signatures_20000_MROO.RData ../data/inference/Skin-Melanoma.cutaneous_signatures_20000_MROO.RData"
+  opt$model = 'M'
+}else{
+  option_list = list(
+    make_option(c("--files_posteriors"), type="character", default=NA, 
+                help="File with the posterior, with directory included", metavar="character"),
+    make_option(c("--cancer_type"), type="character", default=NA, 
+                help="File with the posterior, with directory included", metavar="character")
+  );
+  opt_parser = OptionParser(option_list=option_list);
+  opt = parse_args(opt_parser);
+}
+
+opt$files_posteriors = strsplit(opt$files_posteriors, " ")[[1]]
+data_inference = opt$files_posteriors
+model = opt$model = 'M'
+
+# data_inference = list.files("../data/inference/", full.names = TRUE)
+# data_inference = data_inference[grepl("20000_MROO", data_inference)]
 
 posteriors_betas = lapply(data_inference,
                     function(f){
@@ -65,27 +86,36 @@ ggplot(melt(cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) st
   geom_bar(stat='identity', position = "identity", alpha=.3)
 ggsave(filename = "../results/betas/all_betas_zeros.png")
 
-load=F
-if(load){
-  load("../data/robjects_cache/betas91ecb3fe-4ff0-4e91-b6f0-a2eaf027f91e.Rdata")
-  df_betas_zeros = cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) strsplit(i, '_')[[1]][1]),
-                   nonzero_features= unlist(num_not_containing_zero),
-                   features=sapply(posteriors_betas_slope, function(i) dim(i)[2]))
-  df_betas_zeros_melt = melt(df_betas_zeros)
-  ggplot(df_betas_zeros_melt,
-         aes(x=ct, y=value, fill=variable))+
-    geom_bar(stat='identity', position = "identity", alpha=.3)
-  df_betas_zeros_ratio = data.frame(ct=df_betas_zeros$ct, ratio=df_betas_zeros$nonzero_features/df_betas_zeros$features,
-                                    stringsAsFactors = FALSE)
-  ggplot(df_betas_zeros_ratio,
-         aes(x=factor(ct, levels=as.character(ct)[order(ratio)]),
-             y=ratio, label=ct ))+geom_point()+geom_label_repel()+lims(y=c(min(df_betas_zeros_ratio$ratio), 1.2))+
-    theme(axis.title.x=element_blank(),
-          axis.text.x=element_blank(),
-          axis.ticks.x=element_blank())
-  ggsave(filename = "../results/betas/all_betas_zeros2.png", width = 14)
-}
+
+#  load("../data/robjects_cache/betas91ecb3fe-4ff0-4e91-b6f0-a2eaf027f91e.Rdata")
+df_betas_zeros = cbind.data.frame(ct= sapply( names(posteriors_betas), function(i) strsplit(i, '_')[[1]][1]),
+                 nonzero_features= unlist(num_not_containing_zero),
+                 features=sapply(posteriors_betas_slope, function(i) dim(i)[2]))
+df_betas_zeros_melt = melt(df_betas_zeros)
+df_betas_zeros_ratio = data.frame(ct=df_betas_zeros$ct, ratio=df_betas_zeros$nonzero_features/df_betas_zeros$features,
+                                  stringsAsFactors = FALSE)
+
+ggplot(df_betas_zeros_melt,
+       aes(x=ct, y=value, fill=variable))+
+  geom_bar(stat='identity', position = "identity", alpha=.3)
+
+ggplot(df_betas_zeros_ratio,
+       aes(x=factor(ct, levels=as.character(ct)[order(ratio)]),
+           y=ratio, label=ct ))+geom_point()+geom_label_repel()+lims(y=c(min(df_betas_zeros_ratio$ratio), 1.2))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+ggsave(filename = "../results/betas/all_betas_zeros2.png", width = 14)
 
 as.character(df_betas_zeros_ratio$ct)[order(df_betas_zeros_ratio$ratio)]
 
+## load tracksig
+tracksig = read.csv("../data/restricted/tracksig/changepoints_stats_tracksig.csv", stringsAsFactors = FALSE)
+tracksig = tracksig %>% group_by(type) %>% dplyr::summarize(count = n(), bool_changepoints=sum(n_changepoints > 0))%>%
+  mutate(tracksig_frac= bool_changepoints/count  )
+tracksig = cbind(df_betas_zeros_ratio, (tracksig[match(as.character(df_betas_zeros_ratio$ct), tracksig$type),]))
+
+ggplot(tracksig, aes(x=ratio, y=tracksig_frac, label=ct))+geom_point()+geom_label_repel()+
+  labs(x='Ratio of non-zero coefficients', y='Fraction of TrackSig samples with some changepoint')
+ggsave(paste0("../results/betas/betas_tracksig_comparison_", model, '.pdf'), width = 8, height = 8)
 

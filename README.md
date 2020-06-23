@@ -5,7 +5,9 @@ The data folder data/ is restricted and therefore not available
 To set up the conda environment, the file `code/environment.yaml` contains the necessary packages. R=To set up the environment, run
 ```
 (module load miniconda3-4.5.4-gcc-5.4.0-hivczbz)
-conda env create --name snakemake-globalDA --file environment.yaml
+#conda env create --name snakemake-globalDA --file environment.yaml
+conda create -n snakemake-globalDA -c conda-forge bioconda::snakemake bioconda::snakemake-minimal -c bioconda
+
 ```
 to enter the environment, type
 
@@ -121,3 +123,7 @@ Samples for which there is no VCF file
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/accfc45b-eae0-4991-a488-e217cdb46655
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/bcf858fd-cc3b-4fde-ab10-eb96216f4366
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/c082dc34-457e-40ec-8258-e11e8ed362c2
+
+![betas_tracksig_comparison_M](results/betas/betas_tracksig_comparison_M.pdf "")
+
+![betas_tracksig_comparison_DM](results/betas/betas_tracksig_comparison_DM.pdf "")

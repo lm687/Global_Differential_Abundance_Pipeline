@@ -310,7 +310,7 @@ list_for_model = lapply(model, function(name_model){
     theta_list = lapply(give_theta_res, function(i) i[[1]])
     individuals_list = lapply(give_theta_res, function(i) i[[2]])
     cols = unlist(individuals_list) #rep(rep(sample_subset_idxs, length(sample_posterior_idxs)), ### need to change something here
-    print(cols)
+    # print(cols)
     # subset = unlist(lapply(unique(cols), function(i) sample(x = which(cols == i),
     #                                                         size = 1000,
     #                                                         replace = FALSE )))
