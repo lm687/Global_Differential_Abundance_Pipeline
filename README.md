@@ -1,11 +1,10 @@
 ## Ignored folders
-The data folder data/ is restricted and therefore not available
+The data folder `data/` is restricted and therefore not available
 
 ## Environment
-To set up the conda environment, the file `code/environment.yaml` contains the necessary packages. R=To set up the environment, run
+To set up the environment, run
 ```
-(module load miniconda3-4.5.4-gcc-5.4.0-hivczbz)
-#conda env create --name snakemake-globalDA --file environment.yaml
+module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 conda create -n snakemake-globalDA -c conda-forge bioconda::snakemake bioconda::snakemake-minimal -c bioconda
 
 ```
@@ -18,42 +17,32 @@ conda deactivate
 ```
 
 
-## Config file
-first of all
-`config_PCAWG_working.yaml`
-
-snakemake -p ../data/restricted/pcawg/pcawg_restricted_snv/fec30898-f86b-4207-aa78-de77142c8f50.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi
 
 
-### Samples in PCAWG for which there are no VCFs
+
+
+
+### Stan files for inference
+The folder `code/2_inference/` contains all the files for inference.
+
+#### Simulation under the parameters
+
+To simulate data under the parameters see file `code/3_analysis/posterior_predictive_checks.R`, section `Lower-dimensional representation of posteriors and of observed values [2]`. The corresponding results are in the folder `results/simulation_from_params/`
+## Results
+
+Multinomial             |  Dirichlet-Multinomial
+:-------------------------:|:-------------------------:
+![betas tracksig comparison M](results/betas/all_betas_zeros.png "")  | ![betas tracksig comparison DM](results/betas/all_betas_zeros_DM.png "")
+
+Multinomial             |  Dirichlet-Multinomial
+:-------------------------:|:-------------------------:
+![betas tracksig comparison M](results/betas/betas_tracksig_comparison_M.png "")  | ![betas tracksig comparison DM](results/betas/betas_tracksig_comparison_DM.png "")
+
+ 
+### Samples for which there is no VCF file
 These files appear in the metadata and may have them in the mutccf file, but I don't have their VCF, which is the only file that contains what mutation it is (in mutccf you can have the position and CCF, but not mutation type).
 
-../results/reports/faulty_samples
-
-
-## Embedding genome, creating objects, running and analysing inference
-### Modifying vcfs
-
-0. Modify VCF files to get only the important information (position, mutation type), and add the flanking bases (embed to count space)
 ```
-sh code/0_modify_vcf/get_flanking_and_mut.sh
-```
-
-Creates files with suffix `_merged`.
-
-
-1. Create ROO objects
-
-#### Signature definitions
-https://www.synapse.org/#!Synapse:syn11738319
-
-
-
-
-
-
-Samples for which there is no VCF file
-
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/f8467ec8-2d61-ba21-e040-11ac0c483584
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/f856fa85-fdb8-c0b0-e040-11ac0d480b4e
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/f8696c79-b165-92a6-e040-11ac0c4804bf
@@ -123,4 +112,7 @@ Samples for which there is no VCF file
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/accfc45b-eae0-4991-a488-e217cdb46655
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/bcf858fd-cc3b-4fde-ab10-eb96216f4366
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/c082dc34-457e-40ec-8258-e11e8ed362c2
-![betas tracksig comparison M](results/betas/all_betas_zeros.png "")![betas tracksig comparison DM](results/betas/all_betas_zeros_DM.png "")
+```
+
+
+
