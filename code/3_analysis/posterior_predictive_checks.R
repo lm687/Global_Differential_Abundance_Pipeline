@@ -46,7 +46,9 @@ if(length(opt$files_posteriors) == 1){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
 }
 print(files_posterior_split)
-print(dim(files_posterior_split))
+if(is.null(dim(files_posterior_split))){
+  files_posterior_split = do.call('cbind', files_posterior_split)
+}
 ct = unique(basename(files_posterior_split[1,]))
 type_feature = unique(files_posterior_split[2,])
 nits =  as.numeric(files_posterior_split[3,])
@@ -273,7 +275,7 @@ list_for_model = lapply(model, function(name_model){
         alpha = softmax_mat(cbind(t(covariates[[name_model]]$X)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$beta[sample_posterior_idx,,] + 
                                     do.call('cbind', replicate(nfeatures, t(covariates[[name_model]]$Z)[sample_subset_idxs,] %*% posteriors_all[[name_model]]$u[sample_posterior_idx,],
                                                                simplify = FALSE)),
-              rep(0, length(sample_subset_idxs))) * do.call('cbind', replicate(nfeatures+1, posteriors_all[[name_model]]$overdispersion_scalars[sample_posterior_idx,sample_subset_idxs], simplify = FALSE)))
+              rep(0, length(sample_subset_idxs)))) * do.call('cbind', replicate(nfeatures+1, posteriors_all[[name_model]]$overdispersion_scalars[sample_posterior_idx,sample_subset_idxs], simplify = FALSE))
         theta = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
         list(theta, sample_subset_idxs)
       }
