@@ -4,7 +4,8 @@ name_config="config_PCAWG.yaml"
 name_failed_samples="../text/readme/1_faulty_samples"
 echo "Creating config file $name_config ... "
 
-echo "Samples for which there is no VCF file\n" > $name_failed_samples
+echo "Samples for which there is no VCF file\nThese files appear in the metadata and may have them in the mutccf file, but I don't have their VCF, which is the only file that contains what mutation it is (in mutccf you can have the position and CCF, but not mutation type).\n\n `````` " > $name_failed_samples
+
 
 ## Samples
 echo "samples:" > $name_config
@@ -45,3 +46,4 @@ done
 
 
 echo "... Config file $name_config created."
+echo "``````" >> > $name_failed_samples
