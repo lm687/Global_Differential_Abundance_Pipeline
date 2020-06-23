@@ -46,6 +46,7 @@ if(length(opt$files_posteriors) == 1){
   files_posterior_split = sapply(opt$files_posteriors, function(i) strsplit(i, "_")[[1]])
 }
 print(files_posterior_split)
+print(dim(files_posterior_split))
 ct = unique(basename(files_posterior_split[1,]))
 type_feature = unique(files_posterior_split[2,])
 nits =  as.numeric(files_posterior_split[3,])
