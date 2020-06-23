@@ -12,7 +12,7 @@
 module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 source activate rstan_env_analysis
 
-Rscript --vanilla 3_analysis/posterior_predictive_checks.R 
+Rscript --vanilla 3_analysis/posterior_predictive_checks.R --files_posteriors "../data/inference/Bladder-TCC_signatures_20000_DMROO.RData ../data/inference/Bladder-TCC_signatures_20000_MROO.RData ../data/inference/Bladder-TCC_signatures_20000_LNMROO.RData"
 
 conda deactivate
 
