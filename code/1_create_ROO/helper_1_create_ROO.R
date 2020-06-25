@@ -308,3 +308,8 @@ createROO_ROOSigs_object <- function(type_features='nucleotidesubstitution3',
   }
   
 }
+
+give_dummy_row_names = function(df, prefix='Sample'){
+  rownames(df) = paste0(prefix, 1:nrow(df))
+  df
+}

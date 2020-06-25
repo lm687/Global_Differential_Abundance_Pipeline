@@ -13,7 +13,8 @@ rule all:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
       # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
-      expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
+      # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
+      expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{d}_{beta_intensity}", uuid="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
 
 
 rule index_vcf:
@@ -64,3 +65,16 @@ rule inference:
 #source activate rstan_env
 ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}
 #conda deactivate"""
+
+rule simulate_for_comparison:
+    input:
+        "../data/assessing_models_simulation/{uuid}.txt"
+    params:
+        n = expand("{n}", n=config["simulation_n"]),
+        nlambda = expand("{nlambda}", nlambda=config["simulation_nlambda"]),
+        d = expand("{d}", d=config["simulation_d"]),
+        beta_intensity = expand("{beta_intensity}", beta_intensity=config["beta_gamma_shape"])
+    output:
+       "../data/assessing_models_simulation/datasets/{uuid}_{params.n}_{params.nlambda}_{params.d}_{params.beta_intensity}"
+    shell:
+       "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --uuid {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
