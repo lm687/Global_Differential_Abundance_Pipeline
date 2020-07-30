@@ -1,27 +1,42 @@
 
 # scp -r morril01@clust1-headnode.cri.camres.org:/Users/morril01/git_phd/out/DA_stan/DM_B_* /Users/morril01/Documents/PhD/CDA_in_Cancer/out/DA_stan/
 
+##' script to analyse whether the model successfully identifies differentially abundant samples,
+##' and to compare it to existing tools for differential abundance
+
 rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 library(rstan)
 library(optparse)
 library(ggplot2)
 library(cowplot)
+library(bayesplot)
 source("helper/helper_analyse_posteriors.R")
 
-flder_inference = "../../data/assessing_models_simulation/inference_results/"
+##' Note:
+##' ../data/inference_simulation/ should be moved to ../data/assessing_models_simulation/inference_results/
+##' After this is done the folder below should be changed back
+
+# flder_inference = "../../data/assessing_models_simulation/inference_results/"
+flder_inference = "../../data/inference_simulation/"
 flder_datasets = "../../data/assessing_models_simulation/datasets/"
 fles = list.files(flder_inference, full.names = TRUE)
-fles = fles[grep("_DM.RDS", fles)]
-names_uuid = strsplit(basename(fles), '_')[[1]][1]
-names(names_uuid) = fles
+fles = fles[grep("ModelDMROO", fles)]
+# names_uuid = strsplit(basename(fles), '_')[[1]][1]
+# names(names_uuid) = fles
 
 posteriors = list()
+posteriors_mat = list()
 for(f in fles){
   load(f)
   # cat(f, '\n')
-  posteriors[[f]] = tryCatch(extract(fit))
+  posteriors[[f]] = tryCatch(extract(fit_stan))
+  posteriors_mat[[f]] = as.matrix(fit_stan)
 }
+
+# rhats = sapply(posteriors_mat, bayesplot::rhat)
+rhats = sapply(posteriors_mat, rstan::Rhat)
+sort(rhats, decreasing = TRUE)
 
 ## checking if there are any files in which the sampling didn't work
 check_if_no_samples(posteriors, fles, flder_inference)

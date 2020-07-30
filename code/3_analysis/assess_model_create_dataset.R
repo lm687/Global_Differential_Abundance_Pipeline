@@ -2,19 +2,38 @@
 
 rm(list = ls())
 
+library(optparse)
 library(uuid)
 source("2_inference/helper/helper_DA_stan.R")
 source("1_create_ROO/roo_functions.R")
 source("1_create_ROO/helper_1_create_ROO.R")
 
 
+option_list = list(
+make_option(c("--input"), type="character", default=NA,
+            help="Text with small description of the type of simulation being carried out", metavar="character"),
+make_option(c("--d"), type="numeric", default=NA,
+            help="Number of features", metavar="numeric"),
+make_option(c("--n"), type="numeric", default=NA,
+            help="Number of samples", metavar="numeric"),
+make_option(c("--nlambda"), type="numeric", default=NA,
+            help="Parameter lambda for Poisson draws of number of mutations in sample", metavar="numeric"),
+make_option(c("--beta_gamma_shape"), type="numeric", default=NA,
+            help="Shape parameter for gamma distribution for beta (i.e. slope coefficient for changes in exposure between groups)", metavar="numeric"),
+make_option(c("--outfile"), type="character", default=NA,
+            help="Output file in which to write the dataset (RDS file)", metavar="character")
+);
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+
+
 ## (A) simulate from the model with different parameters
-d = 5 # opt$Nk ## number of signatures
-n = 100 #opt$Ns ## number of samples
-beta_gamma_shape = 2.5  ##opt$hyperparam_shape ## shape parameter for the beta
+d = opt$d # opt$Nk ## number of signatures
+n = opt$n #opt$Ns ## number of samples
+beta_gamma_shape = opt$beta_gamma_shape  ##opt$hyperparam_shape ## shape parameter for the beta
 sd_RE = 2 ## standard deviation for random effects
 lambda = c(10, 10) ## overdispersion scalars. Lower value -> higher overdispersion
-Nm_lambda = 300 ## opt$Nm_lambda ## lambda parameter for number of mutations per sample (i.e. a sample in a group)
+Nm_lambda = opt$nlambda ## opt$Nm_lambda ## lambda parameter for number of mutations per sample (i.e. a sample in a group)
 
 ## Group effects
 ## covariate matrix
@@ -71,7 +90,8 @@ write.table("3_analysis/helper/table_simulation_params.txt", append = TRUE, x = 
 
 saveRDS(list(objects_counts=objects_counts, d=d, n= n, beta_gamma_shape=beta_gamma_shape, sd_RE=sd_RE, lambda=lambda, Nm_lambda=Nm_lambda,
              X_sim = X_sim, beta = beta, Z_sim = Z_sim, u = u, lambdas = lambdas, alphabar = alphabar, alpha = alpha, Nm = Nm, W = W),
-        file = paste0("../data/assessing_models_simulation/datasets/ ", uuid, ".RDS"))
+        # file = paste0("../data/assessing_models_simulation/datasets/ ", uuid, ".RDS"))
+        file = opt$outfile)
 
 ## (B) We simulate two populations, and mix them with some proportions.
 
