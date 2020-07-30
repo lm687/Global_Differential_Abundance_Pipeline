@@ -45,5 +45,33 @@ done
 done
 
 
+## Put the simulation results
+echo "\n\nsimulation_n:
+- 10
+- 20
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "simulation_nlambda:
+- 30
+- 100
+- 300
+" >> $name_config
+
+echo "simulation_d:
+- 3
+- 7
+" >> $name_config
+
+echo "beta_gamma_shape:
+- 0
+- 0.02
+- 0.1
+- 1
+- 2.5
+" >> $name_config
+
 echo "... Config file $name_config created."
-echo "``````" >> > $name_failed_samples
+echo "\`\`\`" >> $name_failed_samples
