@@ -13,7 +13,7 @@ data {
 parameters {
   matrix[p,d-1] beta; // coefficients for fixed effects
   vector[n] u; // coefficients for random effects
-  real<lower=0> sigma_u; // sd for random effect coefficients
+  real<lower=0> var_u; // variance for random effect coefficients
 }
 
 
@@ -35,11 +35,11 @@ transformed parameters {
 
 model {
   
-  // prior for standard deviation of random effects
-  sigma_u ~ gamma(5, 5);
+  // prior for variance of random effects
+  var_u ~ gamma(5, 5);
   
   // prior for random effects
-  to_vector(u) ~ normal(0, sqrt(sigma_u));
+  to_vector(u) ~ normal(0, sqrt(var_u));
 
 
   for(d_it in 1:(d-1)){

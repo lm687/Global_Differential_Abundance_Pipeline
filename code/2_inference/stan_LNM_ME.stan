@@ -11,7 +11,7 @@ data{
 parameters{
   cov_matrix[d-1] Sigma; // covariance matrix for the normal
   vector[d-1] v[2*n]; // a realisation of the multivariate normal
-  real<lower=0> sigma_u; // variance for random effects
+  real<lower=0> var_u; // variance for random effects
   matrix[2,d-1] beta; // FE coefficients
   vector[n] u; // RE coeffcicients
 }
@@ -37,11 +37,11 @@ transformed parameters{
 }
 
 model {
-  // prior for random effects
-    sigma_u ~ gamma(5, 5);
+  // prior for variance of random effects
+  var_u ~ gamma(5, 5);
   
   // prior for random effects
-  u ~ normal(0, sqrt(sigma_u));
+  u ~ normal(0, sqrt(var_u));
 
   for(d_it in 1:(d-1)){
     beta[,d_it] ~ uniform(-5, 5);
