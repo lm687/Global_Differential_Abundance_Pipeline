@@ -6,16 +6,20 @@ grouped_samples = config["grouped_samples"]
 samples_list = dict(zip(cancer_types, [grouped_samples[ct].split() for ct in cancer_types]))
 models = ['M', 'DM', 'LNM']
 models = ['LNM']
-num_iterations = 2000
+models = ['DM']
+num_iterations = 15000
 
 rule all:
     input:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
       # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
-      # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
+## [Inference] Running stan code on PCAWG
+      expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
+## [Benchmarking] Creating synthetic datasets
       # expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{d}_{beta_intensity}_dataset.RDS", uuid="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
-      expand("../data/inference_simulation/{uuid}_n{n}_nlambda{nlambda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData", uuid="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"], nits=num_iterations, model=models)
+## [Benchmarking] Performing inference on the simulated datasets
+#      expand("../data/inference_simulation/{uuid}_n{n}_nlambda{nlambda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData", uuid="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"], nits=num_iterations, model=models)
 
 
 rule index_vcf:

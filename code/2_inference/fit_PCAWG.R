@@ -84,11 +84,11 @@ stan_data = list(n=n,
                      Z = Z)
 
 if(opt$model == 'DM'){
-  params = c('beta', 'u', 'sigma_u', 'overdispersion_scalar')
+  params = c('beta', 'u', 'var_u', 'overdispersion_scalar')
 }else if(opt$model == 'LNM'){
-  params = c('Sigma', 'sigma_u', 'beta', 'u')
+  params = c('Sigma', 'var_u', 'beta', 'u')
 }else if(opt$model == 'M'){
-  params = c('beta', 'u', 'sigma_u')
+  params = c('beta', 'u', 'var_u')
 }
 fit_stan <- stan(file = model_file_name, data = stan_data,
                  iter = Nits, chains = 4, cores = 2, thin = 1, pars = params)
