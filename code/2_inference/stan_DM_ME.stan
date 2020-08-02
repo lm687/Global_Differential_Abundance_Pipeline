@@ -46,11 +46,7 @@ model {
   }
   
 // prior for random effects
-<<<<<<< HEAD
   to_vector(u) ~ normal(0, sqrt(var_u));
-=======
-  to_vector(u) ~ normal(0, sqrt(sigma_u_squared));
->>>>>>> a37b4dc8759f208cf0039fb0d3e32f17bb9a0e42
   
   for (l in 1:(2*n) ) {
     w[l,] ~ dirichlet_multinomial(to_vector(alpha[l,]));
