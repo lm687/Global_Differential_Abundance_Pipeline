@@ -3,6 +3,7 @@ rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 library(TMB)
 library(scales)
+source("helper_functions.R")
 # set.seed(1245)
 #-------------------------------------------------------------------------------------------------#
 
@@ -32,13 +33,13 @@ dyn.load(dynlib("ME_dirichletmultinomial"))
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-create_plot = function(){
-  d = 4 # opt$Nk ## number of signatures
-  n = 10 #opt$Ns ## number of samples
-  beta_gamma_shape = 2  ##opt$hyperparam_shape ## shape parameter for the beta
-  sd_RE = 0.3 ## standard deviation for random effects
-  lambda = c(200, 200) ## overdispersion scalars. Lower value -> higher overdispersion
-  Nm_lambda = 300 ## opt$Nm_lambda ## lambda parameter for number of mutations per sample (i.e. a sample in a group)
+create_dataset = function(d=4, n=10, beta_gamma_shape=2, sd_RE=0.3, lambda=c(200,200), Nm_lambda=300){
+  # d = 4 # opt$Nk ## number of signatures
+  # n = 10 #opt$Ns ## number of samples
+  # beta_gamma_shape = 2  ##opt$hyperparam_shape ## shape parameter for the beta
+  # sd_RE = 0.3 ## standard deviation for random effects
+  # lambda = c(200, 200) ## overdispersion scalars. Lower value -> higher overdispersion
+  # Nm_lambda = 300 ## opt$Nm_lambda ## lambda parameter for number of mutations per sample (i.e. a sample in a group)
   
   ## Group effects
   ## covariate matrix
@@ -70,52 +71,69 @@ create_plot = function(){
   
   #-------------------------------------------------------------------------------------------------#
   data <- list(Y = W, n=n*2, d=d, x=t(X_sim), z = t(Z_sim), num_individuals=n)
+  return(list(data=data, true_beta=beta, true_u=u))
+}
+
+inference_random_start = function(d, n, data, true_u, true_beta){
+  parameters <- list(
+    beta = array(#c(rep(runif(1, min = -4, max = 4), (d-1)),
+      runif(d-1, min = -4, max = 4),
+      # rep(runif(1, min = -4, max = 4), (d-1)),
+      dim = c(1,d-1)),
+    # u = matrix(rep(0, n)),
+    u = matrix(runif(n, min = -1, max = 1)),
+    logSigma_RE=0,
+    log_lambda = 2
+  )
+  #-------------------------------------------------------------------------------------------------#
+  
+  #-------------------------------------------------------------------------------------------------#
+  obj <- MakeADFun(data, parameters, DLL="ME_dirichletmultinomial")
+  obj$hessian <- TRUE
+  opt <- do.call("optim", obj)
+  opt
+  opt$hessian ## <-- FD hessian from optim
+  obj$he()    ## <-- Analytical hessian
+  sdreport(obj) ### Hessian for fixed effects was not positive definite! is it because I am including an intercept in the fixed effects?
+  #-------------------------------------------------------------------------------------------------#
+  
+  #-------------------------------------------------------------------------------------------------#
+  ## Comparing true estimate values
+  # par(mfrow=c(1,2))
+  # plot(beta, opt$par[grep(names(opt$par), pattern = 'beta')])
+  # abline(a = c(0,1))
+  # plot(u, opt$par[grep(names(opt$par), pattern = 'u')])
+  # rsq(x = as.vector(u),  y = opt$par[grep('u', names(opt$par))])
+  # abline(a = c(0,1))
+  # rsq(x = as.vector(beta),  y = opt$par[grep('beta', names(opt$par))])
+  #-------------------------------------------------------------------------------------------------#
+  
+  return(list(x=t(data$x),
+              betas_estimate = opt$par[grep(names(opt$par), pattern = 'beta')],
+              u_estimate = opt$par[grep(names(opt$par), pattern = 'u')],
+              true_beta = true_beta,
+              true_u=as.vector(true_u),
+              initial_beta = parameters$beta,
+              initial_u = as.vector(parameters$u)))
+}
+
+replicate_inference = function(d=4, n=10, beta_gamma_shape=2, sd_RE=0.3, lambda=c(200,200), Nm_lambda=300, nreplicas=30){
+  
+  data_list = create_dataset(d, n, beta_gamma_shape, sd_RE, lambda, Nm_lambda)
+  
+  inference = c(replicate(nreplicas, inference_random_start(d = d, n = n, data = data_list[['data']],
+                                                            data_list[['true_u']], data_list[['true_beta']]), simplify = FALSE))
+}
+
+create_plot = function(d=4, n=10, beta_gamma_shape=2, sd_RE=0.3, lambda=c(200,200), Nm_lambda=300){
+  
+  data_list = create_dataset(d, n, beta_gamma_shape, sd_RE, lambda, Nm_lambda)
+
   # dev.off(); image(t(data$Y))
   
-  inference_random_start = function(){
-    parameters <- list(
-      beta = array(#c(rep(runif(1, min = -4, max = 4), (d-1)),
-                    runif(d-1, min = -4, max = 4),
-                     # rep(runif(1, min = -4, max = 4), (d-1)),
-                   dim = c(1,d-1)),
-      # u = matrix(rep(0, n)),
-      u = matrix(runif(n, min = -1, max = 1)),
-      logSigma_RE=0,
-      log_lambda = 2
-    )
-    #-------------------------------------------------------------------------------------------------#
-    
-    #-------------------------------------------------------------------------------------------------#
-    obj <- MakeADFun(data, parameters, DLL="ME_dirichletmultinomial")
-    obj$hessian <- TRUE
-    opt <- do.call("optim", obj)
-    opt
-    opt$hessian ## <-- FD hessian from optim
-    obj$he()    ## <-- Analytical hessian
-    sdreport(obj) ### Hessian for fixed effects was not positive definite! is it because I am including an intercept in the fixed effects?
-    #-------------------------------------------------------------------------------------------------#
-    
-    #-------------------------------------------------------------------------------------------------#
-    ## Comparing true estimate values
-    # par(mfrow=c(1,2))
-    # plot(beta, opt$par[grep(names(opt$par), pattern = 'beta')])
-    # abline(a = c(0,1))
-    # plot(u, opt$par[grep(names(opt$par), pattern = 'u')])
-    # rsq(x = as.vector(u),  y = opt$par[grep('u', names(opt$par))])
-    # abline(a = c(0,1))
-    # rsq(x = as.vector(beta),  y = opt$par[grep('beta', names(opt$par))])
-    #-------------------------------------------------------------------------------------------------#
-    
-    return(list(x=X_sim,
-                betas_estimate = opt$par[grep(names(opt$par), pattern = 'beta')],
-                u_estimate = opt$par[grep(names(opt$par), pattern = 'u')],
-                true_beta = beta,
-                true_u=as.vector(u),
-                initial_beta = parameters$beta,
-                initial_u = as.vector(parameters$u)))
-  }
   nreplicas = 30
-  inference = c(replicate(nreplicas, inference_random_start(), simplify = FALSE))
+  inference = c(replicate(nreplicas, inference_random_start(d = d, n = n, data = data_list[['data']],
+                                                            data_list[['true_u']], data_list[['true_beta']]), simplify = FALSE))
   
   ## we are only plotting the first two betas
   lims = lapply(1:(d-1), function(beta_idx) sapply(list(c(sapply(inference, function(i) i$betas_estimate)[beta_idx,],
@@ -141,5 +159,30 @@ create_plot = function(){
 }
 
 par(mfrow=c(2,6))
-results_inference = replicate(6, create_plot())
+results_inference = replicate(6, create_plot(d = 4, n = 10, beta_gamma_shape = 2, sd_RE = 0.3,
+                                             lambda = c(200, 200), Nm_lambda = 300))
 ## two examples of sets of coefficients which should give equally good fits
+
+
+results_inference_more = replicate(40, replicate_inference(d = 4, n = 10, beta_gamma_shape = 2, sd_RE = 0.3,
+                                             lambda = c(200, 200), Nm_lambda = 300, nreplicas = 2))
+## random effects
+plot(results_inference[1,1][[1]]$true_u,
+     results_inference[1,1][[1]]$u_estimate)
+
+plot_pairs_with_identity(t(sapply(1:ncol(results_inference), function(dataset_idx) cbind(results_inference[1,dataset_idx][[1]]$true_u,
+                                                         results_inference[1,dataset_idx][[1]]$u_estimate))))
+all_u_scatter = do.call('rbind', lapply(1:ncol(results_inference), function(dataset_idx) cbind(results_inference[1,dataset_idx][[1]]$true_u,
+                                                                               results_inference[1,dataset_idx][[1]]$u_estimate)))
+colnames(all_u_scatter) = c('true u', 'estimate u')
+plot_pairs_with_identity(all_u_scatter)
+
+#---
+plot_pairs_with_identity(t(sapply(1:ncol(results_inference_more),
+                                  function(dataset_idx) cbind(results_inference_more[1,dataset_idx][[1]]$true_u,
+                                                              results_inference_more[1,dataset_idx][[1]]$u_estimate))))
+all_u_scatter = do.call('rbind', lapply(1:ncol(results_inference_more),
+                                        function(dataset_idx) cbind(results_inference_more[1,dataset_idx][[1]]$true_u,
+                                                                    results_inference_more[1,dataset_idx][[1]]$u_estimate)))
+par(mfrow=c(1,1), mar=c(2,2,2,2)); plot(all_u_scatter); abline(coef=c(0,1), col='blue')
+## sometimes we get extreme values for the random effects coefficients

@@ -20,8 +20,10 @@ Type objective_function<Type>::operator() ()
   PARAMETER_MATRIX(u); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
   PARAMETER(logSigma_RE); // log of the standard deviation of the random effects coefficients
   // PARAMETER(log_sd); // log of the standard devs (scaling factor) for MVN
+  PARAMETER_MATRIX(theta_prime);
 
   int d_min1 = d - 1;
+  // matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)
 
   // PARAMETER_VECTOR(cov_par); // number of parameters in the covariance matrix to infer
   // vector<Type> cov_par((d*d-d)/2); // how I had it before but I think it was wrong
@@ -34,7 +36,6 @@ Type objective_function<Type>::operator() ()
 
   matrix<Type> mu(n,d_min1); // mean parameter for multivariate normal
   vector<Type> residual(d_min1);
-  matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)
 
   for(int i=0;i<num_individuals;i++){
     nll -= dnorm(u(i), Type(0.0), exp(logSigma_RE), true);

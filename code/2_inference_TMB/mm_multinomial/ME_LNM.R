@@ -33,7 +33,7 @@ dyn.load(dynlib("ME_LNM"))
 #-------------------------------------------------------------------------------------------------#
 d = 2 # opt$Nk ## number of signatures
 n = 20 #opt$Ns ## number of samples
-beta_gamma_shape = 2  ##opt$hyperparam_shape ## shape parameter for the beta
+beta_gamma_shape = 0.02  ##opt$hyperparam_shape ## shape parameter for the beta
 sd_RE = 1.3 ## standard deviation for random effects
 lambda = c(200, 200) ## overdispersion scalars. Lower value -> higher overdispersion
 Nm_lambda = 300 ## opt$Nm_lambda ## lambda parameter for number of mutations per sample (i.e. a sample in a group)
@@ -76,7 +76,8 @@ parameters <- list(
   beta = matrix(rep(runif(1, min = -4, max = 4), (d-1)),
          nrow = 1, byrow=TRUE),
   u = matrix(rep(1, n)),
-  logSigma_RE=1
+  logSigma_RE=1,
+  theta_prime = matrix(0, nrow=nrow(W), ncol=d-1)
   # mu_par = rep(0, (d-1)*(d-1)-(d-1))/2
   # cov_par = rep(0, (d-1)*(d-1)-(d-1))/2
 )
@@ -96,10 +97,20 @@ sdreport(obj)
 ## Comparing true estimate values
 par(mfrow=c(1,2))
 plot(beta, opt$par[grep(names(opt$par), pattern = 'beta')])
-abline(a = c(0,1))
+abline(coef = c(0,1))
 plot(u, opt$par[grep(names(opt$par), pattern = 'u')])
 rsq(x = as.vector(u),  y = opt$par[grep('u', names(opt$par))])
-abline(a = c(0,1))
+abline(coef = c(0,1))
 rsq(x = as.vector(beta),  y = opt$par[grep('beta', names(opt$par))])
 #-------------------------------------------------------------------------------------------------#
 
+## Note change in scale
+plot(u, opt$par[names( opt$par) == 'u'])
+
+t(X_sim) %*% (matrix(opt$par[names(opt$par) == "beta"]))
+
+theta_est = softmax(cbind(t(Z_sim)%*%replicate(d-1, opt$par[names(opt$par) == "u"], simplify = TRUE), 0))
+
+dev.off(); par(mfrow=c(1,2))
+image(t(theta), zlim = c(0,1))
+image(t(theta_est), zlim = c(0,1))
