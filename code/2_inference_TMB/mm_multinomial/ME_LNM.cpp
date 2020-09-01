@@ -17,10 +17,11 @@ Type objective_function<Type>::operator() ()
   DATA_MATRIX(z); // matrix for random effects
   int num_individuals = z.cols(); // number of patients
   PARAMETER_MATRIX(beta); // coefficients for the fixed effects
-  PARAMETER_MATRIX(u); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
+  PARAMETER_MATRIX(u_random_effects); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
   PARAMETER(logSigma_RE); // log of the standard deviation of the random effects coefficients
   // PARAMETER(log_sd); // log of the standard devs (scaling factor) for MVN
   PARAMETER_MATRIX(theta_prime);
+  PARAMETER_VECTOR(cov_par); //vector<Type> cov_par((d_min1*d_min1-d_min1)/2);
 
   int d_min1 = d - 1;
   // matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)
@@ -29,7 +30,6 @@ Type objective_function<Type>::operator() ()
   // vector<Type> cov_par((d*d-d)/2); // how I had it before but I think it was wrong
   using namespace density;
   // Type log_sd; // log of the standard devs (scaling factor) for MVN
-  vector<Type> cov_par((d_min1*d_min1-d_min1)/2);
   UNSTRUCTURED_CORR_t<Type> nll_mvn(cov_par);
   int log_sd = 1; // dummy
   density::VECSCALE_t<density::UNSTRUCTURED_CORR_t<Type>> scnldens = density::VECSCALE(nll_mvn, log_sd);
@@ -38,12 +38,12 @@ Type objective_function<Type>::operator() ()
   vector<Type> residual(d_min1);
 
   for(int i=0;i<num_individuals;i++){
-    nll -= dnorm(u(i), Type(0.0), exp(logSigma_RE), true);
+    nll -= dnorm(u_random_effects(i), Type(0.0), exp(logSigma_RE), true);
   }
 
   matrix<Type> u_large(num_individuals ,d_min1); // matrix with columns equal to u, repeated d-1 times
   for(int j=0;j<d_min1;j++){
-    u_large.col(j) = u;
+    u_large.col(j) = u_random_effects;
   }
   mu = x * beta + z * u_large;
 

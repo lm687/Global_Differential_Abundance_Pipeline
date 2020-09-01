@@ -51,7 +51,7 @@ stan_data = list(n=n,
                  x = X,
                  Z = Z)
 
-params = c('beta', 'u', 'sigma_u')
+params = c('beta', 'u', 'var_u')
 
 fit_stan <- stan(file = model_file_name, data = stan_data,
                  iter = Nits, chains = 4, cores = 4, thin = 1, pars = params, control = list(stepsize=3, adapt_delta=0.95, max_treedepth=9))

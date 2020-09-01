@@ -43,26 +43,28 @@ Type objective_function<Type>::operator() ()
   nll = Type(0.0);    // Assign value 1.2; a cast is needed.
 
   DATA_MATRIX(Y); // observations (count matrix)
-  DATA_INTEGER(d) // number of features;
-  DATA_INTEGER(n) // number of samples;
+  int d = Y.cols();
+  int n = Y.rows();
+  // DATA_INTEGER(d) // number of features;
+  // DATA_INTEGER(n) // number of samples;
   DATA_INTEGER(num_individuals); // number of different indivdiduals (each with a random effect)
   DATA_MATRIX(x); // matrix of covariates for fixed effects
   DATA_MATRIX(z); // matrix for random effects
   PARAMETER_MATRIX(beta); // coefficients for the fixed effects
-  PARAMETER_MATRIX(u); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
+  PARAMETER_MATRIX(u_random_effects); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
   PARAMETER(logSigma_RE); // log of the standard deviation of the random effects coefficients
   PARAMETER(log_lambda); // log of the parameter for overdispersion in Dirichlet-Multinomial model
   int d_min1 = d - 1;
 
 
   for(int i=0;i<num_individuals;i++){
-    nll -= dnorm(u(i), Type(0.0), exp(logSigma_RE), true);
+    nll -= dnorm(u_random_effects(i), Type(0.0), exp(logSigma_RE), true);
   }
 
 
   matrix<Type> u_large(num_individuals, d_min1); // matrix with columns equal to u, repeated d-1 times
   for(int j=0;j<d_min1;j++){
-    u_large.col(j) = u;
+    u_large.col(j) = u_random_effects;
   }
 
   matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)

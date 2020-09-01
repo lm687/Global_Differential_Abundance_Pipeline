@@ -123,6 +123,7 @@ replicate_inference = function(d=4, n=10, beta_gamma_shape=2, sd_RE=0.3, lambda=
   
   inference = c(replicate(nreplicas, inference_random_start(d = d, n = n, data = data_list[['data']],
                                                             data_list[['true_u']], data_list[['true_beta']]), simplify = FALSE))
+  return('thiswas not here before!'inference)
 }
 
 create_plot = function(d=4, n=10, beta_gamma_shape=2, sd_RE=0.3, lambda=c(200,200), Nm_lambda=300){

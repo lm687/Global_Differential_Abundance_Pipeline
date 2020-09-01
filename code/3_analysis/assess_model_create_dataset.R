@@ -10,6 +10,8 @@ source("1_create_ROO/helper_1_create_ROO.R")
 
 
 option_list = list(
+make_option(c("--simulation_generation"), type="character", default=NA,
+              help="Type of simulation", metavar="character"),
 make_option(c("--input"), type="character", default=NA,
             help="Text with small description of the type of simulation being carried out", metavar="character"),
 make_option(c("--d"), type="numeric", default=NA,
@@ -41,7 +43,12 @@ X_sim = matrix(NA, nrow=2, ncol=2*n)
 ## the samples are split into two groups
 X_sim[1,] = 1
 X_sim[2,] = rep(c(0,1), each=n)
-beta = matrix(0, nrow=2, ncol=d-1)
+if(opt$simulation_generation == 'A'){
+  beta = matrix(0, nrow=2, ncol=d-1)
+}else if(opt$simulation_generation == 'B'){
+  beta = matrix(0, nrow=2, ncol=d-1)
+  beta[1,] = runif(n = d-1, min = -1, max = -1)
+}
 beta[2,] = rgamma(n = d-1, shape = beta_gamma_shape, rate = beta_gamma_shape) ## for the coefficients
 
 ## Random effects

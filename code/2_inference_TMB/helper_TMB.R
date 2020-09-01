@@ -1,0 +1,253 @@
+softmax = function(x){
+  if(is.null(dim(x))){
+    ## vector
+    sum_x = sum(exp(x))
+    exp(x)/sum_x
+  }else{
+    ## matrix
+    sum_x = rowSums(exp(x))
+    sweep(exp(x), 1, sum_x, '/')
+  }
+}
+
+reflect_matrix = function(m){
+  m[nrow(m):1,]
+}
+
+rsq = function (x, y) cor(x, y) ^ 2
+
+load_PCAWG = function(ct, typedata, simulation=FALSE){
+  if(simulation){
+    fle = ct
+  }else{
+    fle = paste0("../../data/roo/", ct, '_', typedata, "_ROO.RDS" )
+  }
+  objects_sigs_per_CT_features <- readRDS(fle)
+  
+  if(simulation){
+    objects_sigs_per_CT_features = objects_sigs_per_CT_features[[1]]
+  }
+  
+  if(length(objects_sigs_per_CT_features) == 1){
+    if(typeof(objects_sigs_per_CT_features) != "S4"){
+      if(is.na(objects_sigs_per_CT_features)){
+        return(NA)
+      }
+    }
+  }
+  
+  if(typedata %in% c("nucleotidesubstitution1", "simulation")){
+    objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+  }else if(typedata == "nucleotidesubstitution3"){
+    objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+  }else if(typedata == "signatures"){
+    if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0)){
+      ## no active signatures
+      objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+    }else{
+      objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_active")
+    }
+    objects_sigs_per_CT_features = lapply(objects_sigs_per_CT_features, function(i){
+      rwn = rownames(i)
+      .x = apply(i, 2, as.numeric)
+      rownames(.x) = rwn
+      round(.x)
+    })
+  }
+  
+  d = ncol(objects_sigs_per_CT_features[[1]]) ## number of signatures or features
+  n = nrow(objects_sigs_per_CT_features[[1]]) ## number of samples
+  
+  print(n)
+  
+  # covariate matrix
+  X = matrix(NA, nrow=2, ncol=2*n)
+  X[1,] = 1
+  X[2,] = rep(c(0,1), each=n)
+  
+  Z0 = matrix(0, nrow=n, ncol=n)
+  diag(Z0) = 1
+  Z = t(rbind(Z0, Z0))
+  
+  ## The counts
+  W = rbind(objects_sigs_per_CT_features[[1]], objects_sigs_per_CT_features[[2]])
+  
+  return(list(x=t(X), z=t(Z), Y=W))
+}
+
+wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE){
+  cat(ct)
+  cat(typedata)
+  data = load_PCAWG(ct, typedata, simulation)
+  if(length(data) == 1){
+    if(is.na(data)){
+      return(warning('RDS object is NA'))
+    }
+  }
+  data$Y = matrix(data$Y, nrow=nrow(data$Y))
+  data$x = (matrix(data$x, ncol=2))
+  
+  # if((nrow(data$x) + ncol(data$Y))*2 > nrow(data$Y)){return(warning('Little data'))}
+  
+  # data <- list(Y = W, x=t(X_sim), z = t(Z_sim))
+  d <- ncol(data$Y)
+  n <- ncol(data$z)
+  
+  if(model == "M"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_random_effects = matrix(rep(1, n)),
+      logSigma_RE=1
+    )
+    obj <- MakeADFun(data, parameters, DLL="ME_multinomial", random = "u_random_effects")
+  }else if(model == "LNM"){
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_random_effects = matrix(rep(1, n)),
+      logSigma_RE=0,
+      theta_prime = matrix(0, nrow=nrow(data$Y), ncol=d-1),
+      cov_par = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    )
+    obj <- MakeADFun(data, parameters, DLL="ME_LNM", random = "u_random_effects")
+  }else if(model == "DM"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_random_effects = matrix(rep(1, n)),
+      logSigma_RE=1,
+      log_lambda =1
+    )
+    obj <- MakeADFun(data, parameters, DLL="ME_dirichletmultinomial", random = "u_random_effects")
+  }
+  obj$hessian <- TRUE
+  opt <- do.call("optim", obj)
+  opt
+  opt$hessian ## <-- FD hessian from optim
+  # obj$he()    ## <-- Analytical hessian
+  return(sdreport(obj))
+}
+
+python_like_select = function(vector, grep_substring){
+  vector[grepl(pattern = grep_substring, x = vector)]
+}
+
+python_like_select_name = function(vector, grep_substring){
+  vector[grepl(pattern = grep_substring, x = names(vector))]
+}
+
+python_like_select_colnames = function(matrix, grep_substring){
+  matrix[,grepl(pattern = grep_substring, x = colnames(matrix))]
+}
+
+python_like_select_rownames = function(matrix, grep_substring){
+  matrix[grepl(pattern = grep_substring, x = rownames(matrix)),]
+}
+
+clean_name = function(x){
+  gsub(".RDS", "", paste0(strsplit(x, "_")[[1]][2:3], collapse = ""))
+}
+
+give_summary_per_sample = function(TMB_object){
+  if(is.null(TMB_object)){
+    "Object doesn't exist"
+  }else{
+    if(typeof(TMB_object) == "character"){
+      return('Timeout or some error')
+    }else{
+      if(TMB_object$pdHess){
+        return('Good')
+      }else{
+        return('Non-PD')
+      }
+    }
+  }
+}
+
+give_summary_of_runs = function(vector_TMB_objects, long_return){
+  timeout_bool = sapply(vector_TMB_objects, typeof) == "character"
+  hessian_positivedefinite_bool = sapply(vector_TMB_objects[!timeout_bool], function(i) i$pdHess)
+  summary_runs = c(sum(timeout_bool), sum(!hessian_positivedefinite_bool), sum(hessian_positivedefinite_bool))
+  names(summary_runs) = c('(failed) timeout', '(failed) non-positive semi-definite hessian', '(successful) positive semi-definite hessian')
+  if(long_return){
+    list(Timeout=names(vector_TMB_objects)[timeout_bool],
+         hessian_nonpositivedefinite_bool = names(vector_TMB_objects)[!timeout_bool][!hessian_positivedefinite_bool],
+         hessian_positivedefinite_bool = names(vector_TMB_objects)[!timeout_bool][hessian_positivedefinite_bool])
+  }else{
+    return(summary_runs)
+  }
+}
+
+get_summary_stan = function(model, typefeature){
+  sapply(as.character(unique(samples_files$CT)), function(i){
+    idx = which( (stan_results$CT == i) & (stan_results$features == typefeature) & (stan_results$model == model))
+    if(length(idx) == 0){return("Object doesn't exist")}else{
+      rw = stan_results[idx,]
+      if(rw$divergent.transitions == "True"){
+        return('Divergent transitions')
+      } else if(rw$Cancelled..time.limit. == "True"){
+        return('Timeout')
+      } else if(!is.na(rw$Rhat.high) | !is.na(rw$ESS)){
+        return('No good convergence')
+      } else{
+        return('Good')
+      }
+    }
+  })
+}
+
+load_posteriors = function(fle_rdata){
+  load(fle_rdata)
+  list(posteriors_betas=posteriors_betas,
+       posteriors_betas_slope=posteriors_betas_slope,
+       num_not_containing_zero=num_not_containing_zero)
+}
+
+wald_generalised = function(v, sigma){
+  chisqrt_stat = t(v) %*% solve(sigma) %*% v
+  pchisq(q = chisqrt_stat, df = 1, lower.tail = FALSE)
+}
+
+wald_TMB_wrapper = function(i){
+  if(typeof(i) == "character"){
+    return(NA)
+  }else{
+    idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"))
+    wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+  }
+}
+
+
+select_slope = function(i){
+  stop('Deprecated due to error! use <select_slope_2> instead')
+  i[(length(i)/2+1):(length(i))]
+}
+
+select_slope_2 = function(i, verbatim=TRUE){
+  if(is.null(dim(i))){
+    if(verbatim) warning('As per 27 August it seems clear that this version, and not <select_slope>, is correct')
+    i[c(F,T)]
+  }else{
+    i[,c(F,T)]
+  }
+}
+
+
+vector_to_ct_list = function(vec){
+  ##' given a vector which contains two or more types of features for the same cancer types,
+  ##' convert it to a matrix with the pairing per cancer type
+  which_sigs = (grep('signatures', names(vec)))
+  which_nuc = (grep('nucleotidesubstitution1', names(vec)))
+  if(sum(length(which_sigs)+length(which_nuc)) < length(vec)){stop('There is a third feature category')}
+  ct_naked1 = gsub('signatures', '', names(vec)[which_sigs])
+  ct_naked2 = gsub('nucleotidesubstitution1', '', names(vec)[which_nuc])
+  ct_naked1[match(ct_naked1, ct_naked2)]
+  ret = cbind(vec[which_sigs][match(ct_naked1, ct_naked2)], vec[which_nuc])
+  rownames(ret) = gsub('signatures', '', rownames(ret))
+  colnames(ret) = c('signatures', 'nucleotidesubsitution1')
+  return(ret)
+}
+

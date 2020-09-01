@@ -4,15 +4,15 @@ duplicate_rows = function(df, n){
   .x
 }
 
-softmax = function(v){
-  .x = sapply(v, exp)
-  .x/sum(.x)
-}
-
-softmax_mat = function(v){
-  .x = t(apply(v, 1, exp))
-  sweep(.x, 1, rowSums(.x), '/')
-}
+# softmax = function(v){
+#   .x = sapply(v, exp)
+#   .x/sum(.x)
+# }
+# 
+# softmax_mat = function(v){
+#   .x = t(apply(v, 1, exp))
+#   sweep(.x, 1, rowSums(.x), '/')
+# }
 
 normalise_rw = function (x) 
 {

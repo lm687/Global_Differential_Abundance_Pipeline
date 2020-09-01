@@ -16,8 +16,8 @@ source activate snakemake-globalDA
 conda deactivate
 ```
 
-
-
+## Synthetic datasets
+- Generation A: 20200625. There is a beta intercept of zero
 
 
 
