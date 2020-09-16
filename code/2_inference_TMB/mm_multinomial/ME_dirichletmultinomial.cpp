@@ -43,18 +43,20 @@ Type objective_function<Type>::operator() ()
   nll = Type(0.0);    // Assign value 1.2; a cast is needed.
 
   DATA_MATRIX(Y); // observations (count matrix)
-  int d = Y.cols();
-  int n = Y.rows();
-  // DATA_INTEGER(d) // number of features;
-  // DATA_INTEGER(n) // number of samples;
+  int d = Y.cols(); // number of features
+  int n = Y.rows(); // 2*n samples
   DATA_INTEGER(num_individuals); // number of different indivdiduals (each with a random effect)
   DATA_MATRIX(x); // matrix of covariates for fixed effects
   DATA_MATRIX(z); // matrix for random effects
+  DATA_MATRIX(lambda_accessory_mat); // matrix to get a length 2*n vector lambda from a length 2 vector lambda
   PARAMETER_MATRIX(beta); // coefficients for the fixed effects
   PARAMETER_MATRIX(u_random_effects); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
   PARAMETER(logSigma_RE); // log of the standard deviation of the random effects coefficients
-  PARAMETER(log_lambda); // log of the parameter for overdispersion in Dirichlet-Multinomial model
+  PARAMETER_VECTOR(log_lambda); // log of the parameter for overdispersion in Dirichlet-Multinomial model (2 values, one for each group)
   int d_min1 = d - 1;
+
+  matrix<Type> log_lambda_vec(n, 1);
+  log_lambda_vec = lambda_accessory_mat * log_lambda; // get a vector of lambdas of length 2*n
 
 
   for(int i=0;i<num_individuals;i++){
@@ -69,7 +71,6 @@ Type objective_function<Type>::operator() ()
 
   matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)
   theta_prime = x * beta + z * u_large;
-
 
   vector<Type> Q(n); // The probabilities of each event (marginal of exp of ALR)
   for(int l=0;l<n;l++){
@@ -91,7 +92,7 @@ Type objective_function<Type>::operator() ()
 
   for(int l=0; l<n; l++){ // Multinomial draws
     vector<Type> lth_row = Y.row(l);
-    vector<Type> alpha_l = theta.row(l)*exp(log_lambda)*1000;
+    vector<Type> alpha_l = theta.row(l)*exp(log_lambda_vec(l))*1000;
     nll -= dirichlet_multinomial(lth_row, alpha_l, d);
   }
   return nll;

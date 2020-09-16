@@ -131,3 +131,11 @@ for(cancer_type in sort(unique(types$Cancer_type))){
 }
 dev.off()
 
+## number of samples in each ct
+cat(paste0(sapply(roo_files[sort(names(roo_files[grepl('nucleotidesubstitution1', names(roo_files))]))],
+       function(i) try(nrow(i@count_matrices_all[[1]]))), sep='\n'))
+## tex version
+print(xtable::xtable((cbind(sapply(basename(names(roo_files[sort(names(roo_files[grepl('nucleotidesubstitution1', names(roo_files))]))])), function(i) strsplit(i, '_')[[1]][[1]]),
+                            sapply(roo_files[sort(names(roo_files[grepl('nucleotidesubstitution1', names(roo_files))]))],
+       function(i) try(nrow(i@count_matrices_all[[1]])))
+       ))), include.rownames=FALSE)

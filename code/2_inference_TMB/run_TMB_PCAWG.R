@@ -17,12 +17,17 @@ folder_robjs = "../../data/robjects_cache/tmb_results/"
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-TMB::compile("mm_multinomial/ME_LNM.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/ME_LNM"))
 TMB::compile("mm_multinomial/ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/ME_multinomial"))
 TMB::compile("mm_multinomial/ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
+TMB::compile("mm_multinomial/ME_LNM.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/ME_LNM"))
+TMB::compile("mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial"))
+TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial"))
+
 #-------------------------------------------------------------------------------------------------#
 
 
@@ -30,9 +35,9 @@ dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
 samples_files = data.frame(do.call('rbind', sapply(gsub("_ROO.RDS", "", list.files("../../data/roo/")),
                                         strsplit, split = "_")))
 colnames(samples_files) = c('CT', 'type')
-table(samples_files[,1], samples_files[,2])
-ct = "Breast-DCIS" #samples_files[1,1]
-typedata = "signatures" #samples_files[1,2]
+# table(samples_files[,1], samples_files[,2])
+# ct = "Breast-DCIS" #samples_files[1,1]
+# typedata = "signatures" #samples_files[1,2]
 
 samples_files2 = samples_files %>% filter(type != "nucleotidesubstitution3")
 rownames(samples_files2) = rownames(samples_files)[samples_files$type != "nucleotidesubstitution3"]
@@ -43,16 +48,6 @@ rownames(samples_files2) = rownames(samples_files)[samples_files$type != "nucleo
 ## run at random
 if(re_run_inference){
 
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("LNM_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
-           function(idx){
-  # mclapply(1:nrow(samples_files), function(idx){
-    i = samples_files2[idx,]
-    x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "LNM"),
-                    timeout = 300, onTimeout = "warning")
-    saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "LNM_", rownames(i), ".RDS"))
-  })
-  
   mclapply(sample(which(is.na(match(rownames(samples_files2),
                                     gsub(".RDS", "", gsub("M_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
    function(idx){
@@ -70,19 +65,50 @@ if(re_run_inference){
                              timeout = 300, onTimeout = "warning")
              saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "DM_", rownames(i), ".RDS"))
            })
+  
+  
+  mclapply(sample(which(is.na(match(rownames(samples_files2),
+                                    gsub(".RDS", "", gsub("LNM_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
+           function(idx){
+             # mclapply(1:nrow(samples_files), function(idx){
+             i = samples_files2[idx,]
+             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "LNM"),
+                             timeout = 300, onTimeout = "warning")
+             saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "LNM_", rownames(i), ".RDS"))
+           })
+
+  mclapply(sample(which(is.na(match(rownames(samples_files2),
+                                    gsub(".RDS", "", gsub("fullRE_M_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
+           function(idx){
+             i = samples_files2[idx,]
+             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_M"),
+                             timeout = 300, onTimeout = "warning")
+             saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "fullRE_M_", rownames(i), ".RDS"))
+           })
+  
+  mclapply(sample(which(is.na(match(rownames(samples_files2),
+                                     gsub(".RDS", "", gsub("fullRE_DM_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
+            function(idx){
+              i = samples_files2[idx,]
+              x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DM"),
+                              timeout = 300, onTimeout = "warning")
+              saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "fullRE_DM_", rownames(i), ".RDS"))
+            })
+  
+  
 }
 
 #----------------------------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------------------------------------------------#
-# re-run those that had NaN due to bad initial values
-ct = "Uterus-AdenoCA"
-type= "signatures" #"nucleotidesubstitution1" #"signatures" # #
-model = "DM"
-rm(x)
-x = wrapper_run_TMB(ct, type, model)
-x
-saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", model, "_", ct, "_", type, ".RDS"))
+# # re-run those that had NaN due to bad initial values
+# ct = "Kidney-RCC.papillary"
+# type= "nucleotidesubstitution1" #"signatures" # #
+# model = "fullRE_DM"
+# rm(x)
+# x = wrapper_run_TMB(ct, type, model, allow_new_LNM = TRUE)
+# x
+# saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", model, "_", ct, "_", type, ".RDS"))
 #------------------------------------------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------------------#
@@ -90,11 +116,15 @@ results_TMB_M = lapply( python_like_select(list.files(folder_robjs), "^M_"), fun
 names(results_TMB_M) = sapply(python_like_select(list.files(folder_robjs), "^M_"), clean_name)
 results_TMB_DM = lapply( python_like_select(list.files(folder_robjs), "^DM_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_DM) = sapply(python_like_select(list.files(folder_robjs), "^DM_"), clean_name)
-results_TMB_DM_dep = lapply( python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"),
-                             function(i) readRDS(paste0("../../data/robjects_cache/tmb_results_dep/", i)))
-names(results_TMB_DM_dep) = sapply(python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"), clean_name)
+# results_TMB_DM_dep = lapply( python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"),
+#                              function(i) readRDS(paste0("../../data/robjects_cache/tmb_results_dep/", i)))
+# names(results_TMB_DM_dep) = sapply(python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"), clean_name)
 results_TMB_LNM = lapply( python_like_select(list.files(folder_robjs), "^LNM_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_LNM) = sapply(python_like_select(list.files(folder_robjs), "^LNM_"), clean_name)
+names(results_TMB_LNM) = sapply(python_like_select(list.files(folder_robjs), "^LNM_"), clean_name_fullRE)
+results_TMB_fullRE_M = lapply( python_like_select(list.files(folder_robjs), "^fullRE_M_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_fullRE_M) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_M_"), clean_name_fullRE)
+results_TMB_fullRE_DM = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DM_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_fullRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DM_"), clean_name_fullRE)
 #----------------------------------------------------------------------------------------------------#
 
 if(give_summary_runs){
@@ -127,36 +157,54 @@ if(give_summary_runs){
   #------------------------------------------------------------------------------------------------------------------------#
   
   #------------------------------------------------------------------------------------------------------------------------#
-  for(i in sapply(results_TMB_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
-         give_summary_per_sample)){cat(i,'\n')}
+  # for(i in sapply(results_TMB_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+  #        give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
   
-  for(i in sapply(results_TMB_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
+  for(i in sapply(results_TMB_fullRE_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   
-  for(i in sapply(results_TMB_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
-                  give_summary_per_sample)){cat(i,'\n')}
-  #------------------------------------------------------------------------------------------------------------------------#
-  
-  #------------------------------------------------------------------------------------------------------------------------#
-  for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+  for(i in sapply(results_TMB_fullRE_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   
-  for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
-                  give_summary_per_sample)){cat(i,'\n')}
-  
-  for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+  for(i in sapply(results_TMB_fullRE_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   #------------------------------------------------------------------------------------------------------------------------#
   
   #------------------------------------------------------------------------------------------------------------------------#
-  for(i in sapply(results_TMB_LNM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+  # for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  
+  for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   
-  for(i in sapply(results_TMB_LNM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
+  for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   
-  for(i in sapply(results_TMB_LNM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+  for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
+  #------------------------------------------------------------------------------------------------------------------------#
+  
+  #------------------------------------------------------------------------------------------------------------------------#
+  # for(i in sapply(results_TMB_LNM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_LNM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_LNM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
   #------------------------------------------------------------------------------------------------------------------------#
 
   
@@ -190,8 +238,8 @@ if(give_summary_runs){
 
 #------------------------------------------------------------------------------------------------------------------------#
 
-betasM = load_posteriors("../../data/robjects_cache/betas91ecb3fe-4ff0-4e91-b6f0-a2eaf027f91e.Rdata")
-betasDM = load_posteriors("../../data/robjects_cache/betas316eb9a5-31f9-4d4b-be88-1b0e5c184286_DM.Rdata")
+betasM = load_posteriors("../../data/robjects_cache/betas91ecb3fe-4ff0-4e91-b6f0-a2eaf027f91e_M_signatures.Rdata")
+betasDM = load_posteriors("../../data/robjects_cache/betas316eb9a5-31f9-4d4b-be88-1b0e5c184286_DM_signatures.Rdata")
 
 # some example
 betasDM$posteriors_betas$`Biliary-AdenoCA_signatures_20000_DMROO`
@@ -201,7 +249,7 @@ set.seed(182)
 
 #------------------------------------------------------------------------------------------------------------------------#
 ## they should have the same dimensions
-length(results_TMB_DM$`Biliary-AdenoCAsignatures`$par.fixed[grep("beta", names(results_TMB_DM$`Biliary-AdenoCAsignatures`$par.fixed))])
+length(select_slope_2(results_TMB_DM$`Biliary-AdenoCAsignatures`$par.fixed[grep("beta", names(results_TMB_DM$`Biliary-AdenoCAsignatures`$par.fixed))], verbatim = FALSE))
 dim(betasDM$posteriors_betas$`Biliary-AdenoCA_signatures_20000_DMROO`[,python_like_select(colnames(betasDM$posteriors_betas$`Biliary-AdenoCA_signatures_20000_DMROO`), "beta\\[2,")])
 
 ## plotting the histogram of the posteriors and the point MLE
@@ -216,7 +264,7 @@ if(replot){
     
     d_min_1 = sum(grepl('beta\\[2,', colnames(betasDM$posteriors_betas[[idx_posteriors]])))
     
-    pdf(paste0("../../results/TMB/", nme, ".pdf"))
+    pdf(paste0("../../results/TMB/MLE_stan_comparison_DM_double_lambda/", nme, ".pdf"))
     par(mfrow=c(4,4))
     for(idx in 1:d_min_1){
       beta_val = select_slope_2(results_TMB_DM[[nme]]$par.fixed[grep("beta", names(results_TMB_DM[[nme]]$par.fixed))])[idx]
@@ -240,7 +288,6 @@ subset_results_TMB_DM = results_TMB_DM[match(sapply(names(betasDM$posteriors_bet
 subset_results_TMB_DM_dep = results_TMB_DM_dep[match(sapply(names(betasDM$posteriors_betas_slope), function(i) paste0(strsplit(i, '_')[[1]][1:2], collapse = "")),
                                              names(results_TMB_DM_dep))]
 
-
 ## compare betas (note that some gave NaN for their standard error)
 unlisted_TMB_list = function(TMB_list){
   sapply(1:length(TMB_list), function(dataset){
@@ -253,17 +300,21 @@ unlisted_TMB_list = function(TMB_list){
 }
 
 betas_TMB_M_subset = unlisted_TMB_list(subset_results_TMB_M)
-unlisted_TMB_M = sapply(betas_TMB_M, select_slope_2, verbatim=FALSE)
+unlisted_TMB_M = sapply(betas_TMB_M_subset, select_slope_2, verbatim=FALSE)
 betas_TMB_DM_subset = unlisted_TMB_list(subset_results_TMB_DM)
 unlisted_TMB_DM = sapply(betas_TMB_DM_subset, select_slope_2, verbatim=FALSE)
-names(unlisted_TMB_M) = subset_results_TMB_M
-names(unlisted_TMB_DM) = subset_results_TMB_DM
+names(unlisted_TMB_M) = names(subset_results_TMB_M)
+names(unlisted_TMB_DM) = names(subset_results_TMB_DM)
 
 unlisted_stan_mean_M = sapply(betasM$posteriors_betas_slope, function(i) colMeans(i))
 unlisted_stan_mean_DM = sapply(betasDM$posteriors_betas_slope, function(i) colMeans(i))
 
 unlisted_RE_coef_stan_mean_M = 0 ## I would need to get those from the cluster
 
+for(i in which(is.na(names(unlisted_TMB_DM)))){
+  ## need to find the number of features d for these missing tmb runs
+  unlisted_TMB_DM[[i]] = rep(NA, ncol(betasDM$posteriors_betas_slope[[names(betasDM$posteriors_betas_slope)[i]]]))
+}
 
 ## make sure they are the same length
 length(unlisted_TMB_DM)
@@ -272,6 +323,7 @@ length(unlisted_stan_mean_DM)
 ## make sure they are the same length
 length(unlisted_TMB_DM %>% unlist)
 length(unlisted_stan_mean_DM %>% unlist)
+## bad
 
 ## TRUE, FALSE, colour scheme
 myColors <- c('#5ad3b7', '#d35a6c')
@@ -307,9 +359,9 @@ ggsave("../../results/TMB/betas_stan_TMB_M_per_ct.pdf", width = 12)
 plot(unlisted_TMB_DM %>% unlist, unlisted_stan_mean_DM %>% unlist, col=c('blue', 'red')[factor(sapply(subset_results_TMB_DM, give_summary_per_sample) == "Good", levels=c(T,F))], pch=8)
 df_betas_slope_DM = cbind.data.frame( TMB_estimate=(unlisted_TMB_DM %>% unlist),
                                       stan_mean=(unlisted_stan_mean_DM %>% unlist),
-                                      TMB_estimate_dep=(unlisted_TMB_DM_dep %>% unlist),
+                                      #TMB_estimate_dep=(unlisted_TMB_DM_dep %>% unlist),
                                       Bool_good_convergence=factor(rep(sapply(subset_results_TMB_DM, give_summary_per_sample) == "Good",
-                                                                       as.vector(sapply(subset_results_TMB_DM, function(i) sum(names(i$par.fixed) == "beta")/2)))), ## /2 because of the intercept and the slope
+                                                                       as.vector(sapply(unlisted_TMB_DM, length)))), ## /2 because of the intercept and the slope
                                       ct = rep(sapply(names(unlisted_stan_mean_DM), function(i) paste0(strsplit(i, '_')[[1]][1:2], collapse = " ")),
                                                sapply(unlisted_TMB_DM, length)))
 ggplot(df_betas_slope_DM,
@@ -333,7 +385,7 @@ ggplot(df_betas_slope_DM,
 ## checking the scatterplot of the previous version which didn't have an intercept in beta
 ggplot(df_betas_slope_DM,
        aes(x=TMB_estimate, y=stan_mean))+
-  geom_point()+geom_abline(slope = 1, intercept = 0) + ggtitle('Scatterplot of mean of\nposterior and TMB ML estimate')+
+  geom_point()+geom_abline(slope = 1, intercept = 0) + ggtitle('Scatterplot of mean of posterior and TMB ML\n (beta estimate for DM)')+
   theme(legend.position = "bottom")+facet_wrap(.~ct, scales = "free")
 
 
@@ -423,12 +475,33 @@ results_TMB_M
 pvals_M = sapply(results_TMB_M, wald_TMB_wrapper)
 pvals_DM = sapply(results_TMB_DM, wald_TMB_wrapper)
 pvals_LNM = sapply(results_TMB_LNM, wald_TMB_wrapper)
-
+pvals_M_fullRE = sapply(results_TMB_fullRE_M, wald_TMB_wrapper)
+pvals_M_fullRE_good = pvals_M_fullRE[sapply(results_TMB_fullRE_M, give_summary_per_sample) == "Good"]
+pvals_DM_fullRE = sapply(results_TMB_fullRE_DM, wald_TMB_wrapper)
+pvals_DM_fullRE_good = pvals_DM_fullRE[sapply(results_TMB_fullRE_DM, give_summary_per_sample) == "Good"]
 sapply(list(pvals_M, pvals_DM, pvals_LNM), max, na.rm = TRUE)
+
+all_names = unique(c(names(results_TMB_fullRE_M), names(results_TMB_fullRE_DM)))
+betasM = sapply(all_names, function(i) try(python_like_select_name(results_TMB_fullRE_M[[i]]$par.fixed, 'beta')))
+betasDM = sapply(all_names, function(i) try(python_like_select_name(results_TMB_fullRE_DM[[i]]$par.fixed, 'beta')))
+betasDM[sapply(betasM, length) == 0] = NA
+betasM[sapply(betasDM, length) == 0] = NA
+
+length(betasM)
+length(betasDM)
+
+length(unlist(betasM))
+length(unlist(betasDM))
+
+## Differential abundance for full RE
+table(pvals_M_fullRE_good <= 0.05)
+table(pvals_DM_fullRE_good <= 0.05)
 
 #----------------------------------------------------------------------------------------------------------
 
 table(pvals_M <= 0.05, pvals_DM <= 0.05, pvals_LNM <= 0.05)
+
+sapply(list(pvals_M, pvals_DM, pvals_LNM), function(i) sum(na.omit(i<= 0.05))/sum(!is.na(i)))
 
 ## why??!
 names(pvals_M)[!(names(pvals_M) %in% names(pvals_LNM))]
@@ -451,4 +524,53 @@ clnm <- colnames(df_idx[[3]])
 df_idx[[3]] = do.call('rbind', df_idx[[3]])
 rownames(df_idx[[3]]) = clnm
 
+#----------------------------------------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------------------------------------
+## full RE
+## we have the covariance matrix of the random effects (cov_par_RE) and the scaling factors (logs_sd_RE)
+
+plot_random_effects = function(idx_ct){
+  if(typeof(results_TMB_fullRE_M[[idx_ct]]) == "character"){
+    plot(0, main='Run failed')
+  }else{
+    cov_RE = give_UNSTRUCTURED_CORR_t_matrix(vec = python_like_select_name(results_TMB_fullRE_M[[idx_ct]]$par.fixed, 'cov_par_RE'),
+                                    dim_mat = length(python_like_select_name(results_TMB_fullRE_M[[idx_ct]]$par.fixed, 'logs_sd_RE')))
+    ## scsaling (check if this is really how it's done!)
+    cov_RE = cov_RE %*% diag(python_like_select_name(results_TMB_fullRE_M[[idx_ct]]$par.fixed, 'logs_sd_RE'))
+    ## see how these variances compare to the 
+    
+    ## d-1
+    # length(python_like_select_name(results_TMB_fullRE_M[[1]]$par.fixed, 'beta'))/2
+    # cov_RE[,1]
+    
+    if(length(cov_RE[,1]) > 15){
+      par(mfrow=c(1,1))
+      plot(0, main='Too many features')
+    }else{
+      if(length(cov_RE[,1]) > 6){
+        par(mfrow=c(1+ (length(cov_RE[,1]) %/% 6), 6))
+      }else{
+        par(mfrow=c(1,length(cov_RE[,1])))
+      }
+      sapply(1:length(cov_RE[,1]), function(j){
+        plot(density(rnorm(6000, mean = 0, sd = exp(cov_RE[j,j]))), lty='dashed', col='blue')
+        lines(density(matrix(results_TMB_fullRE_M[[idx_ct]]$par.random,
+                             nrow=length(python_like_select_name(results_TMB_fullRE_M[[idx_ct]]$par.fixed,
+                                                                 'logs_sd_RE')))[j,]), col='blue')
+        
+        ## and print the rest as background
+        for(j2 in (1:length((cov_RE)[,1]))[-j]){
+          lines(density(rnorm(6000, mean = 0, sd = exp(cov_RE[j2,j2]))), lty='dotted', col=alpha('black', 0.8))
+        }
+      })
+    }
+  }
+}
+
+pdf("../../results/assessing_models/RE_PCAWG_TMB_fullRE_M.pdf", width = 30, height = 5)
+sapply(1:length(results_TMB_fullRE_M), plot_random_effects)
+# sapply(67, plot_random_effects)
+dev.off()
+#----------------------------------------------------------------------------------------------------------
 

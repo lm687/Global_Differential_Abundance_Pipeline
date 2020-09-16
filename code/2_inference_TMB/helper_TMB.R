@@ -14,6 +14,16 @@ reflect_matrix = function(m){
   m[nrow(m):1,]
 }
 
+give_z_matrix = function(n_times_2){
+  a = matrix(0, nrow = n_times_2/2, ncol = n_times_2/2)
+  diag(a) = 1
+  rbind(a, a)
+}
+
+give_x_matrix = function(n_times_2){
+  cbind(rep(1, n_times_2), rep(c(0,1), each=n_times_2/2))
+}
+
 rsq = function (x, y) cor(x, y) ^ 2
 
 load_PCAWG = function(ct, typedata, simulation=FALSE){
@@ -75,7 +85,7 @@ load_PCAWG = function(ct, typedata, simulation=FALSE){
   return(list(x=t(X), z=t(Z), Y=W))
 }
 
-wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE){
+wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=FALSE){
   cat(ct)
   cat(typedata)
   data = load_PCAWG(ct, typedata, simulation)
@@ -87,9 +97,6 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE){
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
   
-  # if((nrow(data$x) + ncol(data$Y))*2 > nrow(data$Y)){return(warning('Little data'))}
-  
-  # data <- list(Y = W, x=t(X_sim), z = t(Z_sim))
   d <- ncol(data$Y)
   n <- ncol(data$z)
   
@@ -102,26 +109,63 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE){
       logSigma_RE=1
     )
     obj <- MakeADFun(data, parameters, DLL="ME_multinomial", random = "u_random_effects")
+  }else if(model == "fullRE_M"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
   }else if(model == "LNM"){
     parameters <- list(
       beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
                      nrow = 2, byrow=TRUE)),
       u_random_effects = matrix(rep(1, n)),
       logSigma_RE=0,
-      theta_prime = matrix(0, nrow=nrow(data$Y), ncol=d-1),
       cov_par = rep(1, ((d-1)*(d-1)-(d-1))/2)
     )
     obj <- MakeADFun(data, parameters, DLL="ME_LNM", random = "u_random_effects")
+  }else if(model == "fullRE_LNM"){
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logSigma_RE=0,
+      cov_par = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_LNM", random = "u_large")
   }else if(model == "DM"){
     data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
     parameters <- list(
       beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
                      nrow = 2, byrow=TRUE)),
       u_random_effects = matrix(rep(1, n)),
       logSigma_RE=1,
-      log_lambda =1
+      log_lambda = matrix(c(2,2))
     )
     obj <- MakeADFun(data, parameters, DLL="ME_dirichletmultinomial", random = "u_random_effects")
+  }else if(model == "fullRE_DM"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      log_lambda = matrix(c(2,2))
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
+  }else{
+    stop('Specify correct <model>\n')
   }
   obj$hessian <- TRUE
   opt <- do.call("optim", obj)
@@ -149,6 +193,14 @@ python_like_select_rownames = function(matrix, grep_substring){
 
 clean_name = function(x){
   gsub(".RDS", "", paste0(strsplit(x, "_")[[1]][2:3], collapse = ""))
+}
+
+clean_name_fullRE = function(x){
+  gsub(".RDS", "", paste0(strsplit(x, "_")[[1]][3:4], collapse = ""))
+}
+
+re_vector_to_matrix = function(vec_RE, dmin1){
+  matrix(vec_RE, ncol=dmin1)
 }
 
 give_summary_per_sample = function(TMB_object){
@@ -208,14 +260,14 @@ load_posteriors = function(fle_rdata){
 
 wald_generalised = function(v, sigma){
   chisqrt_stat = t(v) %*% solve(sigma) %*% v
-  pchisq(q = chisqrt_stat, df = 1, lower.tail = FALSE)
+  pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
 
-wald_TMB_wrapper = function(i){
+wald_TMB_wrapper = function(i, verbatim=TRUE){
   if(typeof(i) == "character"){
     return(NA)
   }else{
-    idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"))
+    idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
     wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
   }
 }
@@ -251,3 +303,11 @@ vector_to_ct_list = function(vec){
   return(ret)
 }
 
+give_UNSTRUCTURED_CORR_t_matrix = function(vec, dim_mat){
+  # #https://kaskr.github.io/adcomp/classUNSTRUCTURED__CORR__t.html
+  m = matrix(1, nrow = dim_mat, ncol = dim_mat)
+  ## fill in the order that TMB's UNSTRUCTURED_CORR_t saves the covariances
+  m[unlist(sapply(2:nrow(m), function(rw) seq(from = rw,length.out = (rw-1), by = nrow(m) )))] = vec
+  m[unlist(sapply(2:nrow(m), function(cl) seq(from = (((cl-1)*nrow(m))+1),length.out = (cl-1), by = 1 )))] = vec
+  return(m)
+}

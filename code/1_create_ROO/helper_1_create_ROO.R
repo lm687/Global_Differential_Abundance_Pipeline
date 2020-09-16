@@ -313,3 +313,8 @@ give_dummy_row_names = function(df, prefix='Sample'){
   rownames(df) = paste0(prefix, 1:nrow(df))
   df
 }
+
+give_dummy_col_names = function(df, prefix='Feature'){
+  colnames(df) = paste0(prefix, 1:ncol(df))
+  df
+}

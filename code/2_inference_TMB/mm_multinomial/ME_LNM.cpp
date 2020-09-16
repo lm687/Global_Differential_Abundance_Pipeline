@@ -20,11 +20,11 @@ Type objective_function<Type>::operator() ()
   PARAMETER_MATRIX(u_random_effects); // coefficients for the random effects. Even though it is defined as matrix (for TMB matrix multiplication), it is a vector
   PARAMETER(logSigma_RE); // log of the standard deviation of the random effects coefficients
   // PARAMETER(log_sd); // log of the standard devs (scaling factor) for MVN
-  PARAMETER_MATRIX(theta_prime);
+  // PARAMETER_MATRIX(theta_prime);
   PARAMETER_VECTOR(cov_par); //vector<Type> cov_par((d_min1*d_min1-d_min1)/2);
 
   int d_min1 = d - 1;
-  // matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)
+  matrix<Type> theta_prime(n,d_min1); // The probabilities of each event (in ALR)
 
   // PARAMETER_VECTOR(cov_par); // number of parameters in the covariance matrix to infer
   // vector<Type> cov_par((d*d-d)/2); // how I had it before but I think it was wrong

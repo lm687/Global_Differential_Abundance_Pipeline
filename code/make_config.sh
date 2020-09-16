@@ -73,5 +73,62 @@ echo "beta_gamma_shape:
 - 2.5
 " >> $name_config
 
+## Generation C of simulations
+echo "\nsimulation_n_generationC:
+- 20
+- 50
+" >> $name_config
+
+echo "beta_gamma_shape_generationC:
+- 0
+- 0.2
+" >> $name_config
+
+echo "simulation_d_generationC:
+- 3
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_generationC:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationC:
+- 10
+- 80
+" >> $name_config
+
+
+## Generation D of simulations
+echo "\nsimulation_n_generationD:
+- 20
+- 25
+- 30
+- 35
+- 40
+- 45
+" >> $name_config
+
+echo "beta_gamma_shape_generationD:
+- 0
+- 1
+" >> $name_config
+
+echo "simulation_d_generationD:
+- 3
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_generationD:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationD:
+- 10
+- 80
+" >> $name_config
+
+
+
 echo "... Config file $name_config created."
 echo "\`\`\`" >> $name_failed_samples

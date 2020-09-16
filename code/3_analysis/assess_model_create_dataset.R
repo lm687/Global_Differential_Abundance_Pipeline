@@ -7,6 +7,8 @@ library(uuid)
 source("2_inference/helper/helper_DA_stan.R")
 source("1_create_ROO/roo_functions.R")
 source("1_create_ROO/helper_1_create_ROO.R")
+source("2_inference/helper/helper_DA_stan.R") ## for normalise_rw
+source("2_inference_TMB/helper_TMB.R") ## for softmax
 
 
 option_list = list(
@@ -22,6 +24,8 @@ make_option(c("--nlambda"), type="numeric", default=NA,
             help="Parameter lambda for Poisson draws of number of mutations in sample", metavar="numeric"),
 make_option(c("--beta_gamma_shape"), type="numeric", default=NA,
             help="Shape parameter for gamma distribution for beta (i.e. slope coefficient for changes in exposure between groups)", metavar="numeric"),
+make_option(c("--lambda"), type="numeric", default=0,
+            help="Overdispersion parameter", metavar="numeric"),
 make_option(c("--outfile"), type="character", default=NA,
             help="Output file in which to write the dataset (RDS file)", metavar="character")
 );
@@ -34,7 +38,11 @@ d = opt$d # opt$Nk ## number of signatures
 n = opt$n #opt$Ns ## number of samples
 beta_gamma_shape = opt$beta_gamma_shape  ##opt$hyperparam_shape ## shape parameter for the beta
 sd_RE = 2 ## standard deviation for random effects
-lambda = c(10, 10) ## overdispersion scalars. Lower value -> higher overdispersion
+if(opt$simulation_generation %in% c('A', 'B')){
+  lambda = c(10, 10) ## overdispersion scalars. Lower value -> higher overdispersion
+}else{
+  lambda = rep(opt$lambda, 2) ## overdispersion scalars. Lower value -> higher overdispersion
+}
 Nm_lambda = opt$nlambda ## opt$Nm_lambda ## lambda parameter for number of mutations per sample (i.e. a sample in a group)
 
 ## Group effects
@@ -45,11 +53,18 @@ X_sim[1,] = 1
 X_sim[2,] = rep(c(0,1), each=n)
 if(opt$simulation_generation == 'A'){
   beta = matrix(0, nrow=2, ncol=d-1)
+  beta[2,] = rgamma(n = d-1, shape = beta_gamma_shape, rate = beta_gamma_shape) ## for the coefficients
 }else if(opt$simulation_generation == 'B'){
   beta = matrix(0, nrow=2, ncol=d-1)
-  beta[1,] = runif(n = d-1, min = -1, max = -1)
+  beta[1,] = runif(n = d-1, min = -1, max = 1)
+  beta[2,] = rgamma(n = d-1, shape = beta_gamma_shape, rate = beta_gamma_shape) ## for the coefficients
+}else if(opt$simulation_generation %in% c('GenerationC', 'GenerationD')){
+  beta = matrix(0, nrow=2, ncol=d-1)
+  beta[1,] = runif(n = d-1, min = -1, max = 1)
+  beta[2,] = rgamma(n = d-1, shape = beta_gamma_shape, rate = 5) ## for the coefficients
+}else{
+  stop('There must be a valid <simulation_generation>')
 }
-beta[2,] = rgamma(n = d-1, shape = beta_gamma_shape, rate = beta_gamma_shape) ## for the coefficients
 
 ## Random effects
 Z_sim0 = matrix(0, nrow=n, ncol=n)
@@ -62,7 +77,7 @@ u[,1] = rnorm(n = n, mean = 0, sd = sd_RE)
 lambdas = c(rep(lambda[1], n), rep(lambda[2], n))
 
 ## create alpha
-alphabar = softmax_mat( cbind(t(X_sim)%*%beta + t(Z_sim)%*%replicate(d-1, u, simplify = TRUE), 0) )
+alphabar = softmax( cbind(t(X_sim)%*%beta + t(Z_sim)%*%replicate(d-1, u, simplify = TRUE), 0) )
 alpha = alphabar * lambdas
 
 # image(t(alpha), main='Alphas')
@@ -70,8 +85,14 @@ alpha = alphabar * lambdas
 ## Create the counts
 Nm = rpois(n*2, lambda = Nm_lambda) # number of mutations per sample \in N^{2*n}
 W = matrix(NA, nrow = 2*n, ncol = d)
-for(l in 1:(2*n)){
-  W[l,] = HMP::Dirichlet.multinomial(Nrs = Nm[l], shape = alpha[l,])
+if(opt$simulation_generation %in% c('A', 'B')){
+  for(l in 1:(2*n)){
+    W[l,] = HMP::Dirichlet.multinomial(Nrs = Nm[l], shape = alpha[l,])
+  }
+}else if(opt$simulation_generation %in% c('GenerationC', 'GenerationD')){
+  for(l in 1:(2*n)){
+    W[l,] = HMP::Dirichlet.multinomial(Nrs = Nm[l], shape = alpha[l,])
+  }
 }
 
 image(t(W))
@@ -83,7 +104,8 @@ objects_counts <- new("exposures_cancertype",
                       number_categories = 2,
                       id_categories = c('sim1', 'sim2'),
                       active_signatures = "absent; simulation",
-                      count_matrices_all = list(give_dummy_row_names(W[1:n,]), give_dummy_row_names(W[(n+1):(2*n),])),
+                      count_matrices_all = list(give_dummy_col_names(give_dummy_row_names(W[1:n,])), 
+                                                give_dummy_col_names(give_dummy_row_names(W[(n+1):(2*n),]))),
                       count_matrices_active = list(list(), list()),
                       sample_names = rownames(give_dummy_row_names(W[1:n,])),
                       modification = "none",
@@ -99,7 +121,5 @@ saveRDS(list(objects_counts=objects_counts, d=d, n= n, beta_gamma_shape=beta_gam
              X_sim = X_sim, beta = beta, Z_sim = Z_sim, u = u, lambdas = lambdas, alphabar = alphabar, alpha = alpha, Nm = Nm, W = W),
         # file = paste0("../data/assessing_models_simulation/datasets/ ", uuid, ".RDS"))
         file = opt$outfile)
-
-## (B) We simulate two populations, and mix them with some proportions.
 
 
