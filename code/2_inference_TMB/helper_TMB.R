@@ -98,7 +98,7 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
   data$x = (matrix(data$x, ncol=2))
   
   d <- ncol(data$Y)
-  n <- ncol(data$z)
+  n <- ncol(data$z) ## number of INDIVIDUALS, not samples
   
   if(model == "M"){
     data$num_individuals = n
@@ -110,6 +110,16 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
     )
     obj <- MakeADFun(data, parameters, DLL="ME_multinomial", random = "u_random_effects")
   }else if(model == "fullRE_M"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
+  }else if(model == "diagRE_M"){
     data$num_individuals = n
     parameters <- list(
       beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
@@ -135,8 +145,7 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
       u_large = matrix(rep(1, (d-1)*n), nrow=n),
       logSigma_RE=0,
       cov_par = rep(1, ((d-1)*(d-1)-(d-1))/2),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+      logs_sd_RE=rep(1, d-1)
     )
     obj <- MakeADFun(data, parameters, DLL="fullRE_ME_LNM", random = "u_large")
   }else if(model == "DM"){
@@ -164,6 +173,43 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
       log_lambda = matrix(c(2,2))
     )
     obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
+  }else if(model == "fullRE_DM_singlelambda"){
+    data$num_individuals = n
+
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      log_lambda = 1
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_singlelambda_dirichletmultinomial", random = "u_large")
+  }else if(model == "diagRE_DM"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      log_lambda = matrix(c(2,2))
+    )
+    obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
+  }else if(model == "fullRE_DM_altpar"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      log_lambda = matrix(c(2,2))
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial_altpar", random = "u_large")
   }else{
     stop('Specify correct <model>\n')
   }
@@ -199,6 +245,10 @@ clean_name_fullRE = function(x){
   gsub(".RDS", "", paste0(strsplit(x, "_")[[1]][3:4], collapse = ""))
 }
 
+clean_name_fullRE_2 = function(x){
+  gsub(".RDS", "", paste0(strsplit(x, "_")[[1]][4:5], collapse = ""))
+}
+
 re_vector_to_matrix = function(vec_RE, dmin1){
   matrix(vec_RE, ncol=dmin1)
 }
@@ -207,7 +257,7 @@ give_summary_per_sample = function(TMB_object){
   if(is.null(TMB_object)){
     "Object doesn't exist"
   }else{
-    if(typeof(TMB_object) == "character"){
+    if(typeof(TMB_object) %in% c("character", "logical")){
       return('Timeout or some error')
     }else{
       if(TMB_object$pdHess){
@@ -287,6 +337,14 @@ select_slope_2 = function(i, verbatim=TRUE){
   }
 }
 
+select_intercept = function(i, verbatim=TRUE){
+  if(is.null(dim(i))){
+    i[c(T,F)]
+  }else{
+    i[,c(T,F)]
+  }
+}
+
 
 vector_to_ct_list = function(vec){
   ##' given a vector which contains two or more types of features for the same cancer types,
@@ -311,3 +369,11 @@ give_UNSTRUCTURED_CORR_t_matrix = function(vec, dim_mat){
   m[unlist(sapply(2:nrow(m), function(cl) seq(from = (((cl-1)*nrow(m))+1),length.out = (cl-1), by = 1 )))] = vec
   return(m)
 }
+
+get_count_object = function(ct, feature, pre_path=NULL){
+  if(is.null(pre_path)){
+    pre_path = "../../data/roo/"
+  }
+  readRDS(paste0(pre_path, ct, "_", feature, "_ROO.RDS"))
+}
+

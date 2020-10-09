@@ -7,6 +7,8 @@ source("helper_functions.R")
 # set.seed(1245)
 #-------------------------------------------------------------------------------------------------#
 
+stop('Check line <W = t(apply(theta, 1, rmultinom, n = 1, size = Nm_lambda))>. Should we not be drawing from a DM instead of a M?')
+
 #-------------------------------------------------------------------------------------------------#
 softmax = function(x){
   if(is.null(dim(x))){
@@ -28,8 +30,8 @@ rsq = function (x, y) cor(x, y) ^ 2
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-TMB::compile("ME_dirichletmultinomial.cpp", "-std=gnu++17")
-dyn.load(dynlib("ME_dirichletmultinomial"))
+TMB::compile("fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("fullRE_ME_dirichletmultinomial"))
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -76,19 +78,27 @@ create_dataset = function(d=4, n=10, beta_gamma_shape=2, sd_RE=0.3, lambda=c(200
 
 inference_random_start = function(d, n, data, true_u, true_beta){
   parameters <- list(
-    beta = array(#c(rep(runif(1, min = -4, max = 4), (d-1)),
-      runif(d-1, min = -4, max = 4),
-      # rep(runif(1, min = -4, max = 4), (d-1)),
-      dim = c(1,d-1)),
+    beta= (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+            nrow = 2, byrow=TRUE)),
+    # beta = array(#c(rep(runif(1, min = -4, max = 4), (d-1)),
+    #   runif(d-1, min = -4, max = 4),
+    #   # rep(runif(1, min = -4, max = 4), (d-1)),
+    #   dim = c(1,d-1)),
     # u = matrix(rep(0, n)),
-    u_random_effects = matrix(runif(n, min = -1, max = 1)),
-    logSigma_RE=1,
-    log_lambda = 2
+    u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    logs_sd_RE=rep(1, d-1),
+    cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    log_lambda = matrix(c(2,2))
+    # u_random_effects = matrix(runif(n, min = -1, max = 1)),
+    # logSigma_RE=1,
+    # log_lambda = 2
   )
+  data$lambda_accessory_mat = cbind(c(rep(1,n/2),rep(0,n/2)), c(rep(0,n/2),rep(1,n/2)))
+
   #-------------------------------------------------------------------------------------------------#
   
   #-------------------------------------------------------------------------------------------------#
-  obj <- MakeADFun(data, parameters, DLL="ME_dirichletmultinomial", random = "u_random_effects")
+  obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
   obj$hessian <- TRUE
   opt <- do.call("optim", obj)
   opt

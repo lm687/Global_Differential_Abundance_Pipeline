@@ -27,6 +27,12 @@ TMB::compile("mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial"))
 TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial"))
+TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar"))
+TMB::compile("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial"))
+TMB::compile("mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_ME_dirichletmultinomial"))
 
 #-------------------------------------------------------------------------------------------------#
 
@@ -36,8 +42,8 @@ samples_files = data.frame(do.call('rbind', sapply(gsub("_ROO.RDS", "", list.fil
                                         strsplit, split = "_")))
 colnames(samples_files) = c('CT', 'type')
 # table(samples_files[,1], samples_files[,2])
-# ct = "Breast-DCIS" #samples_files[1,1]
-# typedata = "signatures" #samples_files[1,2]
+# ct = "Bladder-TCC" #samples_files[1,1]
+# typedata =nucleotidesubstitution3  #"signatures" #samples_files[1,2]
 
 samples_files2 = samples_files %>% filter(type != "nucleotidesubstitution3")
 rownames(samples_files2) = rownames(samples_files)[samples_files$type != "nucleotidesubstitution3"]
@@ -87,14 +93,45 @@ if(re_run_inference){
            })
   
   mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                     gsub(".RDS", "", gsub("fullRE_DM_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
+                                     gsub(".RDS", "", gsub("fullRE_DM_altpar_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
             function(idx){
               i = samples_files2[idx,]
-              x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DM"),
+              x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DM_altpar"),
                               timeout = 300, onTimeout = "warning")
-              saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "fullRE_DM_", rownames(i), ".RDS"))
+              saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "fullRE_DM_altpar_", rownames(i), ".RDS"))
             })
+
+  ## diagonal M
+  mclapply(sample(which(is.na(match(rownames(samples_files2),
+                                    gsub(".RDS", "", gsub("diagRE_M_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
+           function(idx){
+             outcome_inference="Not good"
+             counter_tries = 0
+             while(outcome_inference != "Good" & counter_tries < 6){
+               i = samples_files2[idx,]
+               x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "diagRE_M"),
+                               timeout = 300, onTimeout = "warning")
+               outcome_inference = give_summary_per_sample(x)
+               counter_tries = counter_tries + 1
+             }
+             saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "diagRE_M_", rownames(i), ".RDS"))
+           })
   
+  ## diagonal DM
+  mclapply(sample(which(is.na(match(rownames(samples_files2),
+                                    gsub(".RDS", "", gsub("diagRE_DM_", "", list.files("../../data/robjects_cache/tmb_results/"))))))),
+           function(idx){
+             outcome_inference="Not good"
+             counter_tries = 0
+             while(outcome_inference != "Good" & counter_tries < 6){
+               i = samples_files2[idx,]
+               x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "diagRE_DM"),
+                               timeout = 300, onTimeout = "warning")
+               outcome_inference = give_summary_per_sample(x)
+               counter_tries = counter_tries + 1
+             }
+             saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "diagRE_DM_", rownames(i), ".RDS"))
+           })
   
 }
 
@@ -102,29 +139,45 @@ if(re_run_inference){
 
 #------------------------------------------------------------------------------------------------------------------------#
 # # re-run those that had NaN due to bad initial values
-# ct = "Kidney-RCC.papillary"
-# type= "nucleotidesubstitution1" #"signatures" # #
-# model = "fullRE_DM"
+# ct = "Lymph-CLL"
+# type= "signatures" #"nucleotidesubstitution1" #"signatures" # #
+# model = "diagRE_DM"
 # rm(x)
 # x = wrapper_run_TMB(ct, type, model, allow_new_LNM = TRUE)
 # x
+# load_PCAWG(ct, type)$Y
 # saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", model, "_", ct, "_", type, ".RDS"))
 #------------------------------------------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------------------#
 results_TMB_M = lapply( python_like_select(list.files(folder_robjs), "^M_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_M) = sapply(python_like_select(list.files(folder_robjs), "^M_"), clean_name)
+
 results_TMB_DM = lapply( python_like_select(list.files(folder_robjs), "^DM_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_DM) = sapply(python_like_select(list.files(folder_robjs), "^DM_"), clean_name)
+
 # results_TMB_DM_dep = lapply( python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"),
 #                              function(i) readRDS(paste0("../../data/robjects_cache/tmb_results_dep/", i)))
 # names(results_TMB_DM_dep) = sapply(python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"), clean_name)
+
 results_TMB_LNM = lapply( python_like_select(list.files(folder_robjs), "^LNM_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_LNM) = sapply(python_like_select(list.files(folder_robjs), "^LNM_"), clean_name_fullRE)
+
 results_TMB_fullRE_M = lapply( python_like_select(list.files(folder_robjs), "^fullRE_M_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_fullRE_M) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_M_"), clean_name_fullRE)
-results_TMB_fullRE_DM = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DM_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_fullRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DM_"), clean_name_fullRE)
+
+full_RE_DM = python_like_select(list.files(folder_robjs), "^fullRE_DM_"); full_RE_DM = full_RE_DM[-grep("_altpar_", full_RE_DM)]
+results_TMB_fullRE_DM = lapply( full_RE_DM, function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_fullRE_DM) = sapply(full_RE_DM, clean_name_fullRE)
+
+results_TMB_diagRE_DM = lapply( python_like_select(list.files(folder_robjs), "^diagRE_DM_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_diagRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_DM_"), clean_name_fullRE)
+
+results_TMB_diagRE_M = lapply( python_like_select(list.files(folder_robjs), "^diagRE_M_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_diagRE_M) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_M_"), clean_name_fullRE)
+
+# results_TMB_fullRE_DM = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DM_altpar_"), function(i) readRDS(paste0(folder_robjs, i)))
+# names(results_TMB_fullRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DM_altpar_"), clean_name_fullRE_2)
 #----------------------------------------------------------------------------------------------------#
 
 if(give_summary_runs){
@@ -186,14 +239,28 @@ if(give_summary_runs){
   # for(i in sapply(results_TMB_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
   #                 give_summary_per_sample)){cat(i,'\n')}
   
+  # for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+  # 
+  # for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+  #                 give_summary_per_sample)){cat(i,'\n')}
+
   for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
-                  give_summary_per_sample)){cat(i,'\n')}
-  
-  for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution3", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   
   for(i in sapply(results_TMB_fullRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
+
+  ## uncorrelated RE
+  for(i in sapply(results_TMB_diagRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+                  give_summary_per_sample)){cat(i,'\n')}
+  
+  for(i in sapply(results_TMB_diagRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+                  give_summary_per_sample)){cat(i,'\n')}
+  
   #------------------------------------------------------------------------------------------------------------------------#
   
   #------------------------------------------------------------------------------------------------------------------------#
@@ -345,14 +412,14 @@ ggplot(df_betas_slope_M,
        aes(x=TMB_estimate, y=stan_mean, col=Bool_good_convergence))+
   geom_point()+ggtitle('Scatterplot of mean of\nposterior and TMB ML estimate')+
   geom_abline(slope = 1, intercept = 0)+theme(legend.position = "bottom")+colScale
-ggsave("../../results/TMB/betas_stan_TMB_M.pdf")
+# ggsave("../../results/TMB/betas_stan_TMB_M.pdf")
 
 ## same plot, but trying to see where it went well and where it did not
 ggplot(df_betas_slope_M,
        aes(x=TMB_estimate, y=stan_mean, col=Bool_good_convergence))+
   geom_point()+ggtitle('Scatterplot of mean of posterior and TMB ML estimate')+
   geom_abline(slope = 1, intercept = 0)+theme(legend.position = "bottom")+facet_wrap(.~factor(ct))+colScale
-ggsave("../../results/TMB/betas_stan_TMB_M_per_ct.pdf", width = 12)
+# ggsave("../../results/TMB/betas_stan_TMB_M_per_ct.pdf", width = 12)
 
 
 ## scatterplot for dirichlet-multinomial draws of the mean beta from the posterior and the MLE for beta
@@ -368,13 +435,13 @@ ggplot(df_betas_slope_DM,
        aes(x=TMB_estimate, y=stan_mean, col=factor(Bool_good_convergence, levels=c(F, T))))+
   geom_point()+ggtitle('Scatterplot of mean of\nposterior and TMB ML estimate')+theme(legend.position = "bottom")+
   geom_abline(intercept = 0, slope = 1)+colScale
-ggsave("../../results/TMB/betas_stan_TMB_DM.pdf")
+# ggsave("../../results/TMB/betas_stan_TMB_DM.pdf")
 
 ggplot(df_betas_slope_DM %>% filter(Bool_good_convergence == TRUE),
        aes(x=TMB_estimate, y=stan_mean, col=factor(Bool_good_convergence, levels=c(F, T))))+
   geom_point()+geom_abline(slope = 1, intercept = 0) + ggtitle('Scatterplot of mean of\nposterior and TMB ML estimate')+
   theme(legend.position = "bottom")+colScale
-ggsave("../../results/TMB/betas_stan_TMB_DM2.pdf")
+# ggsave("../../results/TMB/betas_stan_TMB_DM2.pdf")
 
 ## split by samples that had good convergence and samples that didn't
 ggplot(df_betas_slope_DM,
@@ -394,7 +461,7 @@ ggplot(df_betas_slope_DM %>% filter(Bool_good_convergence == TRUE),
        aes(x=TMB_estimate, y=stan_mean))+
   geom_point()+geom_abline(slope = 1, intercept = 0) + ggtitle('Scatterplot of mean of posterior and TMB ML estimate')+
   theme(legend.position = "bottom")+facet_wrap(.~ct, scales = "free")
-ggsave("../../results/TMB/betas_stan_TMB_DM_per_ct.pdf", width = 8)
+# ggsave("../../results/TMB/betas_stan_TMB_DM_per_ct.pdf", width = 8)
 
 ggplot(df_betas_slope_DM,
        aes(x=TMB_estimate_dep, y=stan_mean))+
@@ -408,6 +475,7 @@ df_betas_slope_DM %>% filter(Bool_good_convergence == TRUE) %>% select(ct) %>% u
 
 #----------------------------------------------------------------------------------------------------------
 ## when are random effects negligible?
+## note: this is for single intercept for RE
 RE_TMB_M = sapply(results_TMB_M, function(i) if(typeof(i) == "list"){i$par.random}else{NA})
 RE_TMB_DM = sapply(results_TMB_DM, function(i) if(typeof(i) == "list"){i$par.random}else{NA})
 
@@ -417,7 +485,7 @@ names(RE_TMB_M_subset) = names(subset_results_TMB_M); names(RE_TMB_DM_subset) = 
 
 ## distribution of the random effects for each cancer type, and for all DM runs
 ggplot(reshape2::melt(RE_TMB_DM), aes(x=value))+geom_density()+facet_wrap(.~L1, scales = "free")
-
+ggplot(reshape2::melt(RE_TMB_DM), aes(x=value))+geom_density()+facet_wrap(.~L1, scales = "free_y")
 ## distribution of the random effects, pooling all cancer types and patients
 ggplot(reshape2::melt(RE_TMB_DM), aes(x=log(abs(value))))+geom_density()
 ggplot(reshape2::melt(RE_TMB_DM), aes(x=log(abs(value))))+geom_histogram()
@@ -479,7 +547,13 @@ pvals_M_fullRE = sapply(results_TMB_fullRE_M, wald_TMB_wrapper)
 pvals_M_fullRE_good = pvals_M_fullRE[sapply(results_TMB_fullRE_M, give_summary_per_sample) == "Good"]
 pvals_DM_fullRE = sapply(results_TMB_fullRE_DM, wald_TMB_wrapper)
 pvals_DM_fullRE_good = pvals_DM_fullRE[sapply(results_TMB_fullRE_DM, give_summary_per_sample) == "Good"]
-sapply(list(pvals_M, pvals_DM, pvals_LNM), max, na.rm = TRUE)
+sapply(list(M_single=pvals_M, DM_single=pvals_DM, LNM_single=pvals_LNM, M_full=pvals_M_fullRE, DM_full=pvals_DM_fullRE), max, na.rm = TRUE)
+
+par(mfrow=c(1,2))
+plot(pvals_M, pvals_M_fullRE)
+plot(pvals_DM, pvals_DM_fullRE)
+
+names(pvals_DM)[is.na(match(names(pvals_DM), names(pvals_DM_fullRE)))]
 
 all_names = unique(c(names(results_TMB_fullRE_M), names(results_TMB_fullRE_DM)))
 betasM = sapply(all_names, function(i) try(python_like_select_name(results_TMB_fullRE_M[[i]]$par.fixed, 'beta')))
