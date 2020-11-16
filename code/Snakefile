@@ -25,15 +25,20 @@ rule all:
 #       uuid="GenerationC",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
 #       lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
 #       beta_intensity = config["beta_gamma_shape_generationC"])
-     expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
-      uuid="GenerationD",  n=config["simulation_n_generationD"], nlambda=config["simulation_nlambda_generationD"],
-      lmbda=config["simulation_lambda_generationD"], d=config["simulation_d_generationD"],\
-      beta_intensity = config["beta_gamma_shape_generationD"])
-## [Benchmarking] Performing inference on the simulated datasets (Generation C)
+     # expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
+     #  uuid="GenerationD",  n=config["simulation_n_generationD"], nlambda=config["simulation_nlambda_generationD"],
+     #  lmbda=config["simulation_lambda_generationD"], d=config["simulation_d_generationD"],\
+     #  beta_intensity = config["beta_gamma_shape_generationD"])
+      expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
+      uuid="GenerationE",  n=config["simulation_n_generationE"], nlambda=config["simulation_nlambda_generationE"],
+      lmbda=config["simulation_lambda_generationE"], d=config["simulation_d_generationE"],\
+      beta_intensity = config["beta_gamma_shape_generationE"])
+      ## [Benchmarking] Performing inference on the simulated datasets (Generation C onwards)
       # expand("../data/assessing_models_simulation/inference_results/{uuid}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData",\
-      #  uuid="GenerationC",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
-      #  lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
-      #  beta_intensity = config["beta_gamma_shape_generationC"], nits=num_iterations, model=models)
+      #  uuid="GenerationE",  n=config["simulation_n_generationE"], nlambda=config["simulation_nlambda_generationE"],
+      #  lmbda=config["simulation_lambda_generationE"], d=config["simulation_d_generationE"],\
+      #  beta_intensity = config["beta_gamma_shape_generationE"], nits=num_iterations, model=models)
+
 
 rule index_vcf:
     input:

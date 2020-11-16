@@ -115,7 +115,7 @@ if(re_run_inference){
                counter_tries = counter_tries + 1
              }
              saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", "diagRE_M_", rownames(i), ".RDS"))
-           })
+  })
   
   ## diagonal DM
   mclapply(sample(which(is.na(match(rownames(samples_files2),
@@ -139,13 +139,13 @@ if(re_run_inference){
 
 #------------------------------------------------------------------------------------------------------------------------#
 # # re-run those that had NaN due to bad initial values
-# ct = "Lymph-CLL"
-# type= "signatures" #"nucleotidesubstitution1" #"signatures" # #
+# ct = "Eso-AdenoCA"
+# type=  "signatures" # "nucleotidesubstitution1
 # model = "diagRE_DM"
 # rm(x)
 # x = wrapper_run_TMB(ct, type, model, allow_new_LNM = TRUE)
 # x
-# load_PCAWG(ct, type)$Y
+# # load_PCAWG(ct, type)$Y
 # saveRDS(object = x, file=paste0("../../data/robjects_cache/tmb_results/", model, "_", ct, "_", type, ".RDS"))
 #------------------------------------------------------------------------------------------------------------------------#
 
@@ -255,6 +255,14 @@ if(give_summary_runs){
                   give_summary_per_sample)){cat(i,'\n')}
 
   ## uncorrelated RE
+  
+  for(i in sapply(results_TMB_diagRE_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
+                  give_summary_per_sample)){cat(i,'\n')}
+  
+  for(i in sapply(results_TMB_diagRE_M[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "signatures", collapse=""))],
+                  give_summary_per_sample)){cat(i,'\n')}
+  
+  
   for(i in sapply(results_TMB_diagRE_DM[sapply(as.character(unique(samples_files$CT)), function(i) paste0(i, "", "nucleotidesubstitution1", collapse=""))],
                   give_summary_per_sample)){cat(i,'\n')}
   

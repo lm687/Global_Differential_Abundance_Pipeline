@@ -129,6 +129,33 @@ echo "simulation_lambda_generationD:
 " >> $name_config
 
 
+## Generation E of simulations
+echo "\nsimulation_n_generationE:
+- 10
+- 20
+- 40
+- 80
+" >> $name_config
+
+echo "beta_gamma_shape_generationE:
+- 0
+- 1
+- 2
+" >> $name_config
+
+echo "simulation_d_generationE:
+- 4
+- 6
+- 10
+" >> $name_config
+
+echo "simulation_nlambda_generationE:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_generationE:
+- NA
+" >> $name_config
 
 echo "... Config file $name_config created."
 echo "\`\`\`" >> $name_failed_samples

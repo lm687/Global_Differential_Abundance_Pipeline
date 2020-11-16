@@ -85,15 +85,23 @@ load_PCAWG = function(ct, typedata, simulation=FALSE){
   return(list(x=t(X), z=t(Z), Y=W))
 }
 
-wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=FALSE){
-  cat(ct)
-  cat(typedata)
-  data = load_PCAWG(ct, typedata, simulation)
-  if(length(data) == 1){
-    if(is.na(data)){
-      return(warning('RDS object is NA'))
+wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=FALSE, object=NULL){
+  
+  if(!is.null(object)){
+    ## if the object of data and covariates is an argument
+    data = object
+  }else{
+    ## else, read from RDS file
+    cat(ct)
+    cat(typedata)
+    data = load_PCAWG(ct, typedata, simulation)
+    if(length(data) == 1){
+      if(is.na(data)){
+        return(warning('RDS object is NA'))
+      }
     }
   }
+  
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
   
@@ -309,7 +317,7 @@ load_posteriors = function(fle_rdata){
 }
 
 wald_generalised = function(v, sigma){
-  chisqrt_stat = t(v) %*% solve(sigma) %*% v
+  chisqrt_stat = t(v) %*% solve(sigma**(1/2)) %*% v
   pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
 
@@ -377,3 +385,48 @@ get_count_object = function(ct, feature, pre_path=NULL){
   readRDS(paste0(pre_path, ct, "_", feature, "_ROO.RDS"))
 }
 
+get_count_object_file = function(fle){
+  readRDS(fle)
+}
+
+give_stderr = function(i, only_slopes=T, only_betas=T){
+  if(!only_betas){
+    stop('Not yet implemented')
+  }else{
+    if(length(i) == 1){ ## they are just NAs
+      if(only_slopes){
+        .x = select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE) ## repeat the NAs
+      }else{
+        .x = python_like_select_name(i$par.fixed, "beta") ## repeat the NAs
+      }
+    }else{
+      if(only_slopes){
+        .x = select_slope_2(python_like_select_name(summary.sdreport(i)[,2], "beta"),v=F)
+      }else{
+        .x = python_like_select_name(summary.sdreport(i)[,2], "beta")
+      }
+    }
+   .x
+  }
+}
+
+createbarplot_object = function(fle, slotname='count_matrices_all'){
+  .x = readRDS(fle)
+  lapply(.x, createbarplot_ROOSigs, slot=slotname, pre_path = "../../../CDA_in_Cancer/code/")
+}
+
+simulate_from_M_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = softmax(cbind(logRmat, 0))
+  }else{
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+  }
+  return(sim_thetas)
+}

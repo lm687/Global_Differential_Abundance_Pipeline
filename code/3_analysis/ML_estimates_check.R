@@ -19,6 +19,9 @@ source("../3_analysis/helper/helper_simulate_from_model.R")
 folder_roo = "../../data/roo/"
 folder_robjs = "../../data/robjects_cache/tmb_results/"
 
+pcawg_labels = read.table("../../data/other/my_pcawg_labels.txt", sep = "\t", stringsAsFactors = FALSE,
+                          header = TRUE)
+
 coefficient_overdispersion = 1000 ## value used in TMB for better convergence
 
 warning('Be careful to use the latest <coefficient_overdispersion> value!')
@@ -54,8 +57,10 @@ results_TMB_fullRE_DM = lapply( full_RE_DM, function(i) readRDS(paste0(folder_ro
 names(results_TMB_fullRE_DM) = sapply(full_RE_DM, clean_name_fullRE)
 # results_TMB_fullRE_DM = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DM_altpar_"), function(i) readRDS(paste0(folder_robjs, i)))
 # names(results_TMB_fullRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DM_altpar_"), clean_name_fullRE_2)
-results_TMB_diagRE_M = lapply( python_like_select(list.files(folder_robjs), "^diagRE_DM_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_diagRE_M) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_DM_"), clean_name_fullRE)
+results_TMB_diagRE_M = lapply( python_like_select(list.files(folder_robjs), "^diagRE_M_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_diagRE_M) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_M_"), clean_name_fullRE)
+results_TMB_diagRE_DM = lapply( python_like_select(list.files(folder_robjs), "^diagRE_DM_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_diagRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_DM_"), clean_name_fullRE)
 #----------------------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------------------#
@@ -64,9 +69,10 @@ results_TMB_DM = results_TMB_DM[match(gsub("_", "", names(count_objects)), names
 results_TMB_LNM = results_TMB_LNM[match(gsub("_", "", names(count_objects)), names(results_TMB_LNM))]
 results_TMB_fullRE_M = results_TMB_fullRE_M[match(gsub("_", "", names(count_objects)), names(results_TMB_fullRE_M))]
 results_TMB_fullRE_DM = results_TMB_fullRE_DM[match(gsub("_", "", names(count_objects)), names(results_TMB_fullRE_DM))]
-results_TMB_diagRE_DM = results_TMB_diagRE_M[match(gsub("_", "", names(count_objects)), names(results_TMB_diagRE_M))]
+results_TMB_diagRE_M = results_TMB_diagRE_M[match(gsub("_", "", names(count_objects)), names(results_TMB_diagRE_M))]
+results_TMB_diagRE_DM = results_TMB_diagRE_DM[match(gsub("_", "", names(count_objects)), names(results_TMB_diagRE_DM))]
 sapply(list(results_TMB_M, results_TMB_DM, results_TMB_LNM, results_TMB_fullRE_M,
-            results_TMB_fullRE_DM, count_objects), length)
+            results_TMB_diagRE_M, results_TMB_fullRE_DM, count_objects), length)
 #----------------------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------------------#
@@ -119,6 +125,7 @@ give_plot_dataset = function(idx_dataset, resultsTMB_list, full_RE=FALSE){
         plot(x=1, type = "n", main=names(count_objects[idx_dataset_TMB]), cex.main=.7)
         return(NA)
       }else{
+        stop('Use or create some function from simulation in helper_TMB.R, and unify these simulations')
         dmin1 = length(python_like_select_name(resultsTMB_list[[idx_dataset_TMB]]$par.fixed, 'beta'))/2
         if(full_RE){
           re_mat = re_vector_to_matrix(resultsTMB_list[[idx_dataset_TMB]]$par.random, dmin1)
@@ -368,130 +375,148 @@ sapply(1:length(results_TMB_diagRE_DM), function(idx_dataset){
 dev.off()
 #----------------------------------------------------------------------------------------------------#
 
+#----------------------------------------------------------------------------------------------------#
+## Expected variance under model and observed variance
+count_objects
+
+## the variance in a multinomial for feature i is n*p_i*(1-p_i), i.e. scales linearly with n, as shown below 
+rbind(apply(rmultinom(n = 100, size = 20, prob = c(0.3, 0.5, 0.2)), 1, var),
+      apply(rmultinom(n = 100, size = 200, prob = c(0.3, 0.5, 0.2)), 1, var),
+      apply(rmultinom(n = 100, size = 2000, prob = c(0.3, 0.5, 0.2)), 1, var))
+
+.obs = do.call('rbind', count_objects$`Biliary-AdenoCA_nucleotidesubstitution1`@count_matrices_all)
+.n = rowSums(.obs)
+.theta = simulate_from_M_RE(beta_coefs = python_like_select_name(results_TMB_fullRE_M[["Biliary-AdenoCAnucleotidesubstitution1"]]$par.fixed, 'beta'),
+                   RE_coefs = results_TMB_fullRE_M[["Biliary-AdenoCAnucleotidesubstitution1"]]$par.random)
+.fitted = t(sapply(1:length(.n), function(i) rmultinom(n = 1, size = .n[i], prob = .theta[i,]) ))
+
+apply((.obs - .fitted)**2, 2, mean) ## observed variances
+apply(sapply(1:nrow(.theta), function(i) sapply(.theta[i,], function(pi) pi*(1-pi)*.n[i])), 1, mean)  ## expected variances
+## not sure if this expected variances have been well calculated
+
+empirical_var_fitted = sapply(1:6, function(cl) mean( (.fitted[,cl]-mean(.fitted[,cl]))**2))
+empirical_var_obs = sapply(1:6, function(cl) mean( (.obs[,cl]-mean(.obs[,cl]))**2))
+par(mfrow=c(1,6))
+sapply(1:6, function(cl) hist((.fitted-.obs)[,cl]))
+
+
+#----------------------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------------------------
-## Simulate data with confidence intervals, to choose between M ME and DM ME
 
-## if a CT has not run well, return NA
-
-give_true_in_conf_int = function(idx_dataset, model, dataset_TMB){
-  # sim_confint = sapply(1:20, function(idx_dataset){
-  # sapply(6, function(idx_dataset){
-  ## idx_dataset=9 is an example of a successful DM run
-  # print(c(is.null(dataset_TMB[[idx_dataset]]),
-  #         typeof(dataset_TMB[[idx_dataset]]) == "character",
-  #         !(dataset_TMB[[idx_dataset]]$pdHess)))
-  if(is.null(dataset_TMB[[idx_dataset]])){
-    return(NA)
-  }else{
-    if(typeof(dataset_TMB[[idx_dataset]]) %in% c("character", "logical")){
-      return(NA)
-    }else{
-      if(!(dataset_TMB[[idx_dataset]]$pdHess)){
-        # no good convergence
-        return(NA)
-      }else{
-        beta_coefs = python_like_select_name(dataset_TMB[[idx_dataset]]$par.fixed, 'beta')
-        RE_coefs = dataset_TMB[[idx_dataset]]$par.random
-        lambda = python_like_select_name(dataset_TMB[[idx_dataset]]$par.fixed, 'log_lambda')
-        
-        if(model == 'DM'){
-          sim_thetas = replicate(1e3, simulate_from_DM_RE(beta_coefs, RE_coefs, lambda, coefficient_overdispersion))
-        }else if(model == 'DM_altpar'){
-          sim_thetas = replicate(1e3, simulate_from_DM_RE_altpar(beta_coefs, RE_coefs, lambda))
-        }else if(model == 'M'){
-          thetas_M = simulate_from_M_RE(beta_coefs, RE_coefs)
-          sim_thetas = replicate(1e3, thetas_M)
-        }else{
-          stop('Indicate a correct <model>')
-        }
-        
-        ## from observed
-        matrices = slot(count_objects[[idx_dataset]], 'count_matrices_active')
-        if(sum(sapply(matrices, length)) == 0){
-          matrices = slot(count_objects[[idx_dataset]], 'count_matrices_all')
-        }
-        
-        matrices = do.call('rbind', lapply(matrices, round))
-        vec_observed = as.vector(matrices)
-        
-        mut_toll = rowSums(matrices)
-        ## simulate with multinomial from these thetas
-        idx_sim = 1
-        multinom_draws = sapply(1:dim(sim_thetas)[3], function(simulate){
-          as.vector(t(sapply(1:nrow(sim_thetas[,,idx_sim]), function(i) rmultinom( n = 1, size = mut_toll[i], prob = sim_thetas[i,,idx_sim]) )))
-        })
-        
-        ## check if real values fall in the confidence interval, for each of the thetas
-        
-        multinom_draws[[1]]
-        multinom_draws[[2]]
-        in_conf_int = sapply(1:dim(multinom_draws)[1], function(i){
-          confint_bounds = quantile(multinom_draws[i,], probs = c(0.025, 0.975))
-          (vec_observed[i] >= confint_bounds[1]) & (vec_observed[i] <= confint_bounds[2])
-        })
-        
-        ## plotting with subsample
-        subset_pars = 1:length(vec_observed) #sample(1:length(vec_observed), size = 10)
-        ccccc=melt(multinom_draws[subset_pars,sample(1:1000, size = 100)])
-        plot(ccccc$Var1, ccccc$value)
-        points(1:length(subset_pars), vec_observed[subset_pars], col='red')
-
-        ## the ones that worked
-        ccccc=melt(multinom_draws[subset_pars,sample(1:1000, size = 100)][in_conf_int,])
-        plot(ccccc$Var1, ccccc$value)
-        points(1:sum(in_conf_int), vec_observed[subset_pars][in_conf_int], col='red')
-        
-        ## the ones that didn't work
-        ccccc=melt(multinom_draws[subset_pars,sample(1:1000, size = 100)][!in_conf_int,])
-        plot(ccccc$Var1, ccccc$value)
-        points(1:sum(!in_conf_int), vec_observed[subset_pars][!in_conf_int], col='red')
-        
-        return(in_conf_int)
-        
-        # ml_thetas = normalise_rw(do.call('rbind', matrices))
-        # ml_thetas = replicate(20, ml_thetas)
-        # dim(melt(sim_thetas))
-        # dim(melt(ml_thetas))
-        # plot(cbind(sim=melt(sim_thetas), ml=melt(ml_thetas))[,c('sim.value', 'ml.value')],
-        #      main=names(count_objects[idx_dataset]), cex.main=.7)
-        # abline(coef = c(0,1), col='blue', lty='dashed')
-      }
-    }
-  }
-}
-sim_confint_M = sapply(1:length(results_TMB_fullRE_M), give_true_in_conf_int, model="M", dataset_TMB=results_TMB_fullRE_M)
+# sim_confint_M = sapply(25:30, give_true_in_conf_int, model="M",
+sim_confint_M = sapply(1:length(results_TMB_fullRE_M), give_true_in_conf_int, model="M",
+                       dataset_TMB=results_TMB_fullRE_M)
 names(sim_confint_M) = names(results_TMB_fullRE_M)
 sim_confint_DM = sapply(1:length(results_TMB_fullRE_DM), give_true_in_conf_int, model="DM", dataset_TMB=results_TMB_fullRE_DM)
 names(sim_confint_DM) = names(results_TMB_fullRE_DM)
 
-which(grepl('Kidney-RCC.clearcell', names(results_TMB_fullRE_DM)))
-names(results_TMB_fullRE_DM)[55]
-
+sim_confint_diagRE_DM = sapply(1:length(results_TMB_diagRE_DM), give_true_in_conf_int, model="DM", dataset_TMB=results_TMB_diagRE_DM)
+names(sim_confint_diagRE_DM) = names(results_TMB_diagRE_DM)
+sim_confint_diagRE_M = sapply(1:length(results_TMB_diagRE_M), give_true_in_conf_int, model="M", dataset_TMB=results_TMB_diagRE_M)
+names(sim_confint_diagRE_M) = names(results_TMB_diagRE_M)
 
 all(na.omit(names(sim_confint_M) == names(sim_confint_DM))) ## check if same ct/feature combinations in all models
 sim_confint_M_prop = sapply(sim_confint_M, function(i) sum(i/length(i)))
 sim_confint_DM_prop = sapply(sim_confint_DM, function(i) sum(i/length(i)))
-sim_confint_M_prop[is.na(sim_confint_M_prop)] = -0.2
-sim_confint_DM_prop[is.na(sim_confint_DM_prop)] = -0.2
+sim_confint_diagRE_M_prop = sapply(sim_confint_diagRE_M, function(i) sum(i/length(i)))
+sim_confint_diagRE_DM_prop = sapply(sim_confint_diagRE_DM, function(i) sum(i/length(i)))
+# sim_confint_M_prop[is.na(sim_confint_M_prop)] = -0.2
+# sim_confint_DM_prop[is.na(sim_confint_DM_prop)] = -0.2
 
-plot(sim_confint_M_prop, sim_confint_DM_prop)
-abline(h = 0, lty='dashed')
-abline(v = 0, lty='dashed')
-abline(coef = c(0,1), lty='dashed')
+# plot(sim_confint_M_prop, sim_confint_DM_prop)
+# abline(h = 0, lty='dashed')
+# abline(v = 0, lty='dashed')
+# abline(coef = c(0,1), lty='dashed')
 
-confint_df = cbind.data.frame(sim_confint_M_prop,sim_confint_DM_prop, names=names(sim_confint_M_prop))
+confint_df = cbind.data.frame(sim_confint_diagRE_M_prop, sim_confint_M_prop, sim_confint_diagRE_DM_prop, sim_confint_DM_prop, names=names(sim_confint_M_prop))
 confint_df$CT = sapply(confint_df$names, function(i) gsub("nucleotidesubstitution1|signatures", "", i) )
 confint_df$type = sapply(1:nrow(confint_df), function(i) gsub(confint_df$CT[i], "", confint_df$names[i]) )
-ggplot(melt(confint_df, measure.vars = c('sim_confint_M_prop', 'sim_confint_DM_prop')),
-       aes(x=interaction(variable, type, CT), col=variable, y=value, label=names))+geom_bar(stat='identity')+
-  ggtitle("Fraction of observed values of simulations under the model with inferred parameters for the M and DM models")
+confint_df$CT2 = pcawg_labels[match(confint_df$CT, pcawg_labels$PCAWG), 'my_code']
 
-ggplot(confint_df,
-       aes(x=sim_confint_M_prop, y=sim_confint_DM_prop, label=CT, col=type))+
-  geom_point()+geom_abline(slope = 1, intercept = 0)+geom_label_repel()+
+confint_df_melt = melt(confint_df, measure.vars = c('sim_confint_diagRE_M_prop', 'sim_confint_M_prop', 'sim_confint_diagRE_DM_prop', 'sim_confint_DM_prop'))
+confint_df_melt[is.na(confint_df_melt$CT),'facet_factor'] = 3
+confint_df_melt[which(confint_df_melt$CT < unique(confint_df_melt$CT)[length(unique(confint_df_melt$CT))*2/3]),'facet_factor'] = 2
+confint_df_melt[which(confint_df_melt$CT < unique(confint_df_melt$CT)[length(unique(confint_df_melt$CT))/3]),'facet_factor'] = 1
+
+ggplot(confint_df_melt[!is.na(confint_df_melt$CT),],
+       # aes(x=interaction(variable, type, CT), col=variable, y=value, label=names))+
+       aes(x=interaction(CT), fill=interaction(variable, type), y=value, group=interaction(variable, type, CT), label=names))+
+  geom_bar(stat='identity', position = "dodge", width = 0.4)+
+  ggtitle("Fraction of observed values of simulations under the model with inferred parameters for the M and DM models")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(#breaks = c("2", "1", "0.5"), 
+                    values=c('#b22222', "red", "#ff4040", "#ff9999",
+                             '#191970', "blue", "#4169e1", "#a1caf1"), name="")+
+  facet_wrap(.~facet_factor, ncol=1, scales='free_x')+
+  theme(legend.position = "bottom",   strip.background = element_blank(),
+        strip.text.x = element_blank())+labs(x="")
+ggsave("../../results/assessing_models/fraction_in_confidenceinterval_M_DM_barplot.pdf", width = 10, height = 6)
+
+ggplot(confint_df[!is.na(confint_df$CT),],
+       aes(x=sim_confint_M_prop, y=sim_confint_DM_prop, label=CT2, col=type))+
+  geom_point()+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_label_repel(size=3)+
   ggtitle("Fraction of observed values of simulations under the model with inferred parameters for the M and DM models")
 ggsave("../../results/assessing_models/fraction_in_confidenceinterval_M_DM_altpar.pdf", width = 7)
+
+ggplot(confint_df[!is.na(confint_df$CT),],
+       aes(x=sim_confint_M_prop, y=sim_confint_diagRE_DM_prop, label=CT2, col=type))+
+  geom_point()+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_label_repel(size=3)+
+  # scale_x_continuous(trans='log2')+
+  # scale_y_continuous(trans='log2')+
+  ggtitle("Fraction of observed values of simulations under the model with inferred\nparameters for the M models with full RE and DM with independent RE")+
+  theme(legend.position = "bottom")
+ggsave("../../results/assessing_models/fraction_in_confidenceinterval_M_diagREDM.pdf", width = 7, height = 7)
+
+ggplot(confint_df[!is.na(confint_df$CT),],
+       aes(x=sim_confint_diagRE_DM_prop, y=sim_confint_DM_prop, label=CT2, col=type))+
+  geom_point()+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_label_repel(size=3)+
+  scale_x_continuous(trans='log2')+
+  scale_y_continuous(trans='log2')+
+  ggtitle("Fraction of observed values of simulations under the model with inferred\nparameters for the DM models with full and independent RE")+
+  theme(legend.position = "bottom")
+ggsave("../../results/assessing_models/fraction_in_confidenceinterval_DM_diagREDM.pdf", width = 7, height = 7)
+
+ggplot(confint_df[!is.na(confint_df$CT),],
+       aes(x=sim_confint_M_prop, y=sim_confint_diagRE_DM_prop, label=CT2, col=type))+
+  geom_point()+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_label_repel(size=3)+
+  ggtitle("Fraction of observed values of simulations under the model with inferred\nparameters for the M models with full RE and DM with independent RE")+
+  theme(legend.position = "bottom")
+ggsave("../../results/assessing_models/fraction_in_confidenceinterval_fullREM_diagREDM.pdf", width = 7, height = 7)
+
+ggplot(confint_df[!is.na(confint_df$CT),],
+       aes(x=sim_confint_diagRE_M_prop, y=sim_confint_M_prop, label=CT2, col=type))+
+  geom_point()+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  geom_abline(slope = 1, intercept = 0)+
+  geom_label_repel(size=3)+
+  scale_color_manual(values=c('#b22222', "#191970"))+
+  ggtitle("Fraction of observed values of simulations under the model with inferred\nparameters for the M models with full RE and independent RE")+
+  theme_classic()+theme(legend.position = "bottom")
+ggsave("../../results/assessing_models/fraction_in_confidenceinterval_fullREM_diagREM.pdf", width = 7, height = 7)
+
 #----------------------------------------------------------------------------------------------------------
 
 
@@ -681,6 +706,12 @@ pdf("../../results/assessing_models/correlation_features_density_model_compariso
 do.call(grid.arrange, list(grobs=plts_features[[1]], nrow=1))
 dev.off()
 
+pdf("../../results/assessing_models/correlation_features_density_model_comparison_signatures_and_features_fullRE.pdf",
+    width = 15, height = 5)
+do.call(grid.arrange, list(grobs=c(plts_features[[1]][1:2], plts_features[[2]][1:2]), nrow=1))
+dev.off()
+
+
 pdf("../../results/assessing_models/correlation_features_density_model_comparison_nucleotide1.pdf",
     width = 15, height = 5)
 do.call(grid.arrange, list(grobs=plts_features[[2]], nrow=1))
@@ -723,3 +754,7 @@ pdf("../../results/assessing_models/correlation_patients_density_model_compariso
 do.call(grid.arrange, list(grobs=plts_features_patientwise[[2]], nrow=1))
 dev.off()
 
+pdf("../../results/assessing_models/correlation_patients_density_model_comparison_signatures_and_features_fullRE.pdf",
+    width = 15, height = 5)
+do.call(grid.arrange, list(grobs=c(plts_features_patientwise[[1]][1:2], plts_features_patientwise[[2]][1:2]), nrow=1))
+dev.off()

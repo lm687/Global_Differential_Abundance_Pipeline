@@ -58,7 +58,8 @@ Type objective_function<Type>::operator() ()
   for(int l=0; l<n; l++){ // Multinomial draws
     vector<Type> lth_row = Y.row(l);
     vector<Type> theta_l = theta.row(l);
-    nll -= multinomial(lth_row, theta_l, d);
+//     nll -= multinomial(lth_row, theta_l, d); // this was what was written on 20201025 and ofc doesn't compile (no multinomila() function). I also don't know what this d refers to
+    nll -= dmultinom(lth_row, theta_l, true);
   }
   return nll;
 

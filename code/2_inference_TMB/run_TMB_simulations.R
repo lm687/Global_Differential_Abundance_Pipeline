@@ -17,6 +17,7 @@ source("mm_multinomial/helper_functions.R")
 source("helper_TMB.R")
 uuid = uuid::UUIDgenerate()
 re_run_test = FALSE ## use cache
+re_make_plots = TRUE
 # set.seed(1245)
 #-------------------------------------------------------------------------------------------------#
 
@@ -34,9 +35,10 @@ dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
 ##' 20200625: first generation
 ##' (B) (not run) same as 20200625, but with non-zero intercept for beta
 ##' GenerationC: trying to create data that resembles better the PCAWG cohort data
+dataset_generation='GenerationE'
 dataset_generation=20200625
-dataset_generation='GenerationC'
 dataset_generation='GenerationD'
+dataset_generation='GenerationC'
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -53,10 +55,11 @@ if(re_run_test){
   names(runs_M) = gsub(".RDS", "", basename(datasets_files))
   saveRDS(object = runs_M, file = paste0("../../data/robjects_cache/tmb_results_simulations/", dataset_generation, "_simulation_runs_M_", uuid, ".RDS"))
 }else{
-  runs_M_names = list("../../data/robjects_cache/tmb_results_simulations/20200625_simulation_runs_M_970f6533-5025-4eef-a598-956422846ddf.RDS",
-                      "../../data/robjects_cache/tmb_results_simulations/GenerationC_simulation_runs_M_ae8b28fd-de16-4e2e-906e-9c9d49ab896c.RDS",
-                      "../../data/robjects_cache/tmb_results_simulations/GenerationD_simulation_runs_M_96f86b9d-c9e5-4ce0-bc46-18503a851944.RDS")
-  names(runs_M_names) = c(20200625, 'GenerationC', 'GenerationD')
+  runs_M_names = list("../../data/robjects_cache/tmb_results_simulations/singleRE_20200625_simulation_runs_M_970f6533-5025-4eef-a598-956422846ddf.RDS",
+                      "../../data/robjects_cache/tmb_results_simulations/singleRE_GenerationC_simulation_runs_LNM_ae8b28fd-de16-4e2e-906e-9c9d49ab896c.RDS",
+                      "../../data/robjects_cache/tmb_results_simulations/GenerationD_simulation_runs_M_96f86b9d-c9e5-4ce0-bc46-18503a851944.RDS",
+                      "../../data/robjects_cache/tmb_results_simulations/GenerationE_simulation_runs_M_4c8d8557-8369-4c67-871d-ecea7ae2aa30.RDS")
+  names(runs_M_names) = c(20200625, 'GenerationC', 'GenerationD', 'GenerationE')
   runs_M = readRDS(runs_M_names[[as.character(dataset_generation)]])
 }
 if(re_run_test){
@@ -64,30 +67,39 @@ if(re_run_test){
   names(runs_DM) = gsub(".RDS", "", basename(datasets_files))
   saveRDS(object = runs_DM, file = paste0("../../data/robjects_cache/tmb_results_simulations/", dataset_generation, "_simulation_runs_DM_", uuid, ".RDS"))
 }else{
-  runs_DM_names = list("../../data/robjects_cache/tmb_results_simulations/20200625_simulation_runs_DM_d8ea36c9-d0ed-4673-b86b-071de763dc65.RDS", #"../../data/robjects_cache/tmb_results_simulations/20200625_simulation_runs_DM_5c268769-daa7-4418-a41b-08c6ed9cf5d3.RDS",
-                      "../../data/robjects_cache/tmb_results_simulations/GenerationC_simulation_runs_DM_d16d694b-d142-4738-9b8d-2e23eefee846.RDS",
-                      "../../data/robjects_cache/tmb_results_simulations/GenerationD_simulation_runs_DM_96f86b9d-c9e5-4ce0-bc46-18503a851944.RDS")
-  names(runs_DM_names) = c(20200625, 'GenerationC', 'GenerationD')
+  runs_DM_names = list("../../data/robjects_cache/tmb_results_simulations/singleRE_20200625_simulation_runs_DM_d8ea36c9-d0ed-4673-b86b-071de763dc65.RDS", #"../../data/robjects_cache/tmb_results_simulations/20200625_simulation_runs_DM_5c268769-daa7-4418-a41b-08c6ed9cf5d3.RDS",
+                      "../../data/robjects_cache/tmb_results_simulations/singleRE_GenerationC_simulation_runs_DM_d16d694b-d142-4738-9b8d-2e23eefee846.RDS",
+                      "../../data/robjects_cache/tmb_results_simulations/GenerationD_simulation_runs_DM_96f86b9d-c9e5-4ce0-bc46-18503a851944.RDS",
+                      "../../data/robjects_cache/tmb_results_simulations/GenerationE_simulation_runs_DM_4c8d8557-8369-4c67-871d-ecea7ae2aa30.RDS")
+  names(runs_DM_names) = c(20200625, 'GenerationC', 'GenerationD', 'GenerationE')
   runs_DM = readRDS(runs_DM_names[[as.character(dataset_generation)]])
 }
-if(re_run_test){
-  runs_LNM = lapply(datasets_files, function(i)  try( wrapper_run_TMB(i, model = "LNM", typedata = "simulation", simulation = TRUE)))
-  names(runs_LNM) = gsub(".RDS", "", basename(datasets_files))
-  saveRDS(object = runs_LNM, file = paste0("../../data/robjects_cache/tmb_results_simulations/", dataset_generation, "_simulation_runs_LNM_", uuid, ".RDS"))
-}else{
-  runs_LNM_names = list("../../data/robjects_cache/tmb_results_simulations/20200625_simulation_runs_LNM_5c268769-daa7-4418-a41b-08c6ed9cf5d3.RDS",
-                       "../../data/robjects_cache/tmb_results_simulations/GenerationC_simulation_runs_LNM_ae8b28fd-de16-4e2e-906e-9c9d49ab896c.RDS",
-                       "../../data/robjects_cache/tmb_results_simulations/GenerationD_simulation_runs_LNM_96f86b9d-c9e5-4ce0-bc46-18503a851944.RDS")
-  names(runs_LNM_names) = c(20200625, 'GenerationC', 'GenerationD')
-  runs_LNM = readRDS(runs_LNM_names[[as.character(dataset_generation)]])
-}
+# if(re_run_test){
+#   runs_LNM = lapply(datasets_files, function(i)  try( wrapper_run_TMB(i, model = "LNM", typedata = "simulation", simulation = TRUE)))
+#   names(runs_LNM) = gsub(".RDS", "", basename(datasets_files))
+#   saveRDS(object = runs_LNM, file = paste0("../../data/robjects_cache/tmb_results_simulations/", dataset_generation, "_simulation_runs_LNM_", uuid, ".RDS"))
+# }else{
+#   runs_LNM_names = list("../../data/robjects_cache/tmb_results_simulations/20200625_simulation_runs_LNM_5c268769-daa7-4418-a41b-08c6ed9cf5d3.RDS",
+#                        "../../data/robjects_cache/tmb_results_simulations/GenerationC_simulation_runs_LNM_ae8b28fd-de16-4e2e-906e-9c9d49ab896c.RDS",
+#                        "../../data/robjects_cache/tmb_results_simulations/GenerationD_simulation_runs_LNM_96f86b9d-c9e5-4ce0-bc46-18503a851944.RDS")
+#   names(runs_LNM_names) = c(20200625, 'GenerationC', 'GenerationD')
+#   runs_LNM = readRDS(runs_LNM_names[[as.character(dataset_generation)]])
+# }
 #-------------------------------------------------------------------------------------------------#
 
+## How many failures have there been?
+table(sapply(runs_DM, function(i) all(is.na(i$par.fixed))))
+idx_to_repeat = 31
+(sapply(runs_DM, function(i) all(is.na(i$par.fixed))))[idx_to_repeat]
+try(wrapper_run_TMB(datasets_files[[idx_to_repeat]], model = "fullRE_M", typedata = "simulation", simulation = TRUE))
+grep('GenerationE_80_200_NA_4_0_dataset', datasets_files)
+get_count_object_file(datasets_files[[idx_to_repeat]])$objects_counts@count_matrices_all
+if(re_make_plots) createbarplot_object(datasets_files[[idx_to_repeat]])
 #-------------------------------------------------------------------------------------------------#
 # Keep only good runs
 runs_M[sapply(runs_M, function(i) try(give_summary_per_sample(i))) != "Good"] = NA
 runs_DM[sapply(runs_DM, function(i) try(give_summary_per_sample(i))) != "Good"] = NA
-runs_LNM[sapply(runs_LNM, function(i) try(give_summary_per_sample(i))) != "Good"] = NA
+# runs_LNM[sapply(runs_LNM, function(i) try(give_summary_per_sample(i))) != "Good"] = NA
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -108,13 +120,13 @@ sapply(runs_M, typeof)
 ## check if the names are the same
 all(names(runs_M) == names(datasets))
 all(names(runs_DM) == names(datasets))
-all(names(runs_LNM) == names(datasets))
+# all(names(runs_LNM) == names(datasets))
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
 pvals_M = as.numeric(sapply(runs_M, function(i) try(wald_TMB_wrapper(i, verbatim=FALSE))))
 pvals_DM = as.numeric(sapply(runs_DM, function(i) try(wald_TMB_wrapper(i, verbatim=FALSE))))
-pvals_LNM = as.numeric(sapply(runs_LNM, function(i) try(wald_TMB_wrapper(i, verbatim=FALSE))))
+# pvals_LNM = as.numeric(sapply(runs_LNM, function(i) try(wald_TMB_wrapper(i, verbatim=FALSE))))
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -122,14 +134,16 @@ pvals_LNM = as.numeric(sapply(runs_LNM, function(i) try(wald_TMB_wrapper(i, verb
 ## TO DO
 pvals_M_adj = pvals_M*length(pvals_M)
 pvals_DM_adj = pvals_DM*length(pvals_DM)
-pvals_LNM_adj = pvals_LNM*length(pvals_LNM)
+# pvals_LNM_adj = pvals_LNM*length(pvals_LNM)
 pvals_ttest_adj = pvals_ttest*length(pvals_ttest)
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
 ## Basic analysis
 ## How many are said to be differentially abundant, how many actually are?
-sapply(list(M=pvals_M_adj <= 0.05, DM=pvals_DM_adj <= 0.05, LNM=pvals_LNM_adj <= 0.05, ttest=pvals_ttest_adj <= 0.05, true=DA_bool), table)
+sapply(list(M=pvals_M_adj <= 0.05, DM=pvals_DM_adj <= 0.05,
+            # LNM=pvals_LNM_adj <= 0.05,
+            ttest=pvals_ttest_adj <= 0.05, true=DA_bool), table)
 
 ## Contingency table
 table(DA_bool, M=pvals_M_adj <= 0.05)
@@ -137,14 +151,40 @@ table(DA_bool, DM=pvals_DM_adj <= 0.05)
 table(DA_bool, LNM=pvals_LNM_adj <= 0.05)
 
 ## which datasets are TP, TN, FP and FN?
-which_contingency = lapply(list(pvals_M_adj, pvals_DM_adj, pvals_LNM_adj), function(i) list(TP = as.vector(which(DA_bool & (i <= 0.05))),
+which_contingency = lapply(list(pvals_M_adj, pvals_DM_adj#, pvals_LNM_adj
+                                ), function(i) list(TP = as.vector(which(DA_bool & (i <= 0.05))),
                                                                         TN = as.vector(which(!DA_bool & (i > 0.05))),
                                                                         FP = as.vector(which(!DA_bool & (i <= 0.05))),
                                                                         FN = as.vector(which(DA_bool & (i > 0.05)))))
-names(which_contingency) = c('M', 'DM', 'LNM')
+names(which_contingency) = c('M', 'DM')#, 'LNM')
 
 ## It doesn't seem to have to do with the number of patients in the datasets
 lapply(which_contingency, function(i) sapply(i, function(j) sapply(j, function(k) datasets[[k]]$n)))
+
+#-------------------------------------------------------------------------------------------------#
+
+#-------------------------------------------------------------------------------------------------#
+## compare estimated betas to actual betas
+for(j in which(sapply(runs_M, typeof) %in% c("logical", "character"))){
+  runs_M[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
+}
+
+for(j in which(sapply(runs_DM, typeof) %in% c("logical", "character"))){
+  runs_DM[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
+}
+
+# for(j in which(sapply(runs_LNM, typeof) %in% c("logical", "character"))){
+#   runs_LNM[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
+# }
+
+## beta slopes are not well recovered, even though in fullinterceptRE_ME_multinomial.R it's done well!
+
+true_slope_dataset = (sapply(datasets, function(i) i$beta[2,]))
+inferred_slope_M = sapply(runs_M, function(i) try(select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE)))
+par(mfrow=c(1,1))
+plot(unlist(true_slope_dataset),
+     unlist(inferred_slope_M))
+abline(coef = c(0, 1))
 
 #-------------------------------------------------------------------------------------------------#
 
@@ -175,12 +215,14 @@ plot(metric_change, pvals_DM_adj <= 0.05, col=(1+as.numeric(DA_bool)), pch=9)
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-pdf(paste0("../../results/TMB/", dataset_generation, "_pvals_simulation.pdf"), height = 3, width = 10)
-par(mfrow=c(1,3))
-plot(sort(na.omit(pvals_M)), type = "h", main="M")
-plot(sort(na.omit(pvals_DM)), type = "h", main='DM')
-plot(sort(na.omit(pvals_LNM)), type = "h", main="LNM")
-dev.off()
+if(re_make_plots){
+  pdf(paste0("../../results/TMB/", dataset_generation, "_pvals_simulation.pdf"), height = 3, width = 10)
+  par(mfrow=c(1,3))
+  plot(sort(na.omit(pvals_M)), type = "h", main="M")
+  plot(sort(na.omit(pvals_DM)), type = "h", main='DM')
+  plot(sort(na.omit(pvals_LNM)), type = "h", main="LNM")
+  dev.off()
+}
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -214,13 +256,14 @@ plts = sapply(datasets, function(i) createbarplot_ROOSigs(i$objects_counts, slot
 ## a) I am not computing the p-value properly
 ## b) DA_bool is wrong, perhaps because beta_shape... is not the best thing to look at
 
-pdf(paste0("../../results/assessing_models/barplots_datasets", dataset_generation, "_DA.pdf"), width = 20, height = 15)
-do.call('grid.arrange', plts[DA_bool]) ## differentially abundant
-dev.off()
-pdf(paste0("../../results/assessing_models/barplots_datasets", dataset_generation, "_nonDA.pdf"), width = 20, height = 15)
-do.call('grid.arrange', plts[!DA_bool]) ## not differentially abundant
-dev.off()
-
+if(re_make_plots){
+  pdf(paste0("../../results/assessing_models/barplots_datasets", dataset_generation, "_DA.pdf"), width = 20, height = 15)
+  do.call('grid.arrange', plts[DA_bool]) ## differentially abundant
+  dev.off()
+  pdf(paste0("../../results/assessing_models/barplots_datasets", dataset_generation, "_nonDA.pdf"), width = 20, height = 15)
+  do.call('grid.arrange', plts[!DA_bool]) ## not differentially abundant
+  dev.off()
+}
 
 ## the ones that DM think are DA or not
 # do.call('grid.arrange', plts[which(pvals_DM_adj <= 0.05)]) ## differentially abundant
@@ -275,7 +318,7 @@ summarise_DA_detection(true = DA_bool, predicted = pvals_ttest_adj <= 0.05)
 
 all_summary = do.call('rbind', list(M=summarise_DA_detection(true = DA_bool, predicted = pvals_M_adj <= 0.05),
                                     DM=summarise_DA_detection(true = DA_bool, predicted = pvals_DM_adj <= 0.05),
-                                    LNM=summarise_DA_detection(true = DA_bool, predicted = pvals_LNM_adj <= 0.05),
+                                    #LNM=summarise_DA_detection(true = DA_bool, predicted = pvals_LNM_adj <= 0.05),
                                     ttest=summarise_DA_detection(true = DA_bool, predicted = pvals_ttest_adj <= 0.05)))
 xtable::xtable(all_summary, digits=c(0,4,4,4,4,4,4))
 #-------------------------------------------------------------------------------------------------#
@@ -319,20 +362,6 @@ par(mfrow=c(1,3))
 plot( sapply(datasets, function(i) i$beta_gamma_shape), pvals_M_adj)
 plot( sapply(datasets, function(i) i$beta_gamma_shape), pvals_DM_adj)
 plot( sapply(datasets, function(i) i$beta_gamma_shape), pvals_LNM_adj)
-
-## compare estimated betas to actual betas
-par(mfrow=c(1,1))
-plot((unlist(sapply(datasets, function(i) i$beta[2,]))),
-     (unlist(sapply(runs_M, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"))))))
-abline(coef = c(0, 1))
-
-for(j in which(sapply(runs_DM, typeof) == "character")){
-  runs_DM[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
-}
-
-for(j in which(sapply(runs_LNM, typeof) == "character")){
-  runs_LNM[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
-}
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -343,15 +372,20 @@ df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function
                                     n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1),
                                     beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1),
                                     beta_est_M = unlist(sapply(runs_M, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
+                                    beta_stderr_M = unlist(sapply(runs_M, give_stderr)),
                                     beta_est_DM = unlist(sapply(runs_DM, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
-                                    beta_est_LNM = unlist(sapply(runs_LNM, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
+                                    beta_stderr_DM = unlist(sapply(runs_DM, give_stderr)),
+                                    # beta_est_LNM = unlist(sapply(runs_LNM, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
                                     pvals_M_adj=rep(pvals_M_adj, unlist(sapply(datasets, function(i) i$d))-1),
                                     pvals_DM_adj=rep(pvals_DM_adj, unlist(sapply(datasets, function(i) i$d))-1),
-                                    pvals_LNM_adj=rep(pvals_LNM_adj, unlist(sapply(datasets, function(i) i$d))-1))
-df_beta_recovery$bool_zero_true_beta = factor((df_beta_recovery$beta_true == 0), levels = c(TRUE, FALSE))
-
-pairs(df_beta_recovery[,c('pvals_M_adj', 'pvals_DM_adj', 'pvals_LNM_adj')], main='Pairs plot of p-values')
-pairs(df_beta_recovery[,c('beta_est_M', 'beta_est_DM', 'beta_est_LNM')], main='Pairs plot of betas')
+                                    # pvals_LNM_adj=rep(pvals_LNM_adj, unlist(sapply(datasets, function(i) i$d))-1)
+                                    DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
+                                    idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$d-1))))
+df_beta_recovery$bool_zero_true_beta = factor(df_beta_recovery$beta_true == 0, levels=c(TRUE, FALSE))
+pairs(df_beta_recovery[,c('pvals_M_adj', 'pvals_DM_adj'#, 'pvals_LNM_adj'
+                          )], main='Pairs plot of p-values')
+pairs(df_beta_recovery[,c('beta_est_M', 'beta_est_DM'#, 'beta_est_LNM'
+                          )], main='Pairs plot of betas')
 
 table(na.omit(df_beta_recovery$pvals_M_adj <= 0.05))
 table(na.omit(df_beta_recovery$pvals_DM_adj <= 0.05))
@@ -363,17 +397,17 @@ ggplot(df_beta_recovery,
        aes(x=(beta_true), y=(beta_est_M), col=beta_gamma_shape))+geom_point()+
   geom_abline(intercept = 0, slope = 1)
 
-ggplot(df_beta_recovery,
-       aes(x=(beta_true), y=(beta_est_M), col=beta_gamma_shape))+geom_point()+
-  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
-
-ggplot(df_beta_recovery,
-       aes(x=(beta_true), y=(beta_est_DM), col=beta_gamma_shape))+geom_point()+
-  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
-
-ggplot(df_beta_recovery,
-       aes(x=(beta_true), y=(beta_est_LNM), col=beta_gamma_shape))+geom_point()+
-  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
+# ggplot(df_beta_recovery,
+#        aes(x=(beta_true), y=(beta_est_M), col=beta_gamma_shape))+geom_point()+
+#   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
+# 
+# ggplot(df_beta_recovery,
+#        aes(x=(beta_true), y=(beta_est_DM), col=beta_gamma_shape))+geom_point()+
+#   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
+# 
+# ggplot(df_beta_recovery,
+#        aes(x=(beta_true), y=(beta_est_LNM), col=beta_gamma_shape))+geom_point()+
+#   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -388,6 +422,21 @@ p <- ggplot(df_beta_recovery,
   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~bool_zero_true_beta, scales = "free_x")
 gp <- ggplotGrob(p); facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]; gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1,4); grid::grid.draw(gp)
 
+## Looking at true zeros
+## i.e. runs where all beta slopes are zero
+if(re_make_plots){
+  ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
+         aes(x=(beta_true), y=(beta_est_M), col=(pvals_M_adj<0.05)))+geom_point()+
+    geom_abline(intercept = 0, slope = 1)+facet_wrap(.~(pvals_M_adj<0.05), scales = "free_x")
+  ggsave(paste0("../../results/TMB/", dataset_generation, "_betaslopes_nonDA.pdf"), height = 3, width = 8)
+  ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
+         aes(x=idx_within_dataset, y=(beta_est_M), col=(pvals_M_adj<0.05)))+geom_point()+
+    geom_errorbar(aes(ymin=beta_est_M-beta_stderr_M, ymax=beta_est_M+beta_stderr_M), width=.2,
+                  position=position_dodge(.9))+
+    facet_wrap(.~idx, scales='free_x')
+  ggsave(paste0("../../results/TMB/", dataset_generation, "_betaslopes_stderr_nonDA.pdf"), height = 8, width = 8)
+}
+
 ## Dirichlet-Multinomial
 ## there are some very extreme values of beta
 plot(density(log(abs(na.omit(df_beta_recovery$beta_est_DM))))) ## all betas
@@ -399,12 +448,39 @@ p <- ggplot(df_beta_recovery,
 gp <- ggplotGrob(p); facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]; gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1,4); grid::grid.draw(gp)
 
 ## LNM
-df_beta_recovery[df_beta_recovery$idx %in% which(sapply(runs_LNM, function(i) max(abs(python_like_select_name(i$par.fixed, "beta")))) > 20),'beta_est_LNM'] = NA
-p <- ggplot(df_beta_recovery,
-       aes(x=(beta_true), y=(beta_est_LNM), col=(pvals_LNM_adj)<0.05))+geom_point()+
-  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~bool_zero_true_beta, scales = "free_x")
-gp <- ggplotGrob(p); facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]; gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1,4); grid::grid.draw(gp)
+# df_beta_recovery[df_beta_recovery$idx %in% which(sapply(runs_LNM, function(i) max(abs(python_like_select_name(i$par.fixed, "beta")))) > 20),'beta_est_LNM'] = NA
+# p <- ggplot(df_beta_recovery,
+#        aes(x=(beta_true), y=(beta_est_LNM), col=(pvals_LNM_adj)<0.05))+geom_point()+
+#   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~bool_zero_true_beta, scales = "free_x")
+# gp <- ggplotGrob(p); facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]; gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1,4); grid::grid.draw(gp)
 #-------------------------------------------------------------------------------------------------#
+
+#-------------------------------------------------------------------------------------------------#
+## Do betas compensate for each other? i.e. if there is an overestimate in slope, is there an overestimate
+## in the intersect corresponding to the same log-ratio?
+
+beta_gamma_shapes_df = cbind.data.frame(idx=1:length(datasets), beta_gamma_shape= sapply(datasets, function(i) i$beta_gamma_shape))
+cut_beta_gamma_shapes = split(1:length(datasets), f = sapply(datasets, function(i) i$beta_gamma_shape))
+
+df_beta_recovery$beta_gamma_shape = beta_gamma_shapes_df[match(df_beta_recovery$idx, beta_gamma_shapes_df$idx),'beta_gamma_shape']
+
+lapply(cut_beta_gamma_shapes, function(i)  df_beta_recovery[match(i, df_beta_recovery$idx),c('beta_true', 'beta_est_M')])
+
+if(re_make_plots){
+  ggplot(df_beta_recovery,
+         aes(x=(beta_true), y=(beta_est_M), col=n))+geom_point()+
+    geom_abline(intercept = 0, slope = 1)+facet_wrap(.~beta_gamma_shape, scales = "free_x", ncol=5)
+  ggsave(paste0("../../results/TMB/", dataset_generation, "_recoveries_betashape_facet.pdf"), height = 3, width = 11)
+  
+  ggplot(df_beta_recovery,
+         aes(x=(beta_true), y=(beta_est_M), col=n))+geom_point()+
+    geom_abline(intercept = 0, slope = 1)+facet_wrap(.~beta_gamma_shape, scales = "free", ncol=5)
+  ggsave(paste0("../../results/TMB/", dataset_generation, "_recoveries_betashape_facet_freescales.pdf"), height = 3, width = 11)
+}  
+## Problem when beta shape is 0! (why?)
+
+#-------------------------------------------------------------------------------------------------#
+
 
 #-------------------------------------------------------------------------------------------------#
 ## colour code per patient
@@ -574,21 +650,22 @@ which(df_cred_int_theta$DM_convergence == "NULL")
 
 df_cred_int_theta = df_cred_int_theta[!(df_cred_int_theta$LNM_convergence == "NULL" | df_cred_int_theta$DM_convergence == "NULL"),]
 
-ggplot(df_cred_int_theta,
-       aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=d))+ geom_point()
-ggplot(df_cred_int_theta,
-       aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=n))+ geom_point()
-ggplot(df_cred_int_theta,
-       aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=DM_convergence, shape=LNM_convergence))+ geom_point()+
-  geom_abline(slope = 1, intercept = 0)
-ggsave("../../results/assessing_models/theta_in_credint_DM_and_LNM.pdf", width = 7, height = 6)
-## pairing the same cancer types
-ggplot(melt(df_cred_int_theta, id.vars = c('d', 'n', 'DM_convergence', 'LNM_convergence', 'names')),
-       aes(x=variable, y=as.numeric(value), col=DM_convergence, group=names, col=DM_convergence))+ geom_line()+facet_wrap(.~factor(DM_convergence, levels=c('TRUE', 'FALSE')))
-ggsave("../../results/assessing_models/theta_in_credint_DM_and_LNM_2.pdf", width = 9, height = 5)
-ggplot(df_cred_int_theta,
-       aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=LNM_convergence, shape=DM_convergence))+ geom_point()
-
+if(re_make_plots){
+  ggplot(df_cred_int_theta,
+         aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=d))+ geom_point()
+  ggplot(df_cred_int_theta,
+         aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=n))+ geom_point()
+  ggplot(df_cred_int_theta,
+         aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=DM_convergence, shape=LNM_convergence))+ geom_point()+
+    geom_abline(slope = 1, intercept = 0)
+  ggsave("../../results/assessing_models/theta_in_credint_DM_and_LNM.pdf", width = 7, height = 6)
+  ## pairing the same cancer types
+  ggplot(melt(df_cred_int_theta, id.vars = c('d', 'n', 'DM_convergence', 'LNM_convergence', 'names')),
+         aes(x=variable, y=as.numeric(value), col=DM_convergence, group=names, col=DM_convergence))+ geom_line()+facet_wrap(.~factor(DM_convergence, levels=c('TRUE', 'FALSE')))
+  ggsave("../../results/assessing_models/theta_in_credint_DM_and_LNM_2.pdf", width = 9, height = 5)
+  ggplot(df_cred_int_theta,
+         aes(x=cred_int_theta_sims_DM, y=cred_int_theta_sims_LNM, col=LNM_convergence, shape=DM_convergence))+ geom_point()
+}
 
 hist(cred_int_theta_sims_DM)
 
@@ -607,14 +684,16 @@ plot(as.vector(datasets[[6]]$W), as.vector(sim_M))
 #-------------------------------------------------------------------------------------------------#
 ## Overdispersion coefficients for DM runs
 plot(do.call('rbind', sapply(runs_DM, function(i) python_like_select_name(i$par.fixed, 'log_lambda'))))
-ggplot(data.frame(t(sapply(runs_DM, function(i){
-  if(length(python_like_select_name(i$par.fixed, 'log_lambda')) == 0){
-  c(NA, NA)
-  }else{
-    python_like_select_name(i$par.fixed, 'log_lambda')
-  }
-  })),
-  converged=unlist(sapply(runs_DM, function(i)if(!is.null(i$pdHess)){i$pdHess}else{NA}))  ), aes(x=log_lambda, y=log_lambda.1, col=converged))+geom_point()
+if(re_make_plots){
+  ggplot(data.frame(t(sapply(runs_DM, function(i){
+    if(length(python_like_select_name(i$par.fixed, 'log_lambda')) == 0){
+    c(NA, NA)
+    }else{
+      python_like_select_name(i$par.fixed, 'log_lambda')
+    }
+    })),
+    converged=unlist(sapply(runs_DM, function(i)if(!is.null(i$pdHess)){i$pdHess}else{NA}))  ), aes(x=log_lambda, y=log_lambda.1, col=converged))+geom_point()
+}
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
@@ -636,18 +715,42 @@ stan_simA_LNM = gsub(".RData", "", basename(stanfiles[grepl("ModelLNMROO", stanf
 # min(rhats)
 ## supossing this is well computed, none of these runs converged
 
-mod_names_stan_M = stan_simA_M %>% gsub("_nlambda", "_", .) %>% gsub("_d", "_", .) %>% gsub("_n", "_", .) %>% 
+modify_M_name = function(df){
+  df %>% gsub("_nlambda", "_", .) %>% gsub("_d", "_", .) %>% gsub("_n", "_", .) %>% 
   gsub("beta_intensity", "", .) %>% 
   gsub("_Nits1000_ModelMROO", "", .) 
-mod_names_stan_DM = stan_simA_DM %>% gsub("_nlambda", "_", .) %>% gsub("_d", "_", .) %>% gsub("_n", "_", .) %>% 
+}
+modify_DM_name = function(df){
+  df %>% gsub("_nlambda", "_", .) %>% gsub("_d", "_", .) %>% gsub("_n", "_", .) %>% 
   gsub("beta_intensity", "", .) %>% gsub("lambda", "", .) %>% 
   gsub("_Nits2000_ModelDMROO", "", .) 
-mod_names_stan_LNM = stan_simA_LNM %>% gsub("_nlambda", "_", .) %>% gsub("_d", "_", .) %>% gsub("_n", "_", .) %>% 
+}
+modify_LNM_name = function(df){
+  df %>% gsub("_nlambda", "_", .) %>% gsub("_d", "_", .) %>% gsub("_n", "_", .) %>% 
   gsub("beta_intensity", "", .) %>% 
   gsub("_Nits2000_ModelLNMROO", "", .) 
+}
+mod_names_stan_M = modify_M_name(stan_simA_M)
+mod_names_stan_DM = modify_DM_name(stan_simA_DM)
+mod_names_stan_LNM = modify_DM_name(stan_simA_LNM)
 mod_names_M = gsub("_dataset", "", names(runs_M))
 mod_names_DM = gsub("_dataset", "", names(runs_DM))
 mod_names_LNM = gsub("_dataset", "", names(runs_LNM))
+
+modify_M_name_2 = function(i){
+  paste0(paste0(strsplit(i, '_')[[1]][1:3], collapse='_'),
+         '_10_',
+         paste0(strsplit(i, '_')[[1]][4:5], collapse='_'))}
+modify_DM_name_2 = function(i){
+  paste0(paste0(strsplit(i, '_')[[1]][1:3], collapse='_'),
+         '_10_',
+         paste0(strsplit(i, '_')[[1]][4:5], collapse='_'))}
+if(dataset_generation == 20200625){
+  ## there is a bit missing in mod_names_stan_M compared to mod_names_M, which is always a 10. I am
+  ## not sure if it's the coefficient for overdispersion but I add it to mod_names_stan_M anyway
+  mod_names_stan_M = sapply(mod_names_stan_M, modify_M_name_2)
+  mod_names_stan_DM = sapply(mod_names_stan_DM, modify_DM_name_2)
+}
 
 # dim(python_like_select_colnames(as.matrix(stan_simA[[1]]$fit_stan), "beta\\[2,"))
 
@@ -664,28 +767,29 @@ sapply(list(stan_simA_M, stan_simA_DM, stan_simA_LNM), names)
 idx = (1:length(stan_simA_M))[51]
 
 give_plot_stan_vs_TMB_density = function(stan_list, TMB_list, nameout){
-pdf(paste0("../../results/assessing_models/", nameout), width = 10, height = 3)
-sapply(1:length(stan_list), function(idx){
-  if(!is.na(stan_list[[idx]])){
-    .xx = load_stan(paste0(folder_stan, stan_list[[idx]], ".RData"))
-    post_betaslope = python_like_select_colnames(as.matrix(.xx$fit_stan), "beta\\[2,")
-    ML_betaslope = select_slope_2(python_like_select_name(runs_M[[idx]]$par.fixed, "beta"))
-    
-    par(mfrow=c(1,ncol(post_betaslope)))
-    for(i in 1:ncol(post_betaslope)){
-      plot(density(post_betaslope[,i]))
-      abline(v=ML_betaslope[i])
-      # abline(v=ML_betaslope_2[i], col='red')
+  pdf(paste0("../../results/assessing_models/", nameout), width = 10, height = 3)
+  sapply(1:length(stan_list), function(idx){
+    if(!is.na(stan_list[[idx]])){
+      .xx = load_stan(paste0(folder_stan, stan_list[[idx]], ".RData"))
+      post_betaslope = python_like_select_colnames(as.matrix(.xx$fit_stan), "beta\\[2,")
+      ML_betaslope = select_slope_2(python_like_select_name(runs_M[[idx]]$par.fixed, "beta"))
+      
+      par(mfrow=c(1,ncol(post_betaslope)))
+      for(i in 1:ncol(post_betaslope)){
+        plot(density(post_betaslope[,i]))
+        abline(v=ML_betaslope[i])
+        # abline(v=ML_betaslope_2[i], col='red')
+      }
     }
-  }
-})
-dev.off()
+  })
+  dev.off()
 }
 
-give_plot_stan_vs_TMB_density(stan_list = stan_simA_M, TMB_list = runs_M, nameout = "simA_M_stan_TMB_betaslope.pdf")
-give_plot_stan_vs_TMB_density(stan_list = stan_simA_DM, TMB_list = runs_DM, nameout = "simA_DM_stan_TMB_betaslope.pdf")
-give_plot_stan_vs_TMB_density(stan_list = stan_simA_LNM, TMB_list = runs_LNM, nameout = "simA_LNM_stan_TMB_betaslope.pdf")
-
+if(re_make_plots){
+  give_plot_stan_vs_TMB_density(stan_list = stan_simA_M, TMB_list = runs_M, nameout = "simA_M_stan_TMB_betaslope.pdf")
+  give_plot_stan_vs_TMB_density(stan_list = stan_simA_DM, TMB_list = runs_DM, nameout = "simA_DM_stan_TMB_betaslope.pdf")
+  give_plot_stan_vs_TMB_density(stan_list = stan_simA_LNM, TMB_list = runs_LNM, nameout = "simA_LNM_stan_TMB_betaslope.pdf")
+}
 
 ## scatterplot for betas for mean of posterior and ML from TMB
 
@@ -731,38 +835,149 @@ means_stan_DM
 
 df_beta_recovery = cbind(df_beta_recovery,
                          means_stan_M = as.vector(unlist(means_stan_M)),
-                         means_stan_DM = as.vector(unlist(means_stan_DM)),
-                         means_stan_LNM = as.vector(unlist(means_stan_LNM))
+                         means_stan_DM = as.vector(unlist(means_stan_DM))
+                         #means_stan_LNM = as.vector(unlist(means_stan_LNM))
                          )
 df_beta_recovery$converged_M_TMB = sapply(gsub(".{1}$", "", rownames(df_beta_recovery)), function(i) 
   runs_M[[i]]$pdHess)
-df_beta_recovery$converged_LNM_TMB = sapply(gsub(".{1}$", "", rownames(df_beta_recovery)), function(i) 
-                                            runs_LNM[[i]]$pdHess)
+# df_beta_recovery$converged_LNM_TMB = sapply(gsub(".{1}$", "", rownames(df_beta_recovery)), function(i) 
+#                                             runs_LNM[[i]]$pdHess)
 df_beta_recovery$converged_DM_TMB = as.character(sapply(gsub(".{1}$", "", rownames(df_beta_recovery)), function(i) 
   runs_DM[[i]]$pdHess))
-ggplot(df_beta_recovery, aes(x=beta_est_M, means_stan_M))+geom_point()#+geom_abline(coef = c(0,1))
-ggplot(df_beta_recovery[df_beta_recovery$converged_M_TMB,], aes(x=beta_est_M, means_stan_M))+geom_point()#+geom_abline(coef = c(0,1))
-#ggplot(df_beta_recovery[!is.na(df_beta_recovery$means_stan_M),], aes(x=beta_est_M, means_stan_M))+geom_point()#+geom_abline(coef = c(0,1))
-ggsave("../../results/assessing_models/simA_M_scatter.pdf")
-ggplot(df_beta_recovery, aes(x=beta_est_DM, y=means_stan_DM))+
-  geom_point()+geom_abline(coef = c(0,1))+
-  guides(shape=FALSE)
-ggsave("../../results/assessing_models/simA_DM_scatter.pdf")
-ggplot(df_beta_recovery, aes(x=beta_est_DM, y=means_stan_DM, col=converged_DM_TMB))+
-  geom_point()+geom_abline(coef = c(0,1))+
-  guides(shape=FALSE)
-ggsave("../../results/assessing_models/simA_DM_scatter_col.pdf")
-ggplot(df_beta_recovery[df_beta_recovery$converged_DM_TMB == 'TRUE',], aes(x=beta_est_DM, y=means_stan_DM))+
-  geom_point()+geom_abline(coef = c(0,1))+
-  guides(shape=FALSE)
-ggsave("../../results/assessing_models/simA_DM_scatter_col_nodivergent.pdf", width = 5, height = 5)
-ggplot(df_beta_recovery %>% filter(!is.na(means_stan_LNM)),
-       aes(x=(beta_est_LNM), y=means_stan_LNM, col=converged_LNM_TMB))+
-  geom_point()+
-  geom_abline(coef = c(0,1))
-ggsave("../../results/assessing_models/simA_LNM_scatter.pdf")
 
+if(re_make_plots){
+  ggplot(df_beta_recovery, aes(x=beta_est_M, means_stan_M))+geom_point()#+geom_abline(coef = c(0,1))
+  ggplot(df_beta_recovery[df_beta_recovery$converged_M_TMB,], aes(x=beta_est_M, means_stan_M))+geom_point()#+geom_abline(coef = c(0,1))
+  #ggplot(df_beta_recovery[!is.na(df_beta_recovery$means_stan_M),], aes(x=beta_est_M, means_stan_M))+geom_point()#+geom_abline(coef = c(0,1))
+  ggsave("../../results/assessing_models/simA_M_scatter.pdf")
+  ggplot(df_beta_recovery, aes(x=beta_est_DM, y=means_stan_DM))+
+    geom_point()+geom_abline(coef = c(0,1))+
+    guides(shape=FALSE)
+  ggsave("../../results/assessing_models/simA_DM_scatter.pdf")
+  ggplot(df_beta_recovery, aes(x=beta_est_DM, y=means_stan_DM, col=converged_DM_TMB))+
+    geom_point()+geom_abline(coef = c(0,1))+
+    guides(shape=FALSE)
+  ggsave("../../results/assessing_models/simA_DM_scatter_col.pdf")
+  ggplot(df_beta_recovery[df_beta_recovery$converged_DM_TMB == 'TRUE',], aes(x=beta_est_DM, y=means_stan_DM))+
+    geom_point()+geom_abline(coef = c(0,1))+
+    guides(shape=FALSE)
+  ggsave("../../results/assessing_models/simA_DM_scatter_col_nodivergent.pdf", width = 5, height = 5)
+  ggplot(df_beta_recovery %>% filter(!is.na(means_stan_LNM)),
+         aes(x=(beta_est_LNM), y=means_stan_LNM, col=converged_LNM_TMB))+
+    geom_point()+
+    geom_abline(coef = c(0,1))
+  ggsave("../../results/assessing_models/simA_LNM_scatter.pdf")
+}
 ## even in cases where LNM hasn't converged (which is many) there seems to be an okay correlation
+
+#-------------------------------------------------------------------------------------------------#
+
+## Are zeros recovered with Stan?
+ggplot(droplevels(df_beta_recovery) %>% filter(!is.na(means_stan_M)),
+       aes(x=(beta_true), y=(means_stan_M), col=n))+geom_point()+
+  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~beta_gamma_shape, scales = "free_x", ncol=5)
+ggsave(paste0("../../results/TMB/", dataset_generation, "_stan_recoveries_betashape_facet.pdf"), height = 3, width = 11)
+
+ggplot(droplevels(df_beta_recovery) %>% filter(!is.na(means_stan_M)),
+       aes(x=(beta_true), y=(means_stan_M), col=n))+geom_point()+
+  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~beta_gamma_shape, scales = "free", ncol=5)
+ggsave(paste0("../../results/TMB/", dataset_generation, "_stan_recoveries_betashape_facet_freescales.pdf"), height = 3, width = 11)
+
+## Looking at the posteriors of these betas that are not well recovered
+## find the datasets where there are true zeros
+stan_simA_M
+with_zeros_name = sapply(rownames(df_beta_recovery[df_beta_recovery$beta_true == 0,]), function(i){
+  .x = strsplit(i, '_')[[1]]
+  return(paste0(.x[1:(length(.x)-1)], collapse = '_'))
+})
+
+posteriors_truezeros = lapply(paste0(folder_stan, python_like_select(stan_simA_M, 'beta_intensity0_'), ".RData"), load_stan)
+
+ggplot(melt(lapply(posteriors_truezeros, function(i) python_like_select_colnames(as(i$fit_stan, 'matrix'), 'beta\\[2,'))),
+       aes(x=value, col=interaction(parameters, L1), group=interaction(parameters, L1)))+geom_density()
+
+library(ggridges)
+
+give_names = function(vec, names){
+  names(vec) = names
+  vec
+}
+
+give_names_beta2 = function(vec, names){
+  names(vec) =  paste0('beta[2,', 1:length(vec), ']')
+  vec
+}
+names_as_row = function(i){
+  .x = rbind.data.frame(names(i), i)
+  names(.x) = NULL
+  .x
+}
+
+ML_est = (melt(lapply(paste0(sapply(modify_M_name(python_like_select(stan_simA_M, 'beta_intensity0_')), modify_M_name_2), '_'),
+       function(i) t((give_names_beta2(df_beta_recovery[grepl(i, rownames(df_beta_recovery)),'beta_est_M']) )))))
+colnames(ML_est) = c('iterations', 'parameters', 'value', 'L1')
+head(melt(lapply(posteriors_truezeros, function(i) python_like_select_colnames(as(i$fit_stan, 'matrix'), 'beta\\[2,'))))
+ML_est$group=apply(ML_est[,c('parameters', 'L1')], 1, paste0, collapse='.')
+
+posterior_est = melt(lapply(posteriors_truezeros, function(i) python_like_select_colnames(as(i$fit_stan, 'matrix'), 'beta\\[2,')))
+posterior_est$group=apply(posterior_est[,c('parameters', 'L1')], 1, paste0, collapse='.')
+posterior_est$group = factor(posterior_est$group, levels=apply(ML_est[order(ML_est$value),c('parameters', 'L1')], 1, paste0, collapse='.'))
+ML_est$group = factor(ML_est$group, levels=apply(ML_est[order(ML_est$value),c('parameters', 'L1')], 1, paste0, collapse='.'))
+
+ggplot(posterior_est,
+       aes(x=value, y=1,#interaction(parameters, L1),
+           group=group, fill=L1)#, fill=interaction(parameters, L1))
+       )+
+  geom_density_ridges()+
+  facet_wrap(.~group, ncol=4)+
+  geom_vline(data = ML_est, aes(xintercept=value, group=group),
+             #, col=interaction(parameters, L1)))#+facet_wrap(.~interaction(L1,Var2))
+             col='red')+
+  geom_vline(aes(xintercept=0),
+             #, col=interaction(parameters, L1)))#+facet_wrap(.~interaction(L1,Var2))
+             col='gray', lty='dashed')+
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )
+ggsave(paste0("../../results/assessing_models/zero_recovery_", dataset_generation, "_stan_recoveries_truezero.png"), height = 2.5, width = 5)
+
+## another view of the same data
+ggplot(posterior_est,
+       aes(x=value, y=parameters,
+           group=interaction(parameters, L1), fill=L1)#, fill=interaction(parameters, L1))
+)+
+  geom_density_ridges()+
+  facet_wrap(.~L1, ncol=4)+
+  geom_vline(aes(xintercept=0),
+             #, col=interaction(parameters, L1)))#+facet_wrap(.~interaction(L1,Var2))
+             col='gray', lty='dashed')+
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )
+
+## Trying to find how we could avoid this inflation in type I errors
+## looking at the correlation betweeen estimates, to see if it could be a cause
+
+## subsample the data
+sapply(1:length(posteriors_truezeros), function(idx_posteriors_truezeros){
+  pairs(base::subset(python_like_select_colnames(as(posteriors_truezeros[[idx_posteriors_truezeros]]$fit_stan, 'matrix'), 'beta\\[2'),
+               sample(c(T,F), size = 2000, replace = T, prob = c(0.1, 0.9))))
+})
+
+## is the error in zero coefficients larger than for other coefficients?
+## plot in which in the x axis are the sorted coefficients, and in the y axis the errors (|est-true|)
+
+pdf(paste0("../../results/TMB/", dataset_generation, "_ordered_betas_and_error.pdf"), height = 3, width = 5)
+plot((df_beta_recovery$beta_est_M - df_beta_recovery$beta_true)[order(df_beta_recovery$beta_true, decreasing = F)], type='h',
+     xlab='Rank of betas', ylab='Error of betas')
+dev.off()
+
+pdf(paste0("../../results/TMB/", dataset_generation, "_ordered_betas_and_error_zoomed_in.pdf"), height = 3, width = 5)
+plot((df_beta_recovery$beta_est_M - df_beta_recovery$beta_true)[order(df_beta_recovery$beta_true, decreasing = F)], type='h',
+     xlab='Rank of betas', ylab='Error of betas', ylim=c(-2,2))
+dev.off()
 
 #-------------------------------------------------------------------------------------------------#
 

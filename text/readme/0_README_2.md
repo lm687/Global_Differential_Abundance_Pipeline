@@ -47,6 +47,14 @@ Creates files with suffix `_merged`.
 #### Signature definitions
 https://www.synapse.org/#!Synapse:syn11738319
 
+2. Inference
+
+## Simulation for parameter recovery and assessing differential abundance
+```
+../data/assessing_models_simulation/
+```
+contains files with the descriptions of each of the simulated datasets. This file works as input for snakemake as the datasets are created, so it's essential!
+
 
 
 
