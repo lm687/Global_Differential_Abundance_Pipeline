@@ -22,7 +22,7 @@ The file `config_PCAWG.yaml` is created by running
 sh make_config.sh
 ```
 
-`make_config` contains the arguments (i.e. parameters, for the most part) for the different Simulation Generations.
+`make_config` contains the arguments (i.e. parameters, for the most part) for the different Simulation Generations. Note using `bash make_config.sh` will throw an error - use sh instead.
 
 ## Synthetic datasets
 - Generation A: 20200625. There is a beta intercept of zero
