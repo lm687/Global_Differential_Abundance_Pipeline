@@ -16,6 +16,14 @@ source activate snakemake-globalDA
 conda deactivate
 ```
 
+## Creating Snakemake's config file
+The file `config_PCAWG.yaml` is created by running
+```
+sh make_config.sh
+```
+
+`make_config` contains the arguments (i.e. parameters, for the most part) for the different Simulation Generations.
+
 ## Synthetic datasets
 - Generation A: 20200625. There is a beta intercept of zero
 
