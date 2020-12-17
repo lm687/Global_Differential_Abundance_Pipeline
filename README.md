@@ -37,7 +37,8 @@ The folder `code/2_inference/` contains all the files for inference.
 ### Simulation under the parameters
 
 To simulate data under the parameters see file `code/3_analysis/posterior_predictive_checks.R`, section `Lower-dimensional representation of posteriors and of observed values [2]`. The corresponding results are in the folder `results/simulation_from_params/`
-## Results
+
+## Results for the PCAWG cohort
 
 Multinomial             |  Dirichlet-Multinomial
 :-------------------------:|:-------------------------:
@@ -47,8 +48,8 @@ Multinomial             |  Dirichlet-Multinomial
 :-------------------------:|:-------------------------:
 ![betas tracksig comparison M](results/betas/betas_tracksig_comparison_M.png "")  | ![betas tracksig comparison DM](results/betas/betas_tracksig_comparison_DM.png "")
 
- 
-Samples for which there is no VCF file
+## Other considerations
+### PCAWG samples for which there is no VCF file
 These files appear in the metadata and may have them in the mutccf file, but I don't have their VCF, which is the only file that contains what mutation it is (in mutccf you can have the position and CCF, but not mutation type).
 
 ```
