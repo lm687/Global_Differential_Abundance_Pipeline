@@ -9,6 +9,12 @@ models = ['LNM']
 num_iterations = 15000
 num_iterations = 2000
 
+# datasetgeneration = 'GenerationCnorm'
+datasetgeneration2 = 'generationC'
+
+datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'generationC',\
+ 'GenerationCnormsimpler': 'generationC'}
+
 rule all:
     input:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
@@ -17,28 +23,41 @@ rule all:
 ## [Inference] Running stan code on PCAWG
       # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
 ## [Benchmarking] Creating synthetic datasets
-      # expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{d}_{beta_intensity}_dataset.RDS", uuid="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
+      # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{d}_{beta_intensity}_dataset.RDS", datasetgeneration="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
 ## [Benchmarking] Performing inference on the simulated datasets
-     # expand("../data/assessing_models_simulation/inference_results/{uuid}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData", uuid="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], lmbda=10, d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"], nits=num_iterations, model=models)
+     # expand("../data/assessing_models_simulation/inference_results/{datasetgeneration}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData", datasetgeneration="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], lmbda=10, d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"], nits=num_iterations, model=models)
 ## [Benchmarking] Creating synthetic datasets (Generation C and later)
-#      expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
-#       uuid="GenerationC",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
-#       lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
-#       beta_intensity = config["beta_gamma_shape_generationC"])
-     # expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
-     #  uuid="GenerationD",  n=config["simulation_n_generationD"], nlambda=config["simulation_nlambda_generationD"],
+     # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
+     #  datasetgeneration="GenerationC",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
+     #  lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
+     #  beta_intensity = config["beta_gamma_shape_generationC"])
+      # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
+      # datasetgeneration="GenerationCnorm",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
+      # lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
+      # beta_intensity = config["beta_gamma_shape_generationC"])
+     # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
+     #  datasetgeneration="GenerationD",  n=config["simulation_n_generationD"], nlambda=config["simulation_nlambda_generationD"],
      #  lmbda=config["simulation_lambda_generationD"], d=config["simulation_d_generationD"],\
      #  beta_intensity = config["beta_gamma_shape_generationD"])
-      expand("../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
-      uuid="GenerationE",  n=config["simulation_n_generationE"], nlambda=config["simulation_nlambda_generationE"],
-      lmbda=config["simulation_lambda_generationE"], d=config["simulation_d_generationE"],\
-      beta_intensity = config["beta_gamma_shape_generationE"])
+      # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS",
+      # datasetgeneration="GenerationE",  n=config["simulation_n_generationE"], nlambda=config["simulation_nlambda_generationE"],
+      # lmbda=config["simulation_lambda_generationE"], d=config["simulation_d_generationE"],\
+      # beta_intensity = config["beta_gamma_shape_generationE"])
       ## [Benchmarking] Performing inference on the simulated datasets (Generation C onwards)
-      # expand("../data/assessing_models_simulation/inference_results/{uuid}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData",\
-      #  uuid="GenerationE",  n=config["simulation_n_generationE"], nlambda=config["simulation_nlambda_generationE"],
+      # expand("../data/assessing_models_simulation/inference_results/{datasetgeneration}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData",\
+      #  datasetgeneration="GenerationE",  n=config["simulation_n_generationE"], nlambda=config["simulation_nlambda_generationE"],
       #  lmbda=config["simulation_lambda_generationE"], d=config["simulation_d_generationE"],\
       #  beta_intensity = config["beta_gamma_shape_generationE"], nits=num_iterations, model=models)
-
+      # expand("../data/assessing_models_simulation/inference_results/TMB/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}.RDS",\
+      #  datasetgeneration="GenerationCnorm",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
+      #  lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
+      #  beta_intensity = config["beta_gamma_shape_generationC"], nits=num_iterations, model=['fullREDM'])
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='GenerationCnorm', model='fullREDM')
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='GenerationCnorm', model='fullREM')
+        expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+        datasetgeneration='GenerationCnormsimpler', model='fullREM')
 
 rule index_vcf:
     input:
@@ -91,33 +110,65 @@ rule inference:
 
 rule simulate_for_comparison:
     input:
-        "../data/assessing_models_simulation/{uuid}"
+        "../data/assessing_models_simulation/{datasetgeneration}"
     params:
-        uuid = "{uuid}",
+        datasetgeneration = "{datasetgeneration}",
         n = "{n}",
         nlambda = "{nlambda}",
         lmbda = "{lmbda}",
         d = "{d}",
-        beta_intensity = "{beta_intensity}"
+        beta_intensity = "{beta_intensity}",
     output:
-       "../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
+       "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
     shell:
-       "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.uuid} --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
+       # "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.datasetgeneration} 
+       "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
 
 
-rule inference_simulation:
+## This is for stan and it has been deprecated
+rule inference_simulation_stan:
     input:
-        "../data/assessing_models_simulation/datasets/{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
+        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
     log:
-        "logs/inference/simulation_{uuid}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Nits{nits}_Model{model}.log"
+        "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Nits{nits}_Model{model}.log"
     params:
        model=expand("{model}", model = models),
        nits=expand("{nits}", nits = num_iterations)
     output:
-       "../data/assessing_models_simulation/inference_results/{uuid}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData"
+       "../data/assessing_models_simulation/inference_results/{datasetgeneration}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData"
     shell:
         """#module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 #source activate rstan_env
 # ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_simulations.R --infile {input} --output {output} --niterations {params.nits} --model {params.model}
 Rscript --vanilla 2_inference/fit_simulations.R --infile {input} --output {output} --niterations {params.nits} --model {params.model}
 #conda deactivate"""
+
+rule inference_simulation_TMB:
+    input:
+        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
+    log:
+        "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Model{model}.log"
+    params:
+       model="{model}",
+    output:
+       "../data/assessing_models_simulation/inference_results/TMB/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}.RDS"
+    shell:
+       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model}"
+
+
+rule analyse_simulation_TMB:
+    input:
+      lambda wildcards: expand("../data/assessing_models_simulation/inference_results/TMB/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}.RDS",
+        n = config["simulation_n_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
+        nlambda = config["simulation_nlambda_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
+        lmbda = config["simulation_lambda_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
+        d = config["simulation_d_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
+        beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
+        datasetgeneration=wildcards.datasetgeneration,  
+        model = "{model}")
+    output:
+        "../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"
+    shell:
+        "Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input '{input}'\
+        --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
+        --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration}"

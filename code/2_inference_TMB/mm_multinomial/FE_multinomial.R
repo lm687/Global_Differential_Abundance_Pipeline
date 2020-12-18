@@ -776,7 +776,34 @@ abline(coef = c(0,1), col='blue', lwd=2)
 dev.off()
 
 
-## Now with a likelihood ratio test? I'd have to 
+## Confirm that the confidence intervals are correct: for the 95% one, in 95% of the runs (simulating under the same parameter),
+## the true parameter should be included in the confidence interval. I am going to simulate multiple datasets created with the
+## same parameters
 
 
+multiple_runs = replicate(20, replicate(n = 300, replicate_inference_varysinglecoef(n = 100, d = 4, nreplicas = 1,
+                                  betashape_intersect = runif(3),
+                                  betashape_slope = runif(3))))
+saveRDS(multiple_runs, "../../../data/robjects_cache/tmb_results_simulations/multiple_runs.RDS")
+## I take the confidence interval for each of the runs, and see for how many the true value lies inside
+# multiple_runs[[1]]$betas_estimate
+# give_stderr(multiple_runs[[1]]$tmb_object, only_slopes = T, only_betas = T)
+# multiple_runs[[1]]$true_beta[2,]
+# multiple_runs[[1]]$betas_estimate[2,]
 
+ci_bool = apply(multiple_runs, 2, function(k) mclapply(1:length(k) , function(j) give_params_in_CI(k[[j]]$betas_estimate[2,],
+                            give_stderr(k[[j]]$tmb_object, only_slopes = T, only_betas = T),
+                            k[[j]]$true_beta[2,])))
+## do the test
+tests = apply(multiple_runs, 2, function(k) mclapply(1:length(k) , function(j) wald_TMB_wrapper(k[[j]]$tmb_object, v=F) ))
+
+## ~80%???
+par(mfrow=c(1,3))
+plot(sort(sapply(ci_bool, function(k) sum(sapply(k, sum) == 3)/length(k))))
+abline(h=mean(sapply(ci_bool, function(k) sum(sapply(k, sum) == 3)/length(k))))
+
+plot(sort(sapply(tests, function(k) sum(k < 0.05)/length(k))))
+abline(h=mean(sapply(tests, function(k) sum(k < 0.05)/length(k))))
+
+plot(sapply(ci_bool, function(k) sum(sapply(k, sum) == 3)/length(k)),
+     sapply(tests, function(k) sum(k < 0.05)/length(k)))

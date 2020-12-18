@@ -29,6 +29,8 @@ rsq = function (x, y) cor(x, y) ^ 2
 load_PCAWG = function(ct, typedata, simulation=FALSE){
   if(simulation){
     fle = ct
+    print(ct)
+    cat('Reading file', fle, '\n')
   }else{
     fle = paste0("../../data/roo/", ct, '_', typedata, "_ROO.RDS" )
   }
@@ -85,21 +87,28 @@ load_PCAWG = function(ct, typedata, simulation=FALSE){
   return(list(x=t(X), z=t(Z), Y=W))
 }
 
-wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=FALSE, object=NULL){
+wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=FALSE, object=NULL, sort_columns=F){
   
   if(!is.null(object)){
     ## if the object of data and covariates is an argument
     data = object
   }else{
     ## else, read from RDS file
-    cat(ct)
-    cat(typedata)
+    if(!simulation){
+      cat(ct)
+      cat(typedata)
+    }
     data = load_PCAWG(ct, typedata, simulation)
     if(length(data) == 1){
       if(is.na(data)){
         return(warning('RDS object is NA'))
       }
     }
+    
+    if(sort_columns){
+      data$Y = data$Y[,order(colSums(data$Y), decreasing = T)]
+    }
+    
   }
   
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
@@ -127,6 +136,16 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
       cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
     )
     obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
+  }else if(model == "fullRE_Mcat"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_categorical", random = "u_large")
   }else if(model == "diagRE_M"){
     data$num_individuals = n
     parameters <- list(
@@ -181,6 +200,19 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
       log_lambda = matrix(c(2,2))
     )
     obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
+  }else if(model == "fullRE_DMcat"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      log_lambda = matrix(c(2,2))
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial_categorical", random = "u_large")
   }else if(model == "fullRE_DM_singlelambda"){
     data$num_individuals = n
 
@@ -317,7 +349,8 @@ load_posteriors = function(fle_rdata){
 }
 
 wald_generalised = function(v, sigma){
-  chisqrt_stat = t(v) %*% solve(sigma**(1/2)) %*% v
+  warning('20201218: sigma**(1/2) has now been replaced by (as we had before sometime in November) sigma')
+  chisqrt_stat = t(v) %*% solve(sigma) %*% v
   pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
 
@@ -429,4 +462,49 @@ simulate_from_M_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix){
                                  give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
   }
   return(sim_thetas)
+}
+
+simulate_from_correlated_binom = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix, return_logratios=F){
+  d = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, d)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    if(return_logratios){
+      return(logRmat)
+    }else{
+      ## return first probability
+      return(apply(logRmat, 2, function(i) exp(i)/(1+exp(i))))
+    }
+  }else{
+    stop('Not implemented yet')
+    # sim_thetas = sapply(1:d,
+    #                     function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+    #                              give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    return(sim_thetas)
+  }
+}
+
+
+give_confidence_interval = function(vec_est, vec_stderr){
+  sapply(1:length(vec_est), function(i) c(vec_est[i]-1.96*vec_stderr[i],vec_est[i]+1.96*vec_stderr[i]) )
+}
+
+give_params_in_CI = function(vec_est, vec_stderr, vec_true){
+  ci = give_confidence_interval(vec_est, vec_stderr)
+  return(sapply(1:length(vec_est), function(i) (ci[1,i] < vec_true[i]) & (ci[2,i] > vec_true[i]) ))
+}
+
+wrapper_run_ttest_ilr = function(i){
+  x = readRDS(i)
+  x = x[[1]]@count_matrices_all
+  props = sapply(x, normalise_rw, simplify = FALSE)
+  return(Compositional::hotel2T2(x1 = compositions::ilr(props[[1]]), x2 = compositions::ilr(props[[2]]))$pvalue)
+}
+wrapper_run_ttest_props = function(i){
+  x = readRDS(i)
+  x = x[[1]]@count_matrices_all
+  props = sapply(x, normalise_rw, simplify = FALSE)
+  return(Compositional::hotel2T2(x1 =props[[1]][,-1], x2 = props[[2]][,-1])$pvalue)
 }

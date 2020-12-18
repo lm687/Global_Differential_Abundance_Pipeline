@@ -77,15 +77,24 @@ echo "beta_gamma_shape:
 echo "\nsimulation_n_generationC:
 - 20
 - 50
+- 100
 " >> $name_config
 
 echo "beta_gamma_shape_generationC:
 - 0
 - 0.2
+- 0.4
+- 0.6
+- 0.8
+- 2
+- 4
 " >> $name_config
 
 echo "simulation_d_generationC:
 - 3
+- 4
+- 5
+- 6
 - 7
 " >> $name_config
 
