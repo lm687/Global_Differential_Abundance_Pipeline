@@ -34,10 +34,10 @@ if(debugging){
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list()
   opt$input_list = python_like_select(python_like_select(list.files("../data/assessing_models_simulation/inference_results/TMB/", full.names = T),
-                                                         "GenerationCnorm_"), "fullREM")
-  opt$output_folder_name= 'GenerationCnorm_fullREM'
-  opt$output_string = 'GenerationCnorm_fullREM'
-  opt$model = 'fullREM'
+                                                         "GenerationCnorm_"), "fullREDM")
+  opt$output_folder_name= '../results/results_TMB/simulated_datasets/mixed_effects_models/GenerationCnorm/GenerationCnorm_fullREDM/'
+  opt$output_string = 'GenerationCnorm_fullREDM'
+  opt$model = 'fullREDM'
   opt$dataset_generation = 'GenerationCnorm'
   
   # opt$input_list = python_like_select(python_like_select(list.files("../data/assessing_models_simulation/inference_results/TMB/", full.names = T),
@@ -57,6 +57,9 @@ system(paste0("mkdir -p ", folder_output))
 
 datasets_files = list.files("../data/assessing_models_simulation/datasets/", full.names = TRUE)
 datasets_files = datasets_files[grep(pattern = opt$dataset_generation, datasets_files)]
+if(opt$dataset_generation == 'GenerationCnorm'){
+  datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
+}
 datasets = lapply(datasets_files, readRDS)
 names(datasets) = gsub(".RDS", "", basename(datasets_files))
 DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
@@ -96,12 +99,17 @@ df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(
 first_entries_runs = sapply(unique(df_beta_recovery$idx), function(i) which(df_beta_recovery$idx == i)[1])
 table(Sim=df_beta_recovery$DA_bool[first_entries_runs], est_M=df_beta_recovery$pvals_adj[first_entries_runs] <= 0.05)
 
-
 saveRDS(df_beta_recovery,
         paste0("../data/assessing_models_simulation/inference_results/TMB/summaries/", opt$output_string, ".RDS"))
 
 #' Remove non-converged
 df_beta_recovery = df_beta_recovery[df_beta_recovery$converged,]
+
+#' Remove outliers
+df_beta_recovery[which.max(df_beta_recovery$beta_est),]
+if(opt$dataset_generation == 'GenerationCnorm' & opt$model == 'fullREM'){
+  df_beta_recovery = df_beta_recovery[!(df_beta_recovery$idx == 98),]
+}
 
 #' ## zero slopes are not well detected
 ggplot(df_beta_recovery,
@@ -215,5 +223,25 @@ ggplot(df_beta_recovery_accuracy %>% group_by(beta_gamma_shape) %>% summarise(se
        aes(x=beta_gamma_shape, y=specificity, group=beta_gamma_shape))+geom_point()+geom_violin(),
 ncol=2)
 dev.off()
+
+ggplot(df_beta_recovery_accuracy_grouped,
+       aes(x=beta_gamma_shape, y=sensitivity, group=beta_gamma_shape))+geom_point()+geom_violin()
+
+df_beta_recovery_accuracy2 = df_beta_recovery_accuracy
+# df_beta_recovery_accuracy2 = df_beta_recovery_accuracy2[!(is.na(df_beta_recovery_accuracy2$acc)),]
+
+ggplot(df_beta_recovery_accuracy2, aes(x=beta_gamma_shape, fill=acc))+geom_bar(position='stack')+
+  facet_wrap(.~interaction(beta_gamma_shape,df_beta_recovery_accuracy2$n),ncol=7 )
+
+ggplot(df_beta_recovery_accuracy2, aes(x=beta_gamma_shape, group=interaction(n,beta_gamma_shape), fill=acc))+
+  geom_bar(position='stack')+
+  facet_wrap(.~(n),ncol=1 )
+
+
+ggplot(df_beta_recovery_accuracy2, aes(x=factor(beta_gamma_shape), fill=acc))+
+  # geom_bar(position='stack')+facet_wrap(.~n)
+  geom_bar(position='fill')+facet_wrap(.~n)
+ggsave(paste0(opt$output_folder_name, "/", opt$output_string, "_specificity_sensitivity_2.pdf"), height = 3, width = 8)
+
 
 

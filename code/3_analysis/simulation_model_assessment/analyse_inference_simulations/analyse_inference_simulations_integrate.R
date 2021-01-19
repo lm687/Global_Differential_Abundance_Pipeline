@@ -19,6 +19,40 @@ do.call('grid.arrange', list(ggplot(joint_df[!is.na(joint_df$M.beta_est) & !is.n
 dev.off()
 
 
+
+runs_ttest_irl = lapply(datasets_files, function(i)  try(wrapper_run_ttest_ilr(i)))
+runs_ttest_props = lapply(datasets_files, function(i)  try(wrapper_run_ttest_props(i)))
+pvals_ttest_ilr = as.numeric(unlist(runs_ttest_irl))
+pvals_ttest_ilr_adj = pvals_ttest_ilr
+
+res_M = readRDS("../data/assessing_models_simulation/inference_results/TMB/summaries/GenerationCnorm_fullREM.RDS")
+
+pvals_m = res_M[sapply(unique(res_M$idx),
+                       function(i) which(res_M$idx == i)[1]),'pvals_adj']
+res_all = rbind(summarise_DA_detection(true = DA_bool, predicted = pvals_m < 0.05),
+                summarise_DA_detection(true = DA_bool, predicted = pvals_adj <= 0.05),
+                # summarise_DA_detection(true = DA_bool, predicted = runs_ttest_props <= 0.05),
+                summarise_DA_detection(true = DA_bool, predicted = pvals_ttest_ilr_adj <= 0.05))
+rownames(res_all) = c('Multinomial', 'Dirichlet-Multinomial', 'ILR')
+res_all
+
+xtable::xtable(res_all)
+
+table(DA_bool, M_est=pvals_m <= 0.05)
+table(DA_bool, DM_est=pvals_adj <= 0.05)
+table(DA_bool, ILR_est=pvals_ttest_ilr_adj <= 0.05)
+
+xtable::xtable(table(DA_bool, M_est=pvals_m <= 0.05))
+xtable::xtable(table(DA_bool, DM_est=pvals_adj <= 0.05))
+xtable::xtable(table(DA_bool, ILR_est=pvals_ttest_ilr_adj <= 0.05))
+
+require(reshape2)
+head(melt(list(table(DA_bool, M_est=pvals_m <= 0.05),
+               table(DA_bool, DM_est=pvals_adj <= 0.05),
+               table(DA_bool, ILR_est=pvals_ttest_ilr_adj <= 0.05))
+))
+
+
 joint_df$M.beta_true
 
 

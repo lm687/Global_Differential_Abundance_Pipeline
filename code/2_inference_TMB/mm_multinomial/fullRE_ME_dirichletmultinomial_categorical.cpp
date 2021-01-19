@@ -98,7 +98,7 @@ Type objective_function<Type>::operator() ()
       obs_j[j] = 1;
       // loop over each observation separately, which is the same
       // as multiplying by the number of observations
-      nll -= dirichlet_multinomial(obs_j, alpha_l, d);
+      nll -= lth_row[j]*dirichlet_multinomial(obs_j, alpha_l, d);
     }
   }
   return nll;

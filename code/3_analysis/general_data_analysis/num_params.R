@@ -159,6 +159,25 @@ ggplot()+
   labs(x='Number of signatures', y=latex2exp::TeX('Number of samples (log_2)'))+
   ggtitle('Number of signatures and samples in each cancer type, and number of parameters to infer in each model')
 
+x$Effects[is.na(x$Effects)] = 'Single'
+df_roo_sigs_nondup = df_roo_sigs[!duplicated(df_roo_sigs$name),]
+df_roo_sigs$Enough_samples = apply(df_roo_sigs, 1, function(ct) DM_ME(as.numeric(ct['num_sigs'])) < as.numeric(ct['num_samples']) )
+ggplot()+
+  geom_line(data = x[!grepl("LNM", x$Var2),], aes(x=Var1, y=value, col=(Model), shape=(Effects)))+
+  geom_point(data = x[!grepl("LNM", x$Var2),], aes(x=Var1, y=value, col=(Model), shape=(Effects)))+
+  geom_segment(data = df_roo_sigs[!is.na(df_roo_sigs$num_sigs),], aes(y = num_samples, x = 0, xend=num_sigs, yend=num_samples), alpha=0.2, linetype='dashed')+
+  geom_segment(data = df_roo_sigs[!is.na(df_roo_sigs$num_sigs),], aes(y = 0, x = num_sigs, yend=num_samples, xend=num_sigs), alpha=0.2, linetype='dashed')+
+  geom_label_repel(data = df_roo_sigs_nondup[!is.na(df_roo_sigs_nondup$num_sigs),],
+                   aes(y = num_samples, x = num_sigs, label=name),
+                   # aes(y = runif(sum(!is.na(df_roo_sigs_nondup$num_sigs)), min = -40, max = 0), x = num_sigs, label=name),
+                   alpha=0.9, size=3)+
+  xlim(c(0, 20))+
+  facet_wrap(.~Enough_samples)+
+  # scale_y_continuous(trans='log2')+
+  labs(x='Number of signatures', y=latex2exp::TeX('Number of samples (log_2)'))+
+  ggtitle('Number of signatures and samples in each cancer type, and number of parameters to infer in each model')
+ggsave("../results/results_TMB/pcawg/assessing_models/num_samples_signatures_parameters_split.pdf", width = 16, height = 9)
+
 #----------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------#

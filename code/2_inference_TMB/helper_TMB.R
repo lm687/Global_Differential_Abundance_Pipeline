@@ -145,7 +145,7 @@ wrapper_run_TMB = function(ct, typedata, model, simulation=FALSE, allow_new_LNM=
       logs_sd_RE=rep(1, d-1),
       cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
     )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_categorical", random = "u_large")
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial_categorical", random = "u_large")
   }else if(model == "diagRE_M"){
     data$num_individuals = n
     parameters <- list(
@@ -359,7 +359,11 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-    wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+    if(is.na(idx_beta)){
+      NA
+    }else{
+      wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+    }
   }
 }
 
@@ -507,4 +511,35 @@ wrapper_run_ttest_props = function(i){
   x = x[[1]]@count_matrices_all
   props = sapply(x, normalise_rw, simplify = FALSE)
   return(Compositional::hotel2T2(x1 =props[[1]][,-1], x2 = props[[2]][,-1])$pvalue)
+}
+
+
+summarise_DA_detection = function(true, predicted){
+  require(ROCR)
+  ## remove NAs
+  which_na = which(is.na(predicted))
+  if(length(which_na) > 0){ ## some NA
+    true = true[-which_na]
+    predicted = predicted[-which_na]
+  }
+  
+  FPs = sum(!true & predicted)/sum(predicted)
+  TPs = sum(true & predicted)/sum(predicted)
+  TNs = sum(!true & !predicted)/sum(!predicted)
+  FNs = sum(true & !predicted)/sum(!predicted)
+  total_pos = sum(true | predicted)
+  Power = TPs/total_pos
+  Sensitivity = TPs / (TPs + FNs)
+  Specificity = TNs / (TNs + FPs)
+  pred <- ROCR::prediction(as.numeric(true), as.numeric(predicted))
+  AUC = try(ROCR::performance(pred, "auc")@y.values[[1]])
+  return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity, Sensitivity=Sensitivity))
+}
+
+fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov){
+  .sigma = matrix(NA, arg_d, arg_d)
+  diag(.sigma) = arg_entries_var
+  .sigma[unlist(sapply(1:(arg_d-1), function(i) (i-1)*arg_d + (i+1):arg_d ))] = arg_entries_cov
+  .sigma[unlist(sapply(1:(arg_d-1), function(i) (i) + ((i):(arg_d-1))*arg_d))] = arg_entries_cov
+  return(.sigma)
 }
