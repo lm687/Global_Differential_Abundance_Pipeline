@@ -33,8 +33,8 @@ TMB::compile("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial.cpp", "
 dyn.load(dynlib("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial"))
 TMB::compile("mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/diagRE_ME_dirichletmultinomial"))
-TMB::compile("mm_multinomial/fullRE_ME_categorical.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/fullRE_ME_categorical"))
+TMB::compile("mm_multinomial/fullRE_ME_multinomial_categorical.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial_categorical"))
 TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical"))
 
