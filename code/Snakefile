@@ -4,16 +4,14 @@ cancer_types = config["sample_groups"]
 grouped_samples = config["grouped_samples"]
 
 samples_list = dict(zip(cancer_types, [grouped_samples[ct].split() for ct in cancer_types]))
-models = ['M', 'DM', 'LNM']
-models = ['LNM']
-num_iterations = 15000
+models = ['M', 'DM']
+# models = ['LNM']
+# num_iterations = 15000
 num_iterations = 2000
 
-# datasetgeneration = 'GenerationCnorm'
-datasetgeneration2 = 'generationC'
-
 datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'generationC',\
- 'GenerationCnormsimpler': 'generationC'}
+ 'GenerationCnormsimpler': 'generationC', 'generationFnorm': 'generationF', 'generationGnorm': 'generationG',\
+ 'generationMGnorm': 'generationG'}
 
 rule all:
     input:
@@ -54,13 +52,28 @@ rule all:
       #  beta_intensity = config["beta_gamma_shape_generationC"], nits=num_iterations, model=['fullREDM'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationCnorm', model='fullREDM')
-      expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-        datasetgeneration='GenerationCnorm', model='fullREM')
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='GenerationCnorm', model='fullREM')
         # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
         # datasetgeneration='GenerationCnormsimpler', model='fullREM')
         # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
         # datasetgeneration='GenerationCnormsimpler', model='fullREDM')
-        
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='generationMGnorm', model='fullREM')
+      # expand("../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.RDS",
+      #   datasetgeneration="GenerationCnorm",  n=80, nlambda=180,
+      #   lmbda=9, d=6,\
+      #   beta_intensity = 0, itnum=range(100),
+      #   fixed_beta_intercept="betaintercept1",
+      #   fixed_beta_slope="betaslope1")
+      expand("../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS",\
+       datasetgeneration="GenerationCnorm",  n=80, nlambda=180,\
+       lmbda=9, d=6,\
+       beta_intensity = 0, model="diagREDM", itnum=range(100),
+       fixed_beta_intercept="betaintercept1",
+      fixed_beta_slope="betaslope1")
+
+
 rule index_vcf:
     input:
         "../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz"
@@ -123,8 +136,27 @@ rule simulate_for_comparison:
     output:
        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
     shell:
-       # "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.datasetgeneration} 
+       # "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.datasetgeneration}
        "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
+
+rule simulate_for_comparison_multiple:
+    input:
+        "../data/assessing_models_simulation/{datasetgeneration}"
+    params:
+        datasetgeneration = "{datasetgeneration}",
+        n = "{n}",
+        nlambda = "{nlambda}",
+        lmbda = "{lmbda}",
+        d = "{d}",
+        beta_intensity = "{beta_intensity}",
+        itnum = "{itnum}",
+        fixed_beta_intercept="{fixed_beta_intercept}",
+        fixed_beta_slope="{fixed_beta_slope}",
+    output:
+       "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.RDS"
+    shell:
+       # "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.datasetgeneration}
+       "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output} --beta_intercept_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_intercept}.RDS --beta_slope_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_slope}.RDS"
 
 
 ## This is for stan and it has been deprecated
@@ -157,6 +189,17 @@ rule inference_simulation_TMB:
     shell:
        "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model}"
 
+rule inference_simulation_TMB_multiple:
+    input:
+        "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.RDS"
+    log:
+        "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Model{model}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.log"
+    params:
+       model="{model}",
+    output:
+       "../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS"
+    shell:
+       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model}"
 
 rule analyse_simulation_TMB:
     input:
@@ -166,7 +209,7 @@ rule analyse_simulation_TMB:
         lmbda = config["simulation_lambda_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
         d = config["simulation_d_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
         beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
-        datasetgeneration=wildcards.datasetgeneration,  
+        datasetgeneration=wildcards.datasetgeneration,
         model = "{model}")
     output:
         "../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"

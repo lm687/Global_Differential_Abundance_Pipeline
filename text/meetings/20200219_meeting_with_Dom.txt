@@ -1,0 +1,31 @@
+## Meeting with Dom 
+
+- make initial values from multinomial
+- number of samples, number of categories, zeros
+- I could end up in a situation
+- if there is something that perfectly explains a category, you get error messages too. Make sure that there are no prefect spits
+- it's very sensitive to starting point, so ignoring random effects and just fitting fixed effects is likely to give you a good estimate
+- when it doesn't converge, it means that the problem is that the model is no fitting for the data
+- simulate data. observed in x axis, simulated in y. simulate data under these parameters. rank the observations for lowest to highest, for each sample, and then compare the two. do this for each sample independently. 95% coverage as area in the line. this is to show that the model is not unrealistic, not that the mpdel os realistic. check the tails
+- the number of degrees of freedom is a function of n and N and are a function of the correlation of the within-patient. if the correlation is very high we have a problem. if the correlation is very low then we are in a better situation
+- fitting something like 22 parameters and 35 samples might be a problem for convergence
+- check with the standard error whether the true values fall in the confidence interval
+- [TO DO] send data to Dom
+	- worst case scenario: small sample size, high cat
+	- med
+	- best: large number of samples
+	(ratio of N/p varying)
+- he's got this method of using some particular initial estimator the estimate, esp. with tricky situations. Estimator found by indirect inference (takes forever, but they found a fast solution). could be applied here. it removes asymptotic bias & small sample bias
+- in correlated RE it can be very tricky to find a solution
+- send him the algorithm with good/optimized initial parameters (multinom reg)
+- when you're integrating out the RE, TMB does estimate the random effects, to take them out
+- I use optim, but he doesn't. Instead he uses
+	[11:44] Dominique-Laurent Couturier
+	#opt <- do.call("optim", obj) # COMMENT: nlminb does a better job than optim (with default) # standard errors: #sqrt(diag(solve(opt$hessian))) ## <-- SE from numerical hessian from optim #sqrt(diag(solve(obj$he()))) ## <-- SE from Analytical hessian
+	opt <- nlminb(start = obj$par, obj = obj$fn, gr = obj$gr)
+when I do opt I already have the information, and sdreport extracts it
+- [TO DO] Share a script in which he can load and run the TMB c function, and then a script which simulates data under the model, and then run code under simulated dataset, and additionally the raw data of the scenarios
+- simplification might come at a big cost
+- check what they did in the article
+- send him an email about what I thought about the likelihood
+- empirically check unidentifiability due to lack of information: simulation under different number of samples

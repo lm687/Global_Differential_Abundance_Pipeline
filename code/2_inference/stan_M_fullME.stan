@@ -13,7 +13,7 @@ data {
 
 parameters {
   matrix[p,d-1] beta; // coefficients for fixed effects
-  vector[n] ularge; // matrix of coefficients for random effects
+  matrix[n, d-1] ularge; // matrix of coefficients for random effects
   cov_matrix[d-1] sigma_RE; // variance for random effect coefficients
 }
 
@@ -22,23 +22,31 @@ transformed parameters {
   matrix[2*n,d-1] thetaprime;
   simplex[d] theta[2*n];
 
-  for(j in 1:(d-1)){
-    thetaprime[,j] = x'*beta[,j] + Z'*ularge;
-  }
+  // for(j in 1:(d-1)){
+  //   thetaprime[,j] = x'*beta[,j] + Z'*ularge[,j];
+  // }
+  thetaprime = x'*beta + Z'*ularge;
 
   for(l in 1:(2*n)){
     theta[l] = softmax(append_row(to_vector(thetaprime[l,]), 0));
   }
+  
+  // identity = diag_matrix(rep_vector(1.0,d-1));
+
 }
 
 model {
   
   // prior for variance of random effects
-  identity <- diag_matrix(rep_vector(1.0,dim)); 
-  sigma_RE ~ inv_wishart(5, identity);
+  // sigma_RE ~ inv_wishart(d**2/2 - 1/2*d -1 , diag_matrix(rep_vector(0.1, d-1));
+  sigma_RE ~ inv_wishart(d-1, diag_matrix(rep_vector(1.0,d-1)));
+
+  // sigma_RE ~ inv_wishart(8, diag_matrix(rep_vector(0.1, d-1));
   
   // prior for random effects
-  ularge ~ multi_normal(0, sigma_RE);
+  for (i in 1:(n) ) {
+    ularge[i,] ~ multi_normal(rep_vector(0, d-1), sigma_RE);
+  }
 
   for(d_it in 1:(d-1)){
     beta[,d_it] ~ uniform(-5, 5);

@@ -207,5 +207,25 @@ df_roo_sigs[grep('Lymph-CLL', df_roo_sigs$name),]
 results_TMB_fullRE_DM$`Lymph-CLLsignatures`
 #----------------------------------------------------------------------------------------#
 
+subset_roo_files = roo_files[!grepl('nucleotidesubstitution3', names(roo_files))]
+df_summary = sapply(subset_roo_files, function(i){
+  num_active = ncol(attr(i,"count_matrices_active")[[2]])
+  if(is.null(num_active)){
+    num_active = ""
+  }
+  c(ct=unique(attr(i,"cancer_type")),
+    number_of_samples=nrow(attr(i,"count_matrices_all")[[1]]),
+    number_of_categories_1 = ncol(attr(i,"count_matrices_all")[[2]]),
+    number_of_categories_2 = num_active)
+})
+
+df_summary = do.call('rbind', df_summary)
+
+df_summary_names = do.call('rbind', lapply(gsub("_ROO.RDS", "", basename(rownames(df_summary))),
+                                           function(i)  strsplit(i, '_')[[1]]))
+# names(df_summary) = basename(names(subset_roo_files))
+library(xtable)
+print(xtable::xtable(cbind.data.frame(df_summary_names, df_summary[,-1])), include.rownames = FALSE)
+
 
 

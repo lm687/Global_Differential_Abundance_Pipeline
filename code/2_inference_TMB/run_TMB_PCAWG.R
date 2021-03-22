@@ -7,6 +7,7 @@ require(R.utils)
 require(dplyr)
 library(parallel)
 library(RColorBrewer)
+library(jcolors)
 library(reshape2)
 source("mm_multinomial/helper_functions.R")
 source("helper_TMB.R")
@@ -17,7 +18,7 @@ folder_robjs = "../../data/pcawg_robjects_cache/tmb_results/"
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-TMB::compile("mm_multinomial/ME_multinomial.cpp", "-std=gnu++17")
+TMB::compile("mm_multinomial/ME_multinomial.cpp")
 dyn.load(dynlib("mm_multinomial/ME_multinomial"))
 TMB::compile("mm_multinomial/ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
@@ -337,6 +338,25 @@ if(give_summary_runs){
   ## see if there is one run for each combination, and no more
   sort(table(apply(cbind(stan_results$CT, stan_results$features, stan_results$model), 1, paste0, collapse="")))
   ## there should be only one of each
+  
+  
+  all_runs_summary = lapply(list(results_TMB_M, results_TMB_diagRE_M, results_TMB_fullRE_M, results_TMB_fullRE_Mcat,
+                                 results_TMB_DM, results_TMB_diagRE_DM, results_TMB_fullRE_DM, results_TMB_fullRE_DMcat), 
+                            give_summary_of_runs2, long_return = T)
+  names(all_runs_summary) = c('results_TMB_M', 'results_TMB_diagRE_M', 'results_TMB_fullRE_M', 'results_TMB_fullRE_Mcat',
+                                 'results_TMB_DM', 'results_TMB_diagRE_DM', 'results_TMB_fullRE_DM', 'results_TMB_fullRE_DMcat')
+  all_runs_summary_melt = melt(all_runs_summary)
+  all_runs_summary_melt$ct = sapply(as.character(all_runs_summary_melt$value), function(i) gsub("nucleotidesubstitution1", "", gsub("signatures", "", i)))
+  all_runs_summary_melt$type = sapply(1:length(all_runs_summary_melt$ct), function(j) gsub(all_runs_summary_melt$ct[j], "", all_runs_summary_melt$value[j]))
+  all_runs_summary_melt$L1 = factor(all_runs_summary_melt$L1, levels = (c('results_TMB_M', 'results_TMB_diagRE_M', 'results_TMB_fullRE_M', 'results_TMB_fullRE_Mcat',
+                                          'results_TMB_DM', 'results_TMB_diagRE_DM', 'results_TMB_fullRE_DM', 'results_TMB_fullRE_DMcat')))
+  ggplot(all_runs_summary_melt, aes(group=value, y=L2))+geom_bar(position = 'stack')+facet_wrap(.~L1)
+  ggplot(all_runs_summary_melt, aes(x=interaction(ct, type), y=L2, col=type))+geom_point()+facet_wrap(.~L1)
+  ggplot(all_runs_summary_melt, aes(y=interaction(type, ct), x=L1, fill=L2))+geom_tile()+
+    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position = "bottom", legend.title = element_blank())+
+    scale_fill_manual(values = c("red", "#aef7b3", "#f7baae"))+guides(fill=guide_legend(nrow=2))
+  ggsave("../../results/results_TMB/pcawg/summary_runs.png", height = 12, width = 7)
+  
 }
 
 #------------------------------------------------------------------------------------------------------------------------#
@@ -595,13 +615,14 @@ pvals_DM = sapply(results_TMB_DM, wald_TMB_wrapper)
 pvals_LNM = sapply(results_TMB_LNM, wald_TMB_wrapper)
 pvals_M_fullRE = sapply(results_TMB_fullRE_M, wald_TMB_wrapper)
 pvals_M_fullRE_good = pvals_M_fullRE[sapply(results_TMB_fullRE_M, give_summary_per_sample) == "Good"]
-pvals_DM_fullRE = sapply(results_TMB_fullRE_DM, wald_TMB_wrapper)
+pvals_DM_fullRE = sapply(results_TMB_fullRE_DM, function(i) try(wald_TMB_wrapper(i)))
 pvals_DM_fullRE_good = pvals_DM_fullRE[sapply(results_TMB_fullRE_DM, give_summary_per_sample) == "Good"]
 sapply(list(M_single=pvals_M, DM_single=pvals_DM, LNM_single=pvals_LNM, M_full=pvals_M_fullRE, DM_full=pvals_DM_fullRE), max, na.rm = TRUE)
 
 par(mfrow=c(1,2))
 plot(pvals_M, pvals_M_fullRE)
-plot(pvals_DM, pvals_DM_fullRE)
+plot(pvals_DM, pvals_DM_fullRE[match(names(results_TMB_DM), names(results_TMB_fullRE_DM))])
+
 
 names(pvals_DM)[is.na(match(names(pvals_DM), names(pvals_DM_fullRE)))]
 
@@ -621,9 +642,25 @@ length(unlist(betasDM))
 table(pvals_M_fullRE_good <= 0.05)
 table(pvals_DM_fullRE_good <= 0.05)
 
+## Plot the betas
+df_all_beta_slopes = melt(list(M=sapply(betasM[sapply(betasM, typeof) == "double"], select_slope_2, v=F),
+                               DM=sapply(betasDM[sapply(betasM, typeof) == "double"], select_slope_2, v=F)))
+df_all_beta_slopes$ct = gsub("signatures|nucleotidesubstitution1", "", df_all_beta_slopes$L2)
+df_all_beta_slopes$type = sapply(1:nrow(df_all_beta_slopes), function(i) gsub(df_all_beta_slopes$ct[i], "", df_all_beta_slopes$L2[i]) )
+df_all_beta_slopes$converged = 3
+
+df_all_beta_slopes[df_all_beta_slopes$L1 == 'M','converged'] = unlist((sapply(results_TMB_fullRE_M, `[`, "pdHess"))[match(df_all_beta_slopes[df_all_beta_slopes$L1 == 'M',]$L2, names(results_TMB_fullRE_M))])
+df_all_beta_slopes[df_all_beta_slopes$L1 == 'DM','converged'] = unlist((sapply(results_TMB_fullRE_DM, `[`, "pdHess"))[match(df_all_beta_slopes[df_all_beta_slopes$L1 == 'DM',]$L2, names(results_TMB_fullRE_DM))])
+
+ggplot(df_all_beta_slopes,
+       aes(x=ct, y=value, col=type, shape=converged))+geom_point()+facet_wrap(.~interaction(type, L1), nrow=2, scales = "free_y")+
+  geom_abline(intercept = 0, slope = 0, lty='dashed')+
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust=1))+theme(legend.position = "bottom")+labs(x='')
+ggsave("../../results/results_TMB/pcawg/betas_TMB_summary.pdf", width = 10, height = 7)
+
 #----------------------------------------------------------------------------------------------------------
 
-table(pvals_M <= 0.05, pvals_DM <= 0.05, pvals_LNM <= 0.05)
+table(pvals_M <= 0.05, pvals_DM <= 0.05)
 
 sapply(list(pvals_M, pvals_DM, pvals_LNM), function(i) sum(na.omit(i<= 0.05))/sum(!is.na(i)))
 
@@ -697,4 +734,75 @@ sapply(1:length(results_TMB_fullRE_M), plot_random_effects)
 # sapply(67, plot_random_effects)
 dev.off()
 #----------------------------------------------------------------------------------------------------------
+
+## Load objects
+datasets = list.files("../../data/roo/", full.names = T)
+datasets = datasets[!grepl("nucleotidesubstitution3", datasets)]
+datasets_loaded = sapply(datasets, readRDS)
+
+results_TMB_fullRE_DM_matched = results_TMB_fullRE_DM[match(gsub("_", "", gsub("_ROO.RDS", "", basename(datasets))),
+                                                            names(results_TMB_fullRE_DM))]
+names(results_TMB_fullRE_DM_matched) = datasets
+results_TMB_fullRE_M_matched = results_TMB_fullRE_M[match(gsub("_", "", gsub("_ROO.RDS", "", basename(datasets))),
+                                                            names(results_TMB_fullRE_M))]
+names(results_TMB_fullRE_M_matched) = datasets
+
+give_cov_matrix_annotated = function(.dataset_object, dataset_idx, verbatim=T){
+  if(!is.null(.dataset[[dataset_idx]]) & !(typeof(.dataset[[dataset_idx]]) == "character")){
+    if(verbatim) stop('Note: by default, the logratio is taken using the last category as baseline, but that is not necessarily, because it can be changed in the wrapper TMB')
+    .obj = datasets_loaded[[dataset_idx]]
+    if(!(length(attr(.obj,"count_matrices_active")[[1]]) == 0)){
+      .colnames = colnames(attr(.obj,"count_matrices_active")[[1]])
+    }else{
+      .colnames = colnames(attr(.obj,"count_matrices_all")[[1]])
+    }
+    .cov_mat= fill_covariance_matrix(arg_d = length(python_like_select_name(.dataset[[dataset_idx]]$par.fixed, 'beta'))/2,
+                                     arg_entries_var = (python_like_select_name(.dataset[[dataset_idx]]$par.fixed, 'logs_sd_RE'))**2,
+                                     arg_entries_cov = python_like_select_name(.dataset[[dataset_idx]]$par.fixed, 'cov_par_RE'))
+    colnames(.cov_mat) = rownames(.cov_mat) = .colnames[-length(.colnames)]
+    .cov_mat
+  }else{
+    NA
+  }
+}
+
+## Scatterplot of covariances
+covariance_matrices = lapply(list(results_TMB_fullRE_M_matched,
+                                  results_TMB_fullRE_DM_matched), function(.dataset){
+   .x = sapply(1:length(.dataset), give_cov_matrix_annotated, .dataset_object = .dataset, verbatim=FALSE)
+   names(.x) = gsub("_ROO.RDS", "", basename(names(.dataset)))
+   return(.x)
+})
+names(covariance_matrices) = c('fullRE_M', 'fullRE_DM')
+
+covariance_matrices_melt = as.data.frame(melt(covariance_matrices))
+covariance_matrices_melt = covariance_matrices_melt[!is.na(covariance_matrices_melt$value),]
+covariance_matrices_melt = rbind(covariance_matrices_melt, cbind(Var1=covariance_matrices_melt[,2], Var2=covariance_matrices_melt[,1],
+                                                                 covariance_matrices_melt[,3:5]))
+covariance_matrices_melt_substit = covariance_matrices_melt[grepl('nucleotidesubstitution1', covariance_matrices_melt$L2),]
+covariance_matrices_melt_sigs = covariance_matrices_melt[grepl('signatures', covariance_matrices_melt$L2),]
+
+## removing extreme values
+ggplot(covariance_matrices_melt_sigs, aes(x=value))+geom_density()
+extreme_vals_cov_sigs = quantile(covariance_matrices_melt_sigs$value, probs = c(0.01, 0.99))
+covariance_matrices_melt_sigs[ !((covariance_matrices_melt_sigs$value > extreme_vals_cov_sigs[1]) & (covariance_matrices_melt_sigs$value < extreme_vals_cov_sigs[2])),'value'] = NA
+covariance_matrices_melt_sigs = covariance_matrices_melt_sigs[!is.na(covariance_matrices_melt_sigs$ value),]
+head(covariance_matrices_melt_sigs)
+ggplot(covariance_matrices_melt_sigs, aes(x=Var1, y=Var2, col=value))+geom_jitter(size=.2)+
+  scale_color_jcolors_contin("pal3", reverse = TRUE, bias = 1)+labs(col = "Covariance")+
+  theme_bw()+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggsave("../../results/results_TMB/pcawg/covariances_signatures.pdf", width = 10, height = 10)
+
+subset_sigs = names(tail(sort(table(c(as.character(covariance_matrices_melt_sigs$Var1),
+                                      as.character(covariance_matrices_melt_sigs$Var2)))), n=20))
+ggplot(covariance_matrices_melt_sigs[!apply(covariance_matrices_melt_sigs[,1:2], 1, function(i){
+  any(!(i %in% subset_sigs))}),],
+  aes(x=Var1, y=Var2, col=value))+geom_jitter(size=.2)+
+  scale_color_jcolors_contin("pal3", reverse = TRUE, bias = 1)+labs(col = "Covariance")+
+  theme_bw()+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggsave("../../results/results_TMB/pcawg/covariances_signatures_subset.pdf", width = 7, height = 6.7)
+
+ggplot(covariance_matrices_melt_substit, aes(x=Var1, y=Var2, col=value))+geom_jitter()+
+  scale_color_jcolors_contin("pal3", reverse = TRUE, bias = 4)+labs(col = "Covariance")
+  
 
