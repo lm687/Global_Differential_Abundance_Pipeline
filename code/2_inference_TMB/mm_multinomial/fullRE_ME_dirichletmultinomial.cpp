@@ -91,7 +91,7 @@ Type objective_function<Type>::operator() ()
 
   for(int l=0; l<n; l++){ // Multinomial draws
     vector<Type> lth_row = Y.row(l);
-    vector<Type> alpha_l = theta.row(l)*exp(log_lambda_vec(l))*1000;
+    vector<Type> alpha_l = theta.row(l)*exp(log_lambda_vec(l));
     nll -= dirichlet_multinomial(lth_row, alpha_l, d);
   }
   return nll;

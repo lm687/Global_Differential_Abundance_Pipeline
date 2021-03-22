@@ -33,12 +33,15 @@ if(debugging){
   ## debugging
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list()
-  opt$input_list = python_like_select(python_like_select(list.files("../data/assessing_models_simulation/inference_results/TMB/", full.names = T),
-                                                         "GenerationCnorm_"), "fullREDM")
-  opt$output_folder_name= '../results/results_TMB/simulated_datasets/mixed_effects_models/GenerationCnorm/GenerationCnorm_fullREDM/'
-  opt$output_string = 'GenerationCnorm_fullREDM'
+  opt$dataset_generation = 'generationGnorm'
   opt$model = 'fullREDM'
-  opt$dataset_generation = 'GenerationCnorm'
+  opt$input_list = list.files("../data/assessing_models_simulation/inference_results/TMB", full.names = T)
+  opt$input_list = opt$input_list[grep(opt$dataset_generation , opt$input_list)]
+  opt$input_list = opt$input_list[grep(opt$model , opt$input_list)]
+  opt$output_string = paste0(opt$dataset_generation , '_', opt$model, '_manual')
+  opt$output_folder_name = paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/",
+                                  opt$dataset_generation , "/", opt$dataset_generation , "_", opt$model, "_manual/")
+  
   
   # opt$input_list = python_like_select(python_like_select(list.files("../data/assessing_models_simulation/inference_results/TMB/", full.names = T),
   #                                                        "GenerationCnorm_"), "fullREDM")
@@ -50,6 +53,7 @@ if(debugging){
   opt$input_list = strsplit(opt$input_list, " ")[[1]]
 }
 
+opt$input_list = sort(opt$input_list)
 print(opt$input_list)
 
 folder_output = opt$output_folder_name
@@ -60,11 +64,15 @@ datasets_files = datasets_files[grep(pattern = opt$dataset_generation, datasets_
 if(opt$dataset_generation == 'GenerationCnorm'){
   datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
 }
+
+# match
+datasets_files = datasets_files[match(gsub(paste0("_", opt$model, ".RDS"), "", basename(opt$input_list)),
+      gsub("_dataset.RDS", "", basename(datasets_files)))]
+
 datasets = lapply(datasets_files, readRDS)
 names(datasets) = gsub(".RDS", "", basename(datasets_files))
 DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
-print(opt$input_list)
 runs = lapply(opt$input_list, readRDS)
 
 #' ## assess if there was good convergence
@@ -76,7 +84,6 @@ for(j in which(sapply(runs, typeof) %in% c("logical", "character"))){
   runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
 }
 pvals = as.numeric(sapply(runs, function(i) try(wald_TMB_wrapper(i, verbatim=FALSE))))
-
 
 pvals_adj = pvals#*length(pvals_M)
 
@@ -94,7 +101,7 @@ df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function
                                     idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$d-1))))
 
 df_beta_recovery$bool_zero_true_beta = factor(df_beta_recovery$beta_true == 0, levels=c(TRUE, FALSE))
-df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(is.null((i))){FALSE}else{i})
+df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(is.null((i))){FALSE}else{i})[df_beta_recovery$idx]
 
 first_entries_runs = sapply(unique(df_beta_recovery$idx), function(i) which(df_beta_recovery$idx == i)[1])
 table(Sim=df_beta_recovery$DA_bool[first_entries_runs], est_M=df_beta_recovery$pvals_adj[first_entries_runs] <= 0.05)

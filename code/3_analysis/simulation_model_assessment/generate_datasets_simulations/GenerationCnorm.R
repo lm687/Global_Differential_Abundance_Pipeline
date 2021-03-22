@@ -23,6 +23,10 @@ option_list = list(
               help="Shape parameter for gamma distribution for beta (i.e. slope coefficient for changes in exposure between groups)", metavar="numeric"),
   make_option(c("--lambda"), type="numeric", default=0,
               help="Overdispersion parameter", metavar="numeric"),
+  make_option(c("--beta_intercept_input"), type="character", default=NA,
+              help="Fixed intercept for the betas", metavar="character"),
+  make_option(c("--beta_slope_input"), type="character", default=NA,
+              help="Fixed slope for the betas", metavar="character"),
   make_option(c("--outfile"), type="character", default=NA,
               help="Output file in which to write the dataset (RDS file)", metavar="character")
 );
@@ -47,12 +51,21 @@ X_sim = matrix(NA, nrow=2, ncol=2*n)
 X_sim[1,] = 1
 X_sim[2,] = rep(c(0,1), each=n)
 beta = matrix(0, nrow=2, ncol=d-1)
-beta[1,] = runif(n = d-1, min = -1, max = 1)
+if(is.null(opt$beta_intercept_input)){
+  beta[1,] = runif(n = d-1, min = -1, max = 1)
+}else{
+  beta[1,] = readRDS(opt$beta_intercept_input)
+}
+
 if(beta_gamma_shape == 0){
   ## if non-differentially abundant, make it truly non-differentially abundant, i.e. exactly zero
   beta[2,] = 0
 }else{
-  beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
+  if(is.null(opt$beta_slope_input)){
+    beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
+  }else{
+    beta[2,] = readRDS(opt$beta_slope_input)
+  }
 }
 
 ## Random effects

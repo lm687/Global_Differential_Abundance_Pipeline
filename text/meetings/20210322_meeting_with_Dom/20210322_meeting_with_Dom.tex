@@ -1,0 +1,24 @@
+\documentclass{article}
+
+\usepackage{color}
+
+\title{Meeting with Dom 20210322}
+\author{Lena Morrill}
+
+\begin{document}
+
+\maketitle
+
+\paragraph{Fixed effects DM} When removing the coefficient of 100- for the DM likelihood, I get convergence. Otherwise the gradient goes to 0 and I get NA for every single standard error of the parameters.
+
+\paragraph{Diag RE effects DM} kidney renal clear cell RCC now converges (it didn't use to) when removing the 1000 coefficient, and using nlminb.
+
+\paragraph{Full RE effects DM} Removing the coefficient of 1000, still no convergence for kidney renal clear cell RCC, even if increasing number of iterations, and using nlminb, but I don't get the message about gradient too steep.
+
+When using a high value for the initial log lambda (so that it's closer to a multinomial), it doesn't converge either.
+
+When initialising the covariances around 0, and the u at 0, I get that the Hessian of fixed effects was not positive definite., but no NAs.
+
+\paragraph{Not including covariances for signatures with many zero exposures}
+
+\end{document}
