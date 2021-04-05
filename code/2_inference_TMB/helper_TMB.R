@@ -265,14 +265,22 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
 #   return(sdreport(obj))
 # }
 
-wrapper_run_TMB = function(model, object=NULL, sort_columns=F, smart_init_vals=T){
+sort_columns_TMB = function(object){
+  order_cats <- order(colSums(object$Y), decreasing = F) ## increasing so that the last category is the highest
+  object$Y = object$Y[,order_cats]
+  return(object)
+}
+
+wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F){
+  ## sort_columns=F, 
   
   ## if the object of data and covariates is an argument
   data = object
   
-  if(sort_columns){
-    data$Y = data$Y[,order(colSums(data$Y), decreasing = T)]
-  }
+  # if(sort_columns){
+  #   order_cats = order(colSums(data$Y), decreasing = T)
+  #   data$Y = data$Y[,order_cats]
+  # }
   
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
@@ -306,7 +314,7 @@ wrapper_run_TMB = function(model, object=NULL, sort_columns=F, smart_init_vals=T
       logs_sd_RE=rep(1, d-1),
       cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
     )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
+    obj <- MakeADFun(data, parameters, DLL="diagRE_ME_multinomial", random = "u_large")
     }else if(model == "FE_DM"){
       data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
 
@@ -338,23 +346,57 @@ wrapper_run_TMB = function(model, object=NULL, sort_columns=F, smart_init_vals=T
       log_lambda = matrix(c(2,2))
     )
     obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
-  }else if(model == "fullRE_Mcat"){
+  }else if(model == "fullREDMsinglelambda"){
+      data$num_individuals = n
+      parameters <- list(
+        beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                       nrow = 2, byrow=TRUE)),
+        u_large = matrix(rep(1, (d-1)*n), nrow=n),
+        logs_sd_RE=rep(1, d-1),
+        cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+        log_lambda = 1
+      )
+      obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
+  }else if(model == "diagREDMsinglelambda"){
     data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
     parameters <- list(
       beta = beta_init,
       u_large = matrix(rep(1, (d-1)*n), nrow=n),
       logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+      log_lambda = 2
     )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial_categorical", random = "u_large")
+    obj <- MakeADFun(data, parameters, DLL="diagRE_dirichletmultinomial_single_lambda", random = "u_large")
+  }else if(model == "FEDMsinglelambda"){
+    data$num_individuals = NULL
+    parameters <- list(
+      beta = beta_init,
+      log_lambda = 2
+    )
+    obj <- MakeADFun(data, parameters, DLL="FE_dirichletmultinomial_single_lambda")
   }else{
     stop('Specify correct <model>\n')
   }
-  obj$hessian <- TRUE
-  opt <- do.call("optim", obj)
-  opt
-  opt$hessian ## <-- FD hessian from optim
-  return(sdreport(obj))
+  
+  if(use_nlminb){
+    opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max)
+  }else{
+    obj$hessian <- TRUE
+    opt <- do.call("optim", obj)
+    opt
+    opt$hessian ## <-- FD hessian from optim
+  }
+  return_report <- sdreport(obj)
+  # if(sort_columns){
+  #   ## return results in the original order
+  #   order_cats
+  #   return_report$par.fixed[grepl('beta', names(return_report$par.fixed))] = as.vector(matrix(python_like_select_name(return_report$par.fixed, 'beta'), nrow=2)[,order_cats])
+  #   return_report$cov.fixed
+  #   return_report
+  # }
+  
+  return(return_report)
 }
 
 python_like_select = function(vector, grep_substring){
@@ -703,6 +745,7 @@ give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
   keep_obs = rowSums(sig_obj$Y) > 0
   sig_obj$Y = sig_obj$Y[keep_obs,]
   sig_obj$x = sig_obj$x[keep_obs,]
+  sig_obj$z = sig_obj$z[keep_obs,]
   return(sig_obj)
 }
 
@@ -782,6 +825,13 @@ wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, i
   }else if(model == "diagRE_DM"){
     parameters$cov_par_RE = NULL
     obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
+  }else if(model == "fullREDMsinglelambda"){
+    parameters$log_lambda = 2
+    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
+  }else if(model == "diagREDMsinglelambda"){
+    parameters$cov_par_RE = NULL
+    parameters$log_lambda = 2
+    obj <- MakeADFun(data, parameters, DLL="diagRE_dirichletmultinomial_single_lambda", random = "u_large")
   }else if(model == "sparseRE_DM"){
     if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
     parameters$cov_par_RE = NULL
@@ -792,12 +842,31 @@ wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, i
     }else{
       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomial_single", random = "u_large")
     }
-  }else{
+  }else if(model == "sparseRE_DMSL"){
+    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+    parameters$log_lambda = 2
+    parameters$cov_par_RE = NULL
+    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+    data$idx_params_to_infer = (idx_cov_to_fill)
+    if(length(idx_cov_to_fill) > 1){
+      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda", random = "u_large")
+    }else{
+      stop()
+    }
+  }
+  else{
     stop("Incorrect <model>")
   }
 
-  opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max)
+  opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max, trace=T)
   
   if(return_report)  return(sdreport(obj))
   return(opt)
+}
+
+is_slope = function(v){
+  bool_isbetaslope = rep(F, length(v))
+  bool_isbetaslope[v == "beta"] = T
+  bool_isbetaslope[which(bool_isbetaslope)] = c(F,T)
+  bool_isbetaslope
 }
