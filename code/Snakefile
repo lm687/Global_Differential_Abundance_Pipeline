@@ -66,13 +66,24 @@ rule all:
       #   beta_intensity = 0, itnum=range(100),
       #   fixed_beta_intercept="betaintercept1",
       #   fixed_beta_slope="betaslope1")
-      expand("../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS",\
-       datasetgeneration="GenerationCnorm",  n=80, nlambda=180,\
-       lmbda=9, d=6,\
-       beta_intensity = 0, model="diagREDM", itnum=range(100),
-       fixed_beta_intercept="betaintercept1",
-      fixed_beta_slope="betaslope1")
-
+      # expand("../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS",\
+      #  datasetgeneration="GenerationCnorm",  n=80, nlambda=180,\
+      #  lmbda=9, d=6,\
+      #  beta_intensity = 0, model="diagREM", itnum=range(100),
+      #  fixed_beta_intercept="betaintercept2",
+      # fixed_beta_slope="betaslope2")
+      # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
+      #  datasetgeneration="GenerationDMFE1",  n=80, nlambda=180,\
+      #  d=6, lmbda=100,\
+      #  beta_intensity = 0, model="FEDMsinglelambda", itnum=range(100),\
+      #  fixed_beta_intercept="betaintercept1", sdRE_input=1,\
+      # fixed_beta_slope="betaslope1", optimiser='nlminb')
+      expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
+       datasetgeneration="generationMGnorm",  n=80, nlambda=180,\
+       d=6, lmbda=100,\
+       beta_intensity = 0, model="fullREDMsinglelambda", itnum=range(100),\
+       fixed_beta_intercept="betaintercept1", sdRE_input='sdRE1',\
+      fixed_beta_slope="betaslope1", optimiser='nlminb')
 
 rule index_vcf:
     input:
@@ -136,7 +147,6 @@ rule simulate_for_comparison:
     output:
        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
     shell:
-       # "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.datasetgeneration}
        "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
 
 rule simulate_for_comparison_multiple:
@@ -152,11 +162,11 @@ rule simulate_for_comparison_multiple:
         itnum = "{itnum}",
         fixed_beta_intercept="{fixed_beta_intercept}",
         fixed_beta_slope="{fixed_beta_slope}",
+        sdRE_input="{sdRE_input}",
     output:
-       "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.RDS"
+       "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS"
     shell:
-       # "Rscript --vanilla 3_analysis/assess_model_create_dataset.R --simulation_generation {params.datasetgeneration}
-       "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output} --beta_intercept_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_intercept}.RDS --beta_slope_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_slope}.RDS"
+       "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output} --beta_intercept_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_intercept}.RDS --beta_slope_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_slope}.RDS --sdRE_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.sdRE_input}.RDS"
 
 
 ## This is for stan and it has been deprecated
@@ -191,15 +201,16 @@ rule inference_simulation_TMB:
 
 rule inference_simulation_TMB_multiple:
     input:
-        "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.RDS"
+        "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS"
     log:
-        "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Model{model}_{fixed_beta_intercept}_{fixed_beta_slope}_dataset{itnum}.log"
+        "logs/inference/{optimiser}/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Model{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.log"
     params:
        model="{model}",
+       optimiser="{optimiser}"
     output:
-       "../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS"
+       "../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS"
     shell:
-       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model}"
+       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model} --optimiser {params.optimiser}"
 
 rule analyse_simulation_TMB:
     input:
