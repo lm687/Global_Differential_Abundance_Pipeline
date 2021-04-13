@@ -4,13 +4,13 @@ require(TMB)
 require(reshape2)
 require(ggplot2)
 source("../../../2_inference_TMB/helper_TMB.R")
-idx_dataset = 1 ## idx for beta slope and beta intercept true parameters
+idx_dataset = 3 ## idx for beta slope and beta intercept true parameters
 
 # model <- 'diagREDMsinglelambda'
-model <- 'fullREDMsinglelambda'
+model <- 'fullREDMsinglelambda_'
 # model <- 'diagREDM'
 # model <- "fullREM"
-# model <- "fullREDM"
+# model <- "fullREDM_"
 # model <- "diagREM"
 # model <- "FEDMsinglelambda"
 optimiser <- 'nlminb'
@@ -64,7 +64,11 @@ summaries = lapply(runs, function(i){
 #   summaries[[it_runs]]
 # }
   
-summaries_melt = data.frame(melt(sapply(summaries, function(j) j[,1])), stringsAsFactors = F)
+summaries2 = sapply(summaries, function(j) j[,1])
+# if(typeof(summaries2) == "list"){
+#   summaries2 <- do.call('cbind', summaries2)
+# }
+summaries_melt = data.frame(melt(summaries2), stringsAsFactors = F)
 summaries_melt$Var1 = as.character(summaries_melt$Var1)
 summaries_melt$idx_param = rep(1:sum(summaries_melt$Var2 == 1), length(lst))
 summaries_melt[summaries_melt$Var1 == "log_lambda", "value"] = exp(summaries_melt[summaries_melt$Var1 == "log_lambda", "value"])
@@ -80,44 +84,44 @@ if(name_dataset0 %in% c("multiple_GenerationCnormdiagRE_", "multiple_GenerationC
   sds = x[[1]]$sd_RE
 }
 
-if(model %in% c("fullREM")){
+if(model %in% c("fullREM_")){
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 rep(0,((x[[1]]$d-1)**2-(x[[1]]$d-1))/2), ## covariances RE
                 sds) ##sd RE ## this is particular to GenerationCnorm
-}else if(model %in% c("diagREM")){
+}else if(model %in% c("diagREM_")){
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 sds) ##sd RE ## this is particular to GenerationCnorm
-}else if(model %in% c("fullREDM", "fullREDMsinglelambda")){
-  if(model == "fullREDM"){
+}else if(model %in% c("fullREDM_", "fullREDMsinglelambda_")){
+  if(model == "fullREDM_"){
     overdisp <- x[[1]]$lambda
     if(name_dataset0 %in% c("multiple_GenerationMGnorm_", "multiple_generationMGnorm_")){
       overdisp <- c(NA,NA)
     }
-  }else if(model=="fullREDMsinglelambda"){
+  }else if(model=="fullREDMsinglelambda_"){
     if(!is.na(x[[1]]$lambda)){
       stopifnot(x[[1]]$lambda[1] == x[[1]]$lambda[2])
     }
     overdisp <- x[[1]]$lambda[1]
   }
   true_vals = c(as.vector(x[[1]]$beta), ## betas
-                rep(0,((x[[1]]$d-1)**2-(x[[1]]$d-1))/2), ## covariances RE
                 sds, ##sd RE ## this is particular to GenerationCnorm
+                rep(0,((x[[1]]$d-1)**2-(x[[1]]$d-1))/2), ## covariances RE
                 overdisp)
-}else if(model %in% c("diagREDM", "diagREDMsinglelambda" )){
-  if(model == "diagREDM"){
+}else if(model %in% c("diagREDM_", "diagREDMsinglelambda_" )){
+  if(model == "diagREDM_"){
     if(name_dataset0 %in% c("multiple_GenerationMGnorm_", "multiple_generationMGnorm_")){
       overdisp = c(NA, NA)
       }else{
       overdisp <- x[[1]]$lambda
     }
-  }else if(model=="diagREDMsinglelambda"){
+  }else if(model=="diagREDMsinglelambda_"){
     stopifnot(x[[1]]$lambda[1] == x[[1]]$lambda[2])
     overdisp <- x[[1]]$lambda[1]
   }
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 sds, ##sd RE ## this is particular to GenerationCnorm
                 overdisp)
-}else if(model %in% c("FEDMsinglelambda" )){
+}else if(model %in% c("FEDMsinglelambda_" )){
   overdisp <- x[[1]]$lambda
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 overdisp)
@@ -129,7 +133,7 @@ summaries_melt$subtract = summaries_melt$value - rep(true_vals, length(lst))
 ggplot(summaries_melt, aes(x=idx_param, y=subtract, group=idx_param))+
   geom_abline(slope = 0, intercept = 0, lty='dashed', col='blue')+
   geom_boxplot()+facet_wrap(~Var1, scales = "free", nrow=1)+labs(x="Parameter", y="Bias")
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_", name_dataset, optimiser, '_', model, '_', idx_dataset, "_bias.pdf"), width = 10, height = 3.5)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_", name_dataset, optimiser, '_', model, idx_dataset, "_bias.pdf"), width = 10, height = 3.5)
 # summaries_mat = matrix(summaries_melt$value, nrow=sum(summaries_melt$Var2 == 1))
 
 
@@ -167,7 +171,7 @@ ggplot(df_coverage,
        aes(x=parameter, y=CI, group=1))+geom_abline(slope = 0, intercept = 0.95, col='blue', lty='dashed')+
   geom_line()+geom_point()+facet_wrap(.~type_param, scales = "free_x", nrow=1)+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset, optimiser,'_',  model, '_', idx_dataset, "_coverage.pdf"), width = 10, height = 3.5)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset, optimiser,'_',  model, idx_dataset, "_coverage.pdf"), width = 10, height = 3.5)
 
 # summaries[[1]]
 # true_vals

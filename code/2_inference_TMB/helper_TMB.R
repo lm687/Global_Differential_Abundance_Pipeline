@@ -375,6 +375,33 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F){
       log_lambda = 2
     )
     obj <- MakeADFun(data, parameters, DLL="FE_dirichletmultinomial_single_lambda")
+  }else if(model == "fullRE_dirichletmultinomial_singlelambda_REv2"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = beta_init,
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      log_lambda = 2,
+      u_large1 = matrix(runif(n)),
+      u_large2 = matrix(runif(n)),
+      u_large3 = matrix(runif(n)),
+      u_large4 = matrix(runif(n))
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda_REv2",
+                     random = c("u_large1", "u_large2","u_large3", "u_large4"))
+  }else if(model == "fullRE_multinomial_REv2"){
+    data$num_individuals = n
+    parameters <- list(
+      beta = beta_init,
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      u_large1 = matrix(runif(n)),
+      u_large2 = matrix(runif(n)),
+      u_large3 = matrix(runif(n)),
+      u_large4 = matrix(runif(n))
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial_REv2",
+                     random = c("u_large1", "u_large2","u_large3", "u_large4"))
   }else{
     stop('Specify correct <model>\n')
   }
