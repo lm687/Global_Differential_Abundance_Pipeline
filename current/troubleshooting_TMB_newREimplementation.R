@@ -27,6 +27,12 @@ TMB::compile("mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial"))
 TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial"))
+TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2"))
+TMB::compile("mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
 
 ## it's 5-dimensional
 fivedimobject = load_PCAWG(ct = ct, typedata = typedata)
@@ -36,6 +42,11 @@ fivedimobject = give_subset_sigs_TMBobj(fivedimobject,
 
 stopifnot(ncol(fivedimobject$Y) == 5)
 
+## I don't see why results_DMsl_oldRE and results_DMsl_oldRE2 shouldn't give the same results
+results_DMsl_oldRE = (wrapper_run_TMB(object = fivedimobject, model = 'fullREDMsinglelambda'))
+results_DMsl_oldRE2 = (wrapper_run_TMB(object = fivedimobject, model = 'fullREDMsinglelambda2'))
+results_DMsl_oldRE
+results_DMsl_oldRE2
 results_DMsl = (wrapper_run_TMB(object = fivedimobject, model = 'fullRE_dirichletmultinomial_singlelambda_REv2'))
 results_DMsl
 results_DMoldRE = (wrapper_run_TMB(object = fivedimobject, model = 'fullRE_DM'))

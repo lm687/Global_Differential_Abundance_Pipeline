@@ -19,18 +19,18 @@ folder_robjs_nlminb = "../../data/pcawg_robjects_cache/tmb_results/nlminb/"
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-TMB::compile("mm_multinomial/ME_multinomial.cpp")
-dyn.load(dynlib("mm_multinomial/ME_multinomial"))
-TMB::compile("mm_multinomial/ME_dirichletmultinomial.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
-TMB::compile("mm_multinomial/ME_LNM.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/ME_LNM"))
+# TMB::compile("mm_multinomial/ME_multinomial.cpp")
+# dyn.load(dynlib("mm_multinomial/ME_multinomial"))
+# TMB::compile("mm_multinomial/ME_dirichletmultinomial.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
+# TMB::compile("mm_multinomial/ME_LNM.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/ME_LNM"))
 TMB::compile("mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial"))
 TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial"))
-TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar"))
+# TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar"))
 TMB::compile("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial"))
 TMB::compile("mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
@@ -45,7 +45,8 @@ TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-s
 dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
 TMB::compile("mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
-
+TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2"))
 
 #-------------------------------------------------------------------------------------------------#
 
@@ -87,6 +88,16 @@ if(re_run_inference){
                                              model = "fullREDMsinglelambda"),
                              timeout = 300, onTimeout = "warning")
              saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMSL_", rownames(i), ".RDS"))
+           })
+  
+  mclapply(sample(which(is.na(match(as.vector(sapply(enough_samples, function(i) c(paste0(i, '_signatures')))),
+                                    gsub(".RDS", "", gsub("fullRE_DMSL2_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+           function(idx){
+             i = samples_files2[idx,]
+             x = withTimeout(wrapper_run_TMB(sort_columns_TMB(load_PCAWG(ct = i[1,1], typedata = i[1,2])), smart_init_vals = T,
+                                             model = "fullREDMsinglelambda2"),
+                             timeout = 300, onTimeout = "warning")
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMSL2_", rownames(i), ".RDS"))
            })
   
   mclapply(sample(which(is.na(match(as.vector(sapply(enough_samples, function(i) c(paste0(i, '_signatures'), paste0(i, "_nucleotidesubstitution1")))),
@@ -170,24 +181,24 @@ if(re_run_inference){
   
   
   ## Categorical: not over-dispersed
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("fullRE_Mcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
-           function(idx){
-             i = samples_files2[idx,]
-             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_Mcat"),
-                             timeout = 300, onTimeout = "warning")
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_Mcat_", rownames(i), ".RDS"))
-           })
-  
-  ## Categorical: over-dispersed
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("fullRE_DMcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
-           function(idx){
-             i = samples_files2[idx,]
-             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DMcat"),
-                             timeout = 300, onTimeout = "warning")
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMcat_", rownames(i), ".RDS"))
-           })
+  # mclapply(sample(which(is.na(match(rownames(samples_files2),
+  #                                   gsub(".RDS", "", gsub("fullRE_Mcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  #          function(idx){
+  #            i = samples_files2[idx,]
+  #            x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_Mcat"),
+  #                            timeout = 300, onTimeout = "warning")
+  #            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_Mcat_", rownames(i), ".RDS"))
+  #          })
+  # 
+  # ## Categorical: over-dispersed
+  # mclapply(sample(which(is.na(match(rownames(samples_files2),
+  #                                   gsub(".RDS", "", gsub("fullRE_DMcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  #          function(idx){
+  #            i = samples_files2[idx,]
+  #            x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DMcat"),
+  #                            timeout = 300, onTimeout = "warning")
+  #            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMcat_", rownames(i), ".RDS"))
+  #          })
   
 }
 
