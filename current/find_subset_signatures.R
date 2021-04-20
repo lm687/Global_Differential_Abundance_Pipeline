@@ -3,6 +3,7 @@ setwd("~/Documents/PhD/GlobalDA/code/2_inference_TMB/")
 library(TMB)
 library(ggplot2)
 library(dplyr)
+library(gridExtra)
 source("mm_multinomial/helper_functions.R")
 source("helper_TMB.R")
 source("../2_inference/helper/helper_DA_stan.R") ## for normalise_rw
@@ -12,6 +13,8 @@ TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_
 dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_dirichletmultinomial"))
 TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2"))
 TMB::compile("mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
 TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/FE_dirichletmultinomial.cpp", "-std=gnu++17")
@@ -22,6 +25,8 @@ TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_M
 dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial"))
 TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda.cpp", "-std=gnu++17")
 dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda"))
+TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda2"))
 TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial_singlecov.cpp", "-std=gnu++17")
 dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial_singlecov"))
 
@@ -133,20 +138,72 @@ mclapply(1:nrow(df_all_samples),
            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "diagRE_DMSL_",
                                            paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
          })
-#----------------------------------------------------------------------#
+ct = "Bone-Osteosarc"
+.x <- wrapper_run_TMB(object = load_PCAWG(ct = ct, typedata = 'signatures'), model = "diagREDMsinglelambda")
+saveRDS(object = .x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "diagRE_DMSL_",
+                                paste0(ct, "_signatures", collapse = "_"), ".RDS"))
 
 #----------------------------------------------------------------------#
-subset_sigs_sparse_cov_idx <- read.table("../../current/subset_sigs_sparse_cov_idx.txt", stringsAsFactors = F, fill = T)
-ct <- "CNS-GBM"
-obj_ct = load_PCAWG(ct, typedata="signatures", path_to_data = "../../data/")
-idx_cov_to_fill_read <- as.integer(strsplit(subset_sigs_sparse_cov_idx[subset_sigs_sparse_cov_idx$V1 == ct,2], ",")[[1]])
-res_sparse <- wrapper_run_TMB_debug(object = obj_ct, iter.max = 500, init_log_lambda = 3, return_report = T,
-                                    model = "sparseRE_DMSL",
-                                    idx_cov_to_fill=idx_cov_to_fill_read-1) ## idx_cov_to_fill must be zero-indexed
-res_sparse
-wald_TMB_wrapper(res_sparse)
-saveRDS(res_sparse, paste0("../../data/pcawg_robjects_cache/tmb_results/sparseRE_DMSL_", ct, "_signatures.RDS"))
+
+subset_sigs <- read.table("../../current/subset_sigs.txt", stringsAsFactors = F, fill = T)
+.pcawg0 <- load_PCAWG(ct = ct, typedata = "signatures")
+# .sigs_rm <- setdiff(colnames(.pcawg$Y), strsplit(subset_sigs[subset_sigs$V2 == ct,'V3'], ',')[[1]])
+.sigs_rm <- 'SBS33' #colnames(.pcawg0$Y)[-c(1:4)]
+.pcawg <- give_subset_sigs_TMBobj(.pcawg0, sigs_to_remove = .sigs_rm)
+res_subset <- wrapper_run_TMB(object = sort_columns_TMB(.pcawg),
+                                     model = "fullREDMsinglelambda2", use_nlminb = T)
+res_subset
+# wald_TMB_wrapper(res_sparse)
+saveRDS(res_subset, paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/subsetsorted_RE_DMSL_", ct, "_signatures.RDS"))
+
+# mclapply(which(df_all_samples$X2 == "signatures"),
+#          function(idx){
+#            i = df_all_samples[idx,]
+#            typedata = i[1,2]
+#            obj_subset <- give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+#                                                  sigs_to_remove = unique(nonexogenous$V1))
+#            if(dim(obj_subset$Y)[2] <  dim(load_PCAWG(ct = i[1,1], typedata = i[1,2])$Y)[2]){
+#              x = wrapper_run_TMB_debug(object = obj_subset, 
+#                                        model = "fullRE_DM", return_report=T)
+#              x
+#              saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fulLRE_nonexo_DM_",
+#                                              paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+#            }
+#          })
+
 #----------------------------------------------------------------------#
+
+# give_subset_sigs_roo = function(roo, subset_sigs, slot_name){
+#   #subset_sigs=c('SBS1', 'SBS2', 'SBS5', 'SBS13', 'SBS18', 'SBS40')
+#   # roo=readRDS(paste0("../../data/", "roo/", ct, '_', "signatures", "_ROO.RDS" ))
+#   roo
+# }
+
+enough_samples = readLines("~/Desktop/CT_sufficient_samples.txt")
+subset_sigs_sparse_cov_idx <- read.table("../../current/subset_sigs_sparse_cov_idx.txt", stringsAsFactors = F, fill = T)
+# ct <- enough_samples[29]
+# obj_ct = load_PCAWG(ct, typedata="signatures", path_to_data = "../../data/")
+# idx_cov_to_fill_read <- as.integer(strsplit(subset_sigs_sparse_cov_idx[subset_sigs_sparse_cov_idx$V1 == ct,2], ",")[[1]])
+
+# idx_cov_to_fill_read = idx_cov_to_fill_read[-1]
+# idx_cov_to_fill_read = idx_cov_to_fill_read[1:2]
+# res_sparse <- wrapper_run_TMB_debug(object = obj_ct, iter.max = 500, init_log_lambda = 3, return_report = T,
+                                    # model = "fullREDMsinglelambda") ## idx_cov_to_fill must be zero-indexed
+# res_sparse
+# xxxx <- wrapper_run_TMB(object = sort_columns_TMB(obj_ct), model = "fullREDMsinglelambda2", use_nlminb = T, smart_init_vals = T)
+res_sparse2 <- wrapper_run_TMB_debug(object = sort_columns_TMB(obj_ct),
+                                     iter.max = 500, init_log_lambda = 3, return_report = T,
+                                    model = "sparseRE_DMSL2",
+                                    idx_cov_to_fill=idx_cov_to_fill_read-1) ## idx_cov_to_fill must be zero-indexed
+res_sparse2
+# wald_TMB_wrapper(res_sparse)
+# saveRDS(res_sparse, paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/sparseRE_DMSL_", ct, "_signatures.RDS"))
+saveRDS(res_sparse2, paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/sparseRE_DMSL2_", ct, "_signatures.RDS"))
+#----------------------------------------------------------------------#
+
+res_DL2 <- wrapper_run_TMB(object = obj_ct,
+                                    model = "fullREDMsinglelambda2")
+res_DL2
 
 mclapply(which(df_all_samples$X2 == "signatures"),
          function(idx){
@@ -169,6 +226,49 @@ mclapply(which(df_all_samples$X2 == "signatures"),
            }
          })
 
+mclapply(which(df_all_samples$X2 == "signatures"),
+         function(idx){
+           i = df_all_samples[idx,]
+           typedata = i[1,2]
+           obj_subset <- give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+                                                 sigs_to_remove = unique(nonexogenous$V1))
+           if(dim(obj_subset$Y)[2] <  dim(load_PCAWG(ct = i[1,1], typedata = i[1,2])$Y)[2]){
+             x = wrapper_run_TMB_debug(object = obj_subset, 
+                                       model = "fullREDMsinglelambda", return_report=T)
+             x
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fullRE_nonexo_DMSL_",
+                                             paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+           }
+         })
+
+subset_sigs_sparse_cov_idx_nonexo <- read.table("../../current/subset_sigs_sparse_cov_idx_nonexo.txt", stringsAsFactors = F, fill = T)
+
+mclapply(which(df_all_samples$X2 == "signatures"),
+         function(idx){
+           i = df_all_samples[idx,]
+           typedata = i[1,2]
+           ct = i[1,1]
+           obj_subset <- give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+                                                 sigs_to_remove = unique(nonexogenous$V1))
+           idx_cov_to_fill_read <- as.integer(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,2], ",")[[1]])
+           
+           idx_cov_to_fill_read
+           if(dim(obj_subset$Y)[2] <  dim(load_PCAWG(ct = i[1,1], typedata = i[1,2])$Y)[2]){
+             .res_sparse <- wrapper_run_TMB_debug(object = sort_columns_TMB(obj_subset),
+                                                  iter.max = 500, init_log_lambda = 3, return_report = T,
+                                                  model = "sparseRE_DMSL2",
+                                                  idx_cov_to_fill=idx_cov_to_fill_read-1) ## idx_cov_to_fill must be zero-indexed
+             .res_sparse
+             saveRDS(object = .res_sparse, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "sparseRE_nonexo_DMSL_",
+                                             paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+           }
+         })
+obj_subset2 <- give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures"),
+                                       sigs_to_remove = unique(nonexogenous$V1))
+sort(colSums(obj_subset2$Y))
+createBarplot(normalise_rw(makenames_row(obj_subset2$Y)))
+
+
 aa <- readRDS(file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fulLRE_nonexo_DM_",
                                 paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
 wald_TMB_wrapper(aa)
@@ -187,3 +287,45 @@ t(sapply(fles_nonexo, function(j){
   }
 }))
 
+makenames_row = function(a){
+  rownames(a) = make.names(rownames(a), unique = T)
+  a
+}
+
+
+createBarplot(normalise_rw(makenames_row(load_PCAWG(ct = ct, typedata = 'signatures')$Y)))
+createBarplot(normalise_rw(makenames_row(obj_subset$Y)))
+paste0(colnames(obj_subset$Y), collapse = ',')
+
+ct="CNS-PiloAstro"
+ct="CNS-Medullo"
+ct <- "Prost-AdenoCA"
+ct <- 'Lymph-BNHL'
+ct <- 'LUNG-SCC'
+ct <- 'Kidney-ChRCC'
+obj_subset2 <- give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures"),
+                                       sigs_to_remove = unique(nonexogenous$V1))
+sort(colSums(obj_subset2$Y))
+createBarplot(normalise_rw(makenames_row(obj_subset2$Y)))
+
+pdf("../../../CDA_in_Cancer/text/presentations/20210421_WLS_Morrill/figures/prostateadenoca_nonexo.pdf", width=9, height = 4)
+obj_subset2 <- give_subset_sigs_TMBobj(load_PCAWG(ct = "Prost-AdenoCA", typedata = "signatures"),
+                                       sigs_to_remove = unique(nonexogenous$V1))
+do.call('grid.arrange', list(grobs=lapply(split.data.frame(normalise_rw(makenames_row(obj_subset2$Y)), f = rep(c(1,2), each=(nrow(obj_subset2$Y)/2))),
+       function(i) (createBarplot(i, remove_labels = T))), ncol=2))
+dev.off()
+
+pdf("../../../CDA_in_Cancer/text/presentations/20210421_WLS_Morrill/figures/prostateadenoca_nonexo.pdf", width=9, height = 4)
+obj_subset2 <- give_subset_sigs_TMBobj(load_PCAWG(ct = "CNS-PiloAstro", typedata = "signatures"),
+                                       sigs_to_remove = unique(nonexogenous$V1))
+do.call('grid.arrange', list(grobs=lapply(split.data.frame(normalise_rw(makenames_row(obj_subset2$Y)), f = rep(c(1,2), each=(nrow(obj_subset2$Y)/2))),
+                                          function(i) (createBarplot(i, remove_labels = T))), ncol=2))
+dev.off()
+
+
+num_cats_nonexo <- sapply(unique(df_all_samples$X1), function(ct){
+  .xx <- try(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures"),
+                                       sigs_to_remove = unique(nonexogenous$V1)))
+  try(ncol(.xx$Y))
+})
+num_cats_nonexo

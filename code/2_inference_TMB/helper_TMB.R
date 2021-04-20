@@ -357,6 +357,18 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F){
         log_lambda = 1
       )
       obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
+  }else if(model == "fullREDMsinglelambda2"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    parameters <- list(
+      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+                     nrow = 2, byrow=TRUE)),
+      u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      logs_sd_RE=rep(1, d-1),
+      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      log_lambda = 1
+    )
+    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda2", random = "u_large")
   }else if(model == "diagREDMsinglelambda"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
@@ -812,14 +824,14 @@ give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F){
 
 wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, iter.max=150, init_log_lambda = 2, idx_cov_to_fill){
   dim(object$Y)
-  sort_columns=T
+  # sort_columns=T
   smart_init_vals=T
   
   data = object
   
-  if(sort_columns){
-    data$Y = data$Y[,order(colSums(data$Y), decreasing = F)]
-  }
+  # if(sort_columns){
+  #   data$Y = data$Y[,order(colSums(data$Y), decreasing = F)]
+  # }
   
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
@@ -880,8 +892,29 @@ wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, i
     }else{
       stop()
     }
-  }
-  else{
+  }else if(model == "sparseRE_DMSL2"){
+    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+    parameters$log_lambda = 2
+    parameters$cov_par_RE = NULL
+    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+    data$idx_params_to_infer = (idx_cov_to_fill)
+    if(length(idx_cov_to_fill) > 1){
+      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
+    }else{
+      stop()
+    }
+  }else if(model == "sparseRE_DMSL2"){
+    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+    parameters$log_lambda = 2
+    parameters$cov_par_RE = NULL
+    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+    data$idx_params_to_infer = (idx_cov_to_fill)
+    if(length(idx_cov_to_fill) > 1){
+      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
+    }else{
+      stop()
+    }
+  } else{
     stop("Incorrect <model>")
   }
 

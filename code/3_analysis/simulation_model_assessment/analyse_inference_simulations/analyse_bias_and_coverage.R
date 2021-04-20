@@ -7,19 +7,19 @@ source("../../../2_inference_TMB/helper_TMB.R")
 idx_dataset = 3 ## idx for beta slope and beta intercept true parameters
 
 # model <- 'diagREDMsinglelambda'
-model <- 'fullREDMsinglelambda_'
+# model <- 'fullREDMsinglelambda_'
 # model <- 'diagREDM'
 # model <- "fullREM"
-# model <- "fullREDM_"
+model <- "fullREDM_"
 # model <- "diagREM"
 # model <- "FEDMsinglelambda"
 optimiser <- 'nlminb'
 
 # name_dataset <- "multiple_GenerationCnormdiagRE_"
-# name_dataset <- "multiple_GenerationCnorm_"
+name_dataset <- "multiple_GenerationCnorm_"
 # name_dataset <- "multiple_GenerationMGnorm_"
 # name_dataset <- "multiple_generationMGnorm_"
-name_dataset <- "multiple_generationMGnorm_80_180_100_6_0_"
+# name_dataset <- "multiple_generationMGnorm_80_180_100_6_0_"
 # name_dataset <- "multiple_GenerationDMFE1_80_180_100_3_0_"
 name_dataset0 <- paste0(strsplit(name_dataset, '_')[[1]][1:2], sep = '_', collapse = '')
 
