@@ -71,7 +71,9 @@ createRDS_ROOSigs_object <- function(pre_path="",
                                      active_sigs_version="active_signatures_transposed_clonesig2",
                                      outfolder=NULL,
                                      cancer_type=NULL,
-                                     in_dataframe=NULL){
+                                     in_dataframe=NULL,
+                                     type_signatures="QP_COSMIC",
+                                     check_size_exposures=T){
 
   if(is.null(cancer_type)){stop('Cancer type cannot be null')}
 
@@ -82,7 +84,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
   ## 1. name of file
   ## 2. cancer type it belongs to for active signatures
   
-  if(type_features == 'signatures'){
+  if((type_features == 'signatures') & (type_signatures=="QP_COSMIC") ){
     sigs_cosmic <- read.table(paste0("../data/cosmic/sigProfiler_SBS_signatures_2019_05_22.csv"),
                               stringsAsFactors = FALSE, sep = ',', header = TRUE)
     # sigs_cosmic <- read.table(paste0(pre_path, "../../data/cosmic/signatures_probabilities.txt"),
@@ -105,31 +107,56 @@ createRDS_ROOSigs_object <- function(pre_path="",
   }
   
   ## below: file which should have active signatures file but does not
+  
   try({
     # name=gsub('/out_', '', gsub('.consensus.20160830.somatic.snv_mnv.vcf_merged', '', gsub(outfolder, '', j)))
     
     
     if(is.null(in_dataframe)){stop('<in_dataframe> should not be empty - this is your data!')}
-    
     x = in_dataframe
     
-    x$mutation <- gsub('/', '>', x$mutation)
-    x$mutation <- grid_mutations_df[match(x$mutation, grid_mutations_df[,1]),2]
-    
-    if(type_features == "nucleotidesubstitution1"){
-      x$mutation <- sapply(x$mutation, function(i){strsplit(i, "\\[|\\]")[[1]][2]})
+    if(type_features != 'signaturesmutSigExtractor'){
+
+      x$mutation <- gsub('/', '>', x$mutation)
+      x$mutation <- grid_mutations_df[match(x$mutation, grid_mutations_df[,1]),2]
+      
+      if(type_features == "nucleotidesubstitution1"){
+        x$mutation <- sapply(x$mutation, function(i){strsplit(i, "\\[|\\]")[[1]][2]})
+      }
+    }else{
+      # is signaturesmutSigExtractor
+      x$mutation = NA
     }
-    
     ## bin by clonal/subclonal
     num_muts = nrow(x)
     Clonal <- x %>% filter(x$bool_group_1)
     Subclonal <- x %>% filter(!x$bool_group_1)
-  
     
     ## infer signatures
     if(type_features == 'signatures'){
       sigsClonal_QP <- length(Clonal$mutation)*QPsig(tumour.ref = Clonal$mutation, signatures.ref = sigs_cosmic)
       sigsSubclonal_QP <- length(Subclonal$mutation)*QPsig(Subclonal$mutation, signatures.ref = sigs_cosmic)
+    }else if(type_features == 'signaturesmutSigExtractor'){
+      library(mutSigExtractor)
+      library(BSgenome.Hsapiens.UCSC.hg19)
+      
+      ## Clonal
+      ##  HERE
+      contexts_snv_clonal <- extractSigsSnv(df=Clonal[,c('chrom','pos','ref','alt')], output='contexts',
+                                     ref.genome=BSgenome.Hsapiens.UCSC.hg19)
+      sigs_snv_clonal <- fitToSignatures(
+        mut.context.counts=contexts_snv_clonal[,1], 
+        signature.profiles=SBS_SIGNATURE_PROFILES_V3
+      )
+      contexts_snv_subclonal <- extractSigsSnv(df=Subclonal[,c('chrom','pos','ref','alt')], output='contexts',
+                                            ref.genome=BSgenome.Hsapiens.UCSC.hg19)
+      sigs_snv_subclonal <- fitToSignatures(
+        mut.context.counts=contexts_snv_subclonal[,1], 
+        signature.profiles=SBS_SIGNATURE_PROFILES_V3
+      )
+      
+      sigsClonal_QP <- sigs_snv_clonal
+      sigsSubclonal_QP <- sigs_snv_subclonal
     }else{
       if(type_features == "nucleotidesubstitution1"){
         lvls <- sort(unlist( sapply(c('C', 'T'), function(base){ paste0(base, '>', c('A', 'C', 'G', 'T')[! (c('A', 'C', 'G', 'T') == base)]) })))
@@ -143,8 +170,11 @@ createRDS_ROOSigs_object <- function(pre_path="",
     }      
 
     return_object <- list(sigsClonal_QP, sigsSubclonal_QP)
-    if( ! all.equal((sum(sigsClonal_QP) + sum(sigsSubclonal_QP)), num_muts) ){
-      stop('The number of allocated mutations is not the number of original mutations')
+    
+    if(check_size_exposures){
+      if( ! all.equal((sum(sigsClonal_QP) + sum(sigsSubclonal_QP)), num_muts) ){
+        stop('The number of allocated mutations is not the number of original mutations')
+      }
     }
     
     ## are there any active signatures?
@@ -160,6 +190,9 @@ createRDS_ROOSigs_object <- function(pre_path="",
       }else{
         return_object <- list(return_object, list(list(), list()))
       }
+    }else if(type_features == "signaturesmutSigExtractor"){
+      # only populate the active signatures slot
+      return_object <- list(return_object, list(list(), list()))
     }
   })
   if(!exists("return_object")){
