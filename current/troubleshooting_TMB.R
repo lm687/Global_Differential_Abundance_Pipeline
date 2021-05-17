@@ -17,6 +17,9 @@ TMB::compile("mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17"
 dyn.load(dynlib("mm_multinomial/diagRE_ME_dirichletmultinomial"))
 TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_sparsecov.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_sparsecov"))
+TMB::compile("mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
+
 
 ct = "Kidney-RCC.clearcell" #samples_files[1,1]
 typedata =  "signatures" #samples_files[1,2]
@@ -217,3 +220,41 @@ for(ct_it in sort(unique(samples_files[,1]))){
 dev.off()
 
 #------
+
+
+xx <- load_PCAWG("Bone-Osteosarc", "signaturesmutSigExtractor")
+sort(colSums(xx$Y))
+give_subset_sigs(xx, c())
+give_barplot("Bone-Osteosarc", "signaturesmutSigExtractor", legend_on = F)
+
+pairs(xx$Y[,1:4])
+
+cos.sim <- function(A, B) {
+  return( sum(A*B)/sqrt(sum(A^2)*sum(B^2)) )
+} 
+
+cossims = outer(1:ncol(mutSigExtractor::SBS_SIGNATURE_PROFILES_V3),
+      1:ncol(mutSigExtractor::SBS_SIGNATURE_PROFILES_V3), Vectorize(function(i,j){
+        cos.sim(mutSigExtractor::SBS_SIGNATURE_PROFILES_V3[,i],mutSigExtractor::SBS_SIGNATURE_PROFILES_V3[,j])
+  }))
+
+image(cossims)
+plot(hclust(as.dist(cossims)))
+
+# give_amalgamated_exposures(sig_obj = readRDS(file = paste0("../../data/roo/", ct, '_', typedata, "_ROO.RDS" )),
+#                            list_groupings = split(colnames(mutSigExtractor::SBS_SIGNATURE_PROFILES_V3),
+#                                                   factor(cutree(hclust(as.dist(cossims)), h=0.2))))
+
+xx2 <- give_subset_sigs_TMBobj(give_amalgamated_exposures_TMBobj(xx,
+  list_groupings = split(colnames(mutSigExtractor::SBS_SIGNATURE_PROFILES_V3),
+                         factor(cutree(hclust(as.dist(cossims)), h=0.4)))),
+  sigs_to_remove = c('SBS25+'))
+results_diagDM2 = wrapper_run_TMB(xx2, model = "diagREDMsinglelambda")
+results_diagDM = wrapper_run_TMB(load_PCAWG("Bone-Osteosarc", "signatures"), model = "diagREDMsinglelambda")
+results_diagDM2
+results_diagDM
+
+ncol(load_PCAWG("Bone-Osteosarc", "signatures")$Y)
+ncol(xx2$Y)
+
+

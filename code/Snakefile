@@ -18,6 +18,7 @@ rule all:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
       # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
+      expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type="signaturesmutSigExtractor", cancer_type=cancer_types),
 ## [Inference] Running stan code on PCAWG
       # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
 ## [Benchmarking] Creating synthetic datasets
@@ -78,12 +79,12 @@ rule all:
       #  beta_intensity = 0, model="FEDMsinglelambda", itnum=range(100),\
       #  fixed_beta_intercept="betaintercept1", sdRE_input=1,\
       # fixed_beta_slope="betaslope1", optimiser='nlminb')
-      expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
-       datasetgeneration="generationMGnorm",  n=80, nlambda=180,\
-       d=6, lmbda=100,\
-       beta_intensity = 0, model="fullREDMsinglelambda", itnum=range(100),\
-       fixed_beta_intercept="betaintercept3", sdRE_input='sdRE1',\
-      fixed_beta_slope="betaslope3", optimiser='nlminb')
+      # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
+      #  datasetgeneration="generationMGnorm",  n=80, nlambda=180,\
+      #  d=6, lmbda=100,\
+      #  beta_intensity = 0, model="fullREDMsinglelambda", itnum=range(100),\
+      #  fixed_beta_intercept="betaintercept3", sdRE_input='sdRE1',\
+      # fixed_beta_slope="betaslope3", optimiser='nlminb')
 
 rule index_vcf:
     input:
@@ -93,15 +94,15 @@ rule index_vcf:
     shell:
         "tabix -f {input}"
 
-rule embed_counts:
-    input:
-        vcf="../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz",
-        vcf_index="../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi",
-    	ccf="../data/restricted/pcawg/consensus_subclonal_reconstruction_mutccf_20170325/{sample}_mutation_ccf.txt"
-    output:
-        "../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}"
-    shell:
-        "sh 0_embed_in_count_space/0_get_flanking_and_mut_individual.sh {input.vcf} {input.vcf_index} {input.ccf} {output}"
+# rule embed_counts:
+#     input:
+#         vcf="../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz",
+#         vcf_index="../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi",
+#     	ccf="../data/restricted/pcawg/consensus_subclonal_reconstruction_mutccf_20170325/{sample}_mutation_ccf.txt"
+#     output:
+#         "../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}"
+#     shell:
+#         "sh 0_embed_in_count_space/0_get_flanking_and_mut_individual.sh {input.vcf} {input.vcf_index} {input.ccf} {output}"
 
 
 rule make_roo_files:

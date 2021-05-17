@@ -9,6 +9,8 @@ source("helper_TMB.R")
 source("../2_inference/helper/helper_DA_stan.R") ## for normalise_rw
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
 
+TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_multinomial"))
 TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_dirichletmultinomial"))
 TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
@@ -143,6 +145,7 @@ ct = "Bone-Osteosarc"
 saveRDS(object = .x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "diagRE_DMSL_",
                                 paste0(ct, "_signatures", collapse = "_"), ".RDS"))
 
+
 #----------------------------------------------------------------------#
 
 subset_sigs <- read.table("../../current/subset_sigs.txt", stringsAsFactors = F, fill = T)
@@ -179,7 +182,6 @@ saveRDS(res_subset, paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/s
 #   roo
 # }
 
-enough_samples = readLines("~/Desktop/CT_sufficient_samples.txt")
 subset_sigs_sparse_cov_idx <- read.table("../../current/subset_sigs_sparse_cov_idx.txt", stringsAsFactors = F, fill = T)
 # ct <- enough_samples[29]
 # obj_ct = load_PCAWG(ct, typedata="signatures", path_to_data = "../../data/")
@@ -223,6 +225,34 @@ mclapply(which(df_all_samples$X2 == "signatures"),
              #                       idx_cov_to_fill=idx_cov_to_fill_read-1)
              # saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "sparseRE_nonexo_DM_",
              #                                 paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+           }
+         })
+
+mclapply(which(df_all_samples$X2 == "signatures"),
+         function(idx){
+           i = df_all_samples[idx,]
+           typedata = i[1,2]
+           obj_subset <- give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+                                                 sigs_to_remove = unique(nonexogenous$V1))
+           if(dim(obj_subset$Y)[2] <  dim(load_PCAWG(ct = i[1,1], typedata = i[1,2])$Y)[2]){
+             x = wrapper_run_TMB_debug(object = obj_subset, 
+                                       model = "diagREDMsinglelambda", return_report=T)
+             x
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "diagRE_nonexo_DMSL_",
+                                             paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+           }})
+mclapply(which(df_all_samples$X2 == "signatures"),
+         function(idx){
+           i = df_all_samples[idx,]
+           typedata = i[1,2]
+           obj_subset <- give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+                                                 sigs_to_remove = unique(nonexogenous$V1))
+           if(dim(obj_subset$Y)[2] <  dim(load_PCAWG(ct = i[1,1], typedata = i[1,2])$Y)[2]){
+             x = wrapper_run_TMB(object = obj_subset,  use_nlminb = T, smart_init_vals = T,
+                                       model = "fullRE_M")
+             x
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fullRE_nonexo_M_",
+                                             paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
            }
          })
 
@@ -315,9 +345,10 @@ do.call('grid.arrange', list(grobs=lapply(split.data.frame(normalise_rw(makename
        function(i) (createBarplot(i, remove_labels = T))), ncol=2))
 dev.off()
 
-pdf("../../../CDA_in_Cancer/text/presentations/20210421_WLS_Morrill/figures/prostateadenoca_nonexo.pdf", width=9, height = 4)
-obj_subset2 <- give_subset_sigs_TMBobj(load_PCAWG(ct = "CNS-PiloAstro", typedata = "signatures"),
+pdf("../../../CDA_in_Cancer/text/presentations/20210421_WLS_Morrill/figures/CNSmedullo_nonexo.pdf", width=9, height = 4)
+obj_subset2 <- give_subset_sigs_TMBobj(load_PCAWG(ct = "CNS-Medullo", typedata = "signatures"),
                                        sigs_to_remove = unique(nonexogenous$V1))
+obj_subset2$Y = obj_subset2$Y[rownames(obj_subset2$Y) %in% names(table(rownames(obj_subset2$Y))[table(rownames(obj_subset2$Y)) == 2]),]
 do.call('grid.arrange', list(grobs=lapply(split.data.frame(normalise_rw(makenames_row(obj_subset2$Y)), f = rep(c(1,2), each=(nrow(obj_subset2$Y)/2))),
                                           function(i) (createBarplot(i, remove_labels = T))), ncol=2))
 dev.off()

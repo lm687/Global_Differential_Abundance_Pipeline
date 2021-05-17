@@ -52,7 +52,7 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
   }else if(typedata == "nucleotidesubstitution3"){
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
-  }else if(typedata == "signatures"){
+  }else if(grepl("signatures", typedata)){
     if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0)){
       ## no active signatures
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
@@ -764,7 +764,7 @@ give_subset_sigs = function(sig_obj, sigs_to_remove){
   
   if(typedata %in% c("nucleotidesubstitution1", "nucleotidesubstitution3", "simulation")){
     slot_name = "count_matrices_all"
-  }else if(typedata == "signatures"){
+  }else if(grepl("signatures", typedata)){
     if(is.null(attr(sig_obj,"count_matrices_active")[[1]]) | (length(attr(sig_obj,"count_matrices_active")[[1]]) == 0)){
       ## no active signatures
       slot_name = "count_matrices_all"
@@ -778,6 +778,49 @@ give_subset_sigs = function(sig_obj, sigs_to_remove){
   attr(sig_obj,slot_name) = sig_obj_slot
   return(sig_obj)
 }
+
+give_amalgamated_exposures = function(sig_obj, list_groupings){
+  
+  if(typedata %in% c("nucleotidesubstitution1", "nucleotidesubstitution3", "simulation")){
+    slot_name = "count_matrices_all"
+  }else if(grepl("signatures", typedata)){
+    if(is.null(attr(sig_obj,"count_matrices_active")[[1]]) | (length(attr(sig_obj,"count_matrices_active")[[1]]) == 0)){
+      ## no active signatures
+      slot_name = "count_matrices_all"
+    }else{
+      slot_name = "count_matrices_active"
+    }
+  }
+  sig_obj_slot = attr(sig_obj,slot_name)
+  sig_obj_slot = lapply(sig_obj_slot, function(i){
+    new_mat = sapply(list_groupings, function(j){
+      grouped_exp <- i[,colnames(i) %in% j]
+      if(!is.null(ncol(grouped_exp))){
+        rowSums(grouped_exp)
+      }else{
+        grouped_exp
+      }
+      })
+  colnames(new_mat) = sapply(list_groupings, function(i){if(length(i)>1){paste0(i[1], '+')}else{i}})
+  return(new_mat)
+  })
+  attr(sig_obj,slot_name) = sig_obj_slot
+  return(sig_obj)
+}
+
+give_amalgamated_exposures_TMBobj = function(sig_obj, list_groupings){
+  sig_obj$Y = sapply(list_groupings, function(j){
+    grouped_exp <- sig_obj$Y[,colnames(sig_obj$Y) %in% j]
+    if(!is.null(ncol(grouped_exp))){
+      rowSums(grouped_exp)
+    }else{
+      grouped_exp
+    }
+  })
+  colnames(sig_obj$Y) = sapply(list_groupings, function(i){if(length(i)>1){paste0(i[1], '+')}else{i}})
+  return(sig_obj)
+}
+  
 
 give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
   sig_obj$Y = sig_obj$Y[,!(colnames(sig_obj$Y) %in% sigs_to_remove)]
@@ -814,10 +857,10 @@ give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F){
   c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')
   d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')
   if(!legend_on){
-    a+guides(fill=F)
-    b+guides(fill=F)
-    c+guides(fill=F)
-    d+guides(fill=F)
+    a <- a+guides(fill=F)
+    b <- b+guides(fill=F)
+    c <- c+guides(fill=F)
+    d <- d+guides(fill=F)
   }
   grid.arrange(a, b, c, d, top=title)
 }
@@ -929,4 +972,155 @@ is_slope = function(v){
   bool_isbetaslope[v == "beta"] = T
   bool_isbetaslope[which(bool_isbetaslope)] = c(F,T)
   bool_isbetaslope
+}
+
+give_barplot_from_obj <- function(obj, legend_on=F){
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T)+ggtitle('Early raw')
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T)+ggtitle('Late raw')
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')
+  if(!legend_on){
+    a <- a+guides(fill=F)
+    b <- b+guides(fill=F)
+    c <- c+guides(fill=F)
+    d <- d+guides(fill=F)
+  }
+  grid.arrange(a, b, c, d, top=title)
+}
+
+give_ranked_plot_simulation = function(tmb_fit_object, data_object, print_plot = T, nreps = 1, model, integer_overdispersion_param){
+  
+  if(model == 'M'){
+    ## theta is always going to be the same. Only replicate the draws from the multinomial
+    
+    sim_theta = simulate_from_M_TMB(tmb_fit_object = tmb_fit_object, full_RE = T,
+                                    x_matrix = data_object$x, z_matrix = data_object$z)
+    
+    sim_counts = t(sapply(1:nrow(sim_theta), function(i) rmultinom(n = 1, size = sum(data_object$Y[i,]), prob = sim_theta[i,]) ) )
+    
+    if(nreps>1){
+      sim_counts = replicate(nreps, t(sapply(1:nrow(sim_theta), function(i) rmultinom(n = 1, size = sum(data_object$Y[i,]), prob = sim_theta[i,]) ) ), simplify = F)
+    }
+  }else if(model %in% c('DM', 'DMSL')){
+    give_sim_data = function(){
+      if(model == 'DM'){
+        sim_theta = simulate_from_DM_TMB(tmb_fit_object = tmb_fit_object, full_RE = T,
+                                         x_matrix = data_object$x, z_matrix = data_object$z, integer_overdispersion_param=integer_overdispersion_param)
+      }else if(model == 'DMSL'){
+        sim_theta = simulate_from_DMSL_TMB(tmb_fit_object = tmb_fit_object, full_RE = T,
+                                         x_matrix = data_object$x, z_matrix = data_object$z, integer_overdispersion_param=integer_overdispersion_param)
+      }
+      sim_counts = t(sapply(1:nrow(sim_theta), function(i) rmultinom(n = 1, size = sum(data_object$Y[i,]), prob = sim_theta[i,]) ) )
+      return(sim_counts)
+    }    
+    if(nreps>1){
+      sim_counts = replicate(nreps, give_sim_data(), simplify = F)
+    }else{
+      sim_counts = give_sim_data()
+    }
+  }else{
+    stop('Specify a correct model')
+  }
+  
+  stopifnot(all(dim(data_object$Y) == dim(sim_counts)))
+  if(print_plot)  plot(sort(data_object$Y), sort(sim_counts))
+  
+  return(sim_counts)
+  
+}
+
+
+simulate_from_M_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = softmax(cbind(logRmat, 0))
+  }else{
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+  }
+  return(sim_thetas)
+}
+
+simulate_from_DM_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix, integer_overdispersion_param){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  overdispersion_lambda = integer_overdispersion_param*exp(python_like_select_name(tmb_fit_object$par.fixed, "log_lambda")[x_matrix[,2]+1])
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* softmax(c(logRmat[l,], 0)))))
+  }else{
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* sim_thetas[l,])))
+  }
+  return(sim_thetas)
+}
+
+simulate_from_DMSL_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix, integer_overdispersion_param){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  overdispersion_lambda = rep(integer_overdispersion_param*exp(python_like_select_name(tmb_fit_object$par.fixed, "log_lambda")), nrow(x_matrix))
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* softmax(c(logRmat[l,], 0)))))
+  }else{
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* sim_thetas[l,])))
+  }
+  return(sim_thetas)
+}
+
+give_interval_plots = function(df_rank, data_object, loglog=F){
+  xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
+  xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
+                                                       max_interval=quantile(sorted_value, probs = c(0.975)),
+                                                       mean=mean(sorted_value))
+  xx_summary = xx_summary[!(duplicated(xx_summary[,c('rank_number', 'min_interval', 'max_interval')])),c('rank_number', 'min_interval', 'max_interval', 'mean')]
+  a = ggplot(cbind.data.frame(xx_summary, sorted_true=sort(data_object$Y)), aes(x=sorted_true, ymin= min_interval, ymax=max_interval))+
+    geom_abline(slope = 1, intercept = 0, lty='dashed')+
+    geom_ribbon(fill = "red", alpha=0.2)+
+    geom_point(aes(x=sorted_true, y=mean), size=0.4)+
+    geom_line(aes(x=sorted_true, y=mean))+
+    labs(x='Observed ranked value', y='Mean simulated ranked value')
+  if(loglog){
+    a = a+ scale_y_continuous(trans = "log")+scale_x_continuous(trans = "log")
+  }
+  
+  return(a)
+}
+
+give_interval_plots_2 = function(df_rank, data_object,loglog=F, title){
+  xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
+  xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
+                                                       max_interval=quantile(sorted_value, probs = c(0.975)),
+                                                       mean=mean(sorted_value))
+  xx_summary = xx_summary[!(duplicated(xx_summary[,c('rank_number', 'min_interval', 'max_interval')])),c('rank_number', 'min_interval', 'max_interval', 'mean')]
+  xx_summary <- cbind.data.frame(xx_summary, sorted_true=as.vector(data_object$Y))
+  xx_summary[,'rank_true'] = order(xx_summary$sorted_true)
+  xx_summary$col = apply(xx_summary, 1, function(i) (i['sorted_true'] > i['min_interval']) & (i['sorted_true'] < i['max_interval']) )
+  a  = ggplot(xx_summary, aes(x=sorted_true,
+                              ymin= min_interval, ymax=max_interval))+
+    geom_abline(slope = 1, intercept = 0, lty='dashed')+
+    geom_ribbon(fill = "red", alpha=0.2)+
+    geom_point(aes(x=sorted_true, y=mean, col=col), size=0.4)+
+    geom_line(aes(x=sorted_true, y=mean))+
+    labs(x='Observed value', y='Mean simulated value')+
+    ggtitle(title, subtitle=paste0(paste0(names(table(xx_summary$col)), ':', table(xx_summary$col)), collapse ='; '))+
+    theme(legend.position = "bottom")
+  
+  if(loglog){a=a+ scale_y_continuous(trans = "log")+scale_x_continuous(trans = "log") }
+  
+  return(a)
 }
