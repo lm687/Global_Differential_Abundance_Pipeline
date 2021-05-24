@@ -2,7 +2,9 @@ rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 library(umap)
+library(ggplot2)
 library(RColorBrewer)
+source("../../2_inference_TMB/helper_TMB.R")
 
 fles_roo <- list.files("../../../data/roo/", full.names = T)
 
@@ -23,9 +25,11 @@ signature_mutsigextractor_roo <- signature_mutsigextractor_roo[sapply(signature_
 
 
 signature_roo_all <- do.call('rbind', lapply(signature_roo, function(i) rbind(i[[1]], i[[2]])))
+signature_roo_all <- normalise_rw(signature_roo_all)
 signature_roo_all_umap <- umap(signature_roo_all)
 
 signature_roo_all_mutsigextractor <- do.call('rbind', lapply(signature_mutsigextractor_roo, function(i) rbind(i[[1]], i[[2]])))
+signature_roo_all_mutsigextractor <- normalise_rw(signature_roo_all_mutsigextractor)
 signature_roo_all_mutsigextractor_umap <- umap(signature_roo_all_mutsigextractor)
 
 

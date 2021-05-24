@@ -1,17 +1,43 @@
 rm(list = ls())
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 library(ggrepel)
 library(Ternary)
 library(MCMCpack)
 library(dplyr)
 library(gridExtra)
+library(parallel)
+library(TMB)
 
-setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
+TMB::compile("../../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+TMB::compile("../../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda2"))
+TMB::compile("../../2_inference_TMB/mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
+TMB::compile("../../2_inference_TMB/mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/diagRE_ME_dirichletmultinomial"))
+TMB::compile("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial"))
+TMB::compile("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda"))
+TMB::compile("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomialsinglelambda2"))
+TMB::compile("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial_singlecov.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../../current/Dirichlet_Multinomial_Dom/code/TMB_models/sparseRE_ME_dirichletmultinomial_singlecov"))
+TMB::compile("../../2_inference_TMB/mm_multinomial/fullRE_ME_halfdirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/fullRE_ME_halfdirichletmultinomial"))
+TMB::compile("../../2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial"))
+TMB::compile("../../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+
 
 source("../../2_inference_TMB/helper_TMB.R")
 source("../../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
 
-enough_samples = readLines("~/Desktop/CT_sufficient_samples.txt")
+enough_samples = read.table("~/Desktop/CT_sufficient_samples.txt", comment.char='#')[,1]
 ct <- enough_samples[5]
 ct
 nonexogenous = read.table("../../../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t", comment.char = "#", fill = F)
@@ -43,46 +69,68 @@ nonexogenous = read.table("../../../data/cosmic/exogenous_signatures_SBS.txt", s
 
 
 diagRE_DMSL <- sapply(enough_samples, function(ct){
-  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/diagRE_DMSL_", ct, "_signatures.RDS")))
-})
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/diagRE_DMSL_", ct, "_signatures.RDS")))
+}, simplify = F)
+
+diagRE_DMDL <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/optim/diagRE_DM_", ct, "_signatures.RDS")))
+}, simplify = F)
+
+fullRE_DMDL <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/optim/fullRE_DM_", ct, "_signatures.RDS")))
+}, simplify = F)
 
 fullRE_M_nonexo <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fullRE_nonexo_M_", ct, "_signatures.RDS")))
-})
-
-
+}, simplify = F)
 
 fullRE_M <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/optim/fullRE_M_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
 
 diagRE_M <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/optim/diagRE_M_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
 
 sparseRE_DMSL <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/sparseRE_DMSL2_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
+
+fullRE_DMDL_nonexo <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fulLRE_nonexo_DM_", ct, "_signatures.RDS")))
+}, simplify = F)
+
+fullRE_DMDL_sortednonexo <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fulLRE_sortednonexo_DM_", ct, "_signatures.RDS")))
+}, simplify = F)
 
 fullRE_DMSL_nonexo <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fullRE_nonexo_DMSL_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
 
 diagRE_DMSL_nonexo <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/diagRE_nonexo_DMSL_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
+
+fullRE_DMSL_SBS1 <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fullRE_SBS1baseline_DMSL_", ct, "signatures.RDS")))
+}, simplify = F)
+
+fullRE_halfDM <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fullRE_halfDM_", ct, "signatures.RDS")))
+}, simplify = F)
 
 fullRE_DMSL <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/fullRE_DMSL_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
 
 diagRE_DMSL <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/diagRE_DMSL_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
 
 sparseRE_DMSL_nonexo <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/sparseRE_nonexo_DMSL_", ct, "_signatures.RDS")))
-})
+}, simplify = F)
 
 fullRE_DMSL_nonexo[sapply(sparseRE_DMSL_nonexo, typeof) == "character"]
 
@@ -147,82 +195,7 @@ ct <- "Prost-AdenoCA"
 subset_sigs_sparse_cov_idx_nonexo <- read.table("../../../current/subset_sigs_sparse_cov_idx_nonexo.txt", stringsAsFactors = F, fill = T)
 sparseRE_DMSL_nonexo$`Breast-AdenoCA`
 
-give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
-                                    bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8'){
-  
-  if(model == "fullRE_M"){
-    if(!bool_nonexo)    list_estimates <- fullRE_M
-    if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
-  }else if(model == "fullRE_DM"){
-    if(!bool_nonexo)    list_estimates <- fullRE_DMSL
-      if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
-    }else if(model == "sparseRE_DM"){
-    if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
-  }
-  
-  obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data = "../../../data/"),
-                                         sigs_to_remove = sigs_to_remove))
-  dmin1 <- ncol(obj_data$Y)-1
-  cov_vec = rep(0, (dmin1**2-dmin1)/2)
-  
-  if(model %in% c("fullRE_M", "fullRE_DM")){
-    cov_vec = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE')
-    ###**** I AM NOT SURE ABOUT THIS BIT BELOW! ARE THEY SD OR VAR???*****###
-    ### implementing them as though they were sd ###
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
-  }else if(model == "sparseRE_DM"){
-    cov_vec[as.numeric(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,"V2"], ',')[[1]])] = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_RE_part')
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
-  }
-  
-  cov_mat <- fill_covariance_matrix(arg_d = dmin1,
-                                    arg_entries_var = var_vec,
-                                    arg_entries_cov = cov_vec)
-  cov_mat_v2 <- fill_covariance_matrix(arg_d = dmin1,
-                                    arg_entries_var = var_vec_v2,
-                                    arg_entries_cov = cov_vec)
-  # cov_matb <- fill_covariance_matrix(arg_d = dmin1,
-  #                                   arg_entries_var = var_vec**2,
-  #                                   arg_entries_cov = cov_vec)
 
-  beta_mat = matrix(python_like_select_name(list_estimates[[ct]]$par.fixed, 'beta'), nrow=2)
-  
-  n_sim = 1000
-  x_sim = cbind(1, rep(c(0,1), n_sim))
-  u_sim = mvtnorm::rmvnorm(n = n_sim, mean = rep(0,dmin1), sigma = cov_mat)
-  
-  theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
-  
-  if(model %in% c('sparseRE_DM', 'fullRE_DM')){
-    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
-  }else if(model %in% c("fullRE_M")){
-    alpha = softmax(cbind(theta, 0))
-  }else{
-    stop('Check softmax step')
-  }
-
-  if(model %in% c('sparseRE_DM', 'fullRE_DM')){
-    probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
-  }else if(model %in% c("fullRE_M")){
-    probs = alpha
-  }
-
-  probs_obs = normalise_rw(obj_data$Y)
-  all_probs = rbind(probs_obs, probs)
-  
-  if(bool_give_PCA){
-    pca <- prcomp(all_probs)
-    df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
-                     sig_of_interest=all_probs[,sig_of_interest],
-                     group=c('early','late'))
-    return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+
-                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group))))
-  }else{
-    return(all_probs)
-  }
-  
-}
 
 ct <- enough_samples[10]
 
@@ -338,6 +311,8 @@ good_plots = give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo$`Ly
 good_plots_unsorted = lapply(list(good_plots), function(i) lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j), rank_number=1:length(j)) ))
 give_interval_plots_2(df_rank = good_plots_unsorted[[1]], data_object = Lymph_CLL_obj,
                       loglog = F, title = 'Lymph_CLL')
+
+## here there's a proble!! we're using DMSL with the M model
 good_plots_M = give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo$`Lymph-CLL`,
                                          data_object = Lymph_CLL_obj, print_plot = F, nreps = 20, model = "M")
 good_plots_unsorted_M = lapply(list(good_plots_M), function(i) lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j), rank_number=1:length(j)) ))
@@ -426,3 +401,182 @@ dev.off()
 #   }
 #   return(sim_thetas)
 # }
+
+
+
+ct <- enough_samples[1]
+
+for(ct in enough_samples){
+  pdf(paste0("../../../results/results_TMB/pcawg/summaries_betas/", gsub("[.]", "_", ct), "_allsigs.pdf"), height = 2, width = 9)
+  grid.arrange(plot_betas(fullRE_M[[ct]])+ggtitle(paste0(ct, '\n fullRE_M')),
+  plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+  plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+  plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+  plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=1)
+  dev.off()
+  
+  pdf(paste0("../../../results/results_TMB/pcawg/summaries_betas/", gsub("[.]", "_", ct), "_nonexo_allsigs.pdf"), height = 2, width = 9)
+  grid.arrange(plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+  plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+  plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')),
+                                                 nrow=1)
+  dev.off()
+}
+
+for(ct in gsub("[.]", "_", enough_samples)){
+  cat("\\begin{figure}[h]")
+  cat("\\includegraphics[width=\\textwidth]{/Users/morril01/Documents/PhD/GlobalDA/results/results_TMB/pcawg/summaries_betas/", ct, "_allsigs.pdf}\n", sep = "")
+  cat("\\includegraphics[width=\\textwidth]{/Users/morril01/Documents/PhD/GlobalDA/results/results_TMB/pcawg/summaries_betas/", ct, "_nonexo_allsigs.pdf}", sep = "")
+  cat("\\caption{", gsub("_", " ", ct), "}", sep = "")
+  cat("\\end{figure}\n\n\n")
+}
+
+
+fullRE_M[[ct]]
+diagRE_M[[ct]]
+fullRE_DMSL[[ct]]
+diagRE_DMSL[[ct]]
+sparseRE_DMSL[[ct]]
+
+fullRE_M_nonexo[[ct]]
+fullRE_DMSL_nonexo[[ct]]
+diagRE_DMSL_nonexo[[ct]]
+sparseRE_DMSL_nonexo[[ct]]
+
+.dm1 <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                object = load_PCAWG(ct = ct, typedata = "signatures", path_to_data = "../../../data/"))
+.dm1
+.dm1_sorted <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                        object = sort_columns_TMB(load_PCAWG(ct = ct, typedata = "signatures", path_to_data = "../../../data/")))
+.dm1_sorted
+give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+                        sigs_to_remove = unique(nonexogenous$V1))
+.obj <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures", path_to_data = "../../../data/"),
+                                         sigs_to_remove = unique(nonexogenous$V1)))
+.dm1_nonexo <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                        object = .obj, use_nlminb = T)
+.dm1_nonexo
+
+ct <- enough_samples[2]
+give_barplot_from_obj(load_PCAWG(ct = ct, typedata = "signatures",
+                                 path_to_data = "../../../data/"), legend_on = T)
+.dm1_DMDL <- wrapper_run_TMB(model = "fullRE_DM",
+                        object = sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                            path_to_data = "../../../data/"),
+                                            sigs_to_remove = c('NANANANA'))),
+                        use_nlminb = T, smart_init_vals = T)
+.dm1_DMDL
+fill_covariance_matrix(arg_d = length(python_like_select_name(.dm1_DMDL$par.fixed, 'beta'))/2,
+                       arg_entries_var = python_like_select_name(.dm1_DMDL$par.fixed, 'logs_sd_RE'),
+                       arg_entries_cov = python_like_select_name(.dm1_DMDL$par.fixed, 'cov_par_RE'))
+saveRDS(object = .dm1_DMDL, file=paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fullRE_DMDL_sorted20210524_",
+                                paste0(ct, "signatures", collapse = "_"), ".RDS"))
+
+plot_betas(.dm1_nonexo, names_cats = paste0(colnames(.obj$Y)[-ncol(.obj$Y)], '/', colnames(.obj$Y)[ncol(.obj$Y)]))+labs(x='')
+
+
+mclapply(enough_samples, function(ct){
+             x = wrapper_run_TMB(model = "fullREDMsinglelambda", object=sort_columns_TMB_SBS1(load_PCAWG(ct = ct, typedata = "signatures", path_to_data = "../../../data/")),
+                                 use_nlminb = T)
+             x
+             saveRDS(object = x, file=paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fullRE_SBS1baseline_DMSL_",
+                                             paste0(ct, "signatures", collapse = "_"), ".RDS"))
+})
+
+fullRE_DMSL_SBS1_betas <- lapply(fullRE_DMSL_SBS1, function(i){
+  .x <- try(give_betas(i)[2,])
+  if((typeof(.x) == 'character')){
+    .x <- NA
+  }else{
+    .sum_i = summary(i)
+    .x <- t(python_like_select_rownames(.sum_i, 'beta')[c(F,T),])
+  }
+  .x
+})
+for(i in 1:length(fullRE_DMSL_SBS1)){
+  if(!(typeof(fullRE_DMSL_SBS1[[i]]) == 'character')){
+    .nmes <- colnames(sort_columns_TMB_SBS1(load_PCAWG(ct = enough_samples[i], typedata = "signatures", path_to_data = "../../../data/"))$Y)
+    colnames(fullRE_DMSL_SBS1_betas[[i]]) = paste0(.nmes[-length(.nmes)], '/', .nmes[length(.nmes)])
+      
+  }
+}
+
+fullRE_DMSL_SBS1_betas_all <- lapply(1:length(fullRE_DMSL_SBS1_betas), function(i) try(data.frame(ct=names(fullRE_DMSL_SBS1_betas[i]), beta=t(fullRE_DMSL_SBS1_betas[[i]]),
+                                                                                                               logR=colnames(fullRE_DMSL_SBS1_betas[[i]]))))
+fullRE_DMSL_SBS1_betas_all <- do.call('rbind', fullRE_DMSL_SBS1_betas_all[sapply(fullRE_DMSL_SBS1_betas_all, typeof) == 'list'])
+
+fullRE_DMSL_SBS1_betas_all[!grepl("/SBS1$", fullRE_DMSL_SBS1_betas_all$logR),]
+## select only those with SBS1 as baseline
+fullRE_DMSL_SBS1_betas_all <- fullRE_DMSL_SBS1_betas_all[grepl("/SBS1$", fullRE_DMSL_SBS1_betas_all$logR),]
+
+fullRE_DMSL_SBS1_betas_all$phHess <- sapply(fullRE_DMSL_SBS1, function(i) try(i$pdHess))[match(fullRE_DMSL_SBS1_betas_all$ct, names(fullRE_DMSL_SBS1))]
+
+ggplot(fullRE_DMSL_SBS1_betas_all, aes(x=ct, col=logR, y=beta.Estimate))+geom_point()+
+  facet_wrap(.~logR, scales = "free_x", nrow=5)+
+  geom_errorbar(aes(ymin=`beta.Estimate`-`beta.Std..Error`, ymax=`beta.Estimate`+`beta.Std..Error`), width=.1)+
+  geom_hline(yintercept = 0, col='blue', lty='dashed')+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1))
+ggsave("../../../results/results_TMB/pcawg/all_betas_all_ct.pdf", width = 25, height = 15)
+
+fullRE_DMSL_SBS1_betas_all$exogenous = (gsub("/.*", "", fullRE_DMSL_SBS1_betas_all$logR) %in% nonexogenous$V1)
+ggplot(fullRE_DMSL_SBS1_betas_all, aes(x=logR, y=beta.Estimate, col=exogenous))+geom_point()+
+  facet_wrap(.~ct, scales = "free_x", nrow=5)+
+  geom_errorbar(aes(ymin=`beta.Estimate`-`beta.Std..Error`, ymax=`beta.Estimate`+`beta.Std..Error`), width=.1)+
+  geom_hline(yintercept = 0, col='blue', lty='dashed')+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1))
+ggsave("../../../results/results_TMB/pcawg/all_betas_all_ct_byct.pdf", width = 12, height = 12)
+
+#-------------------------------------------------------------------------------------#
+
+mclapply(enough_samples, function(ct){
+  x = wrapper_run_TMB(model = "fullREhalfDM", object=sort_columns_TMB(load_PCAWG(ct = ct, typedata = "signatures", path_to_data = "../../../data/")),
+                      use_nlminb = T)
+  x
+  saveRDS(object = x, file=paste0("../../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fullRE_halfDM_",
+                                  paste0(ct, "signatures", collapse = "_"), ".RDS"))
+})
+sapply(fullRE_halfDM, function(i) try(i$pdHess))
+
+#-------------------------------------------------------------------------------------#
+
+#-------------------------------------------------------------------------------------#
+
+list_models <- c( 'diagRE_M', 'fullRE_M',
+                  'diagRE_DMDL','fullRE_halfDM', 'fullRE_DMDL', 
+                  'diagRE_DMSL','sparseRE_DMSL', 'fullRE_DMSL', 'fullRE_DMSL_SBS1',
+                  'fullRE_M_nonexo','diagRE_DMSL_nonexo','sparseRE_DMSL_nonexo', 'fullRE_DMSL_nonexo',
+                  'fullRE_DMDL_nonexo', 'fullRE_DMDL_sortednonexo')
+
+all_summaries <- lapply(lapply(list_models, get), function(i){
+    give_summary_of_runs2(i, long_return = T)})
+names(all_summaries) <- list_models
+
+ggplot(melt(all_summaries), aes(x=factor(L1, levels=list_models), y=value, fill=L2))+geom_tile()+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1))
+
+
+# load_PCAWG(ct = "Skin-Melanoma.mucosal", typedata = "signatures", path_to_data = "../../../data/")
+  
+ct <- "Bone-Osteosarc"
+obj <- sort_columns_TMB(load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../../data/"))
+sortedM <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj)
+sortedM
+
+## use params from ME M for ME DM
+dmin1 <- ncol(obj$Y)-1
+
+sortedDM <- wrapper_run_TMB(model = "fullRE_DM",
+                           object = obj,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM$par.fixed, 'cov_par_RE'),
+                             log_lambda = matrix(c(2,2))))
+sortedDM
+
+

@@ -35,6 +35,8 @@ TMB::compile("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial.cpp", "
 dyn.load(dynlib("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial"))
 TMB::compile("mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/diagRE_ME_dirichletmultinomial"))
+TMB::compile("mm_multinomial/diagRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_ME_multinomial"))
 # TMB::compile("mm_multinomial/fullRE_ME_multinomial_categorical.cpp", "-std=gnu++17")
 # dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial_categorical"))
 # TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical.cpp", "-std=gnu++17")
@@ -149,18 +151,18 @@ if(re_run_inference){
 
   ## diagonal M
   mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("diagRE_M_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+                                    gsub(".RDS", "", gsub("diagRE_M_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/optim/"))))))),
            function(idx){
              outcome_inference="Not good"
              counter_tries = 0
              while(outcome_inference != "Good" & counter_tries < 6){
                i = samples_files2[idx,]
-               x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "diagRE_M"),
+               x = withTimeout(wrapper_run_TMB(load_PCAWG(i[1,1], i[1,2]), model = "diagRE_M"),
                                timeout = 300, onTimeout = "warning")
                outcome_inference = give_summary_per_sample(x)
                counter_tries = counter_tries + 1
              }
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "diagRE_M_", rownames(i), ".RDS"))
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/optim/", "diagRE_M_", rownames(i), ".RDS"))
   })
   
   ## diagonal DM

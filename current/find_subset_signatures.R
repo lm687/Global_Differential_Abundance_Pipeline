@@ -4,10 +4,15 @@ library(TMB)
 library(ggplot2)
 library(dplyr)
 library(gridExtra)
+library(parallel)
 source("mm_multinomial/helper_functions.R")
 source("helper_TMB.R")
 source("../2_inference/helper/helper_DA_stan.R") ## for normalise_rw
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
+
+enough_samples = readLines("~/Desktop/CT_sufficient_samples.txt")
+df_all_samples = data.frame(do.call('rbind', lapply(enough_samples, function(i) rbind(c(i, 'signatures'), c(i, "nucleotidesubstitution1")))))
+nonexogenous = read.table("../../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t", comment.char = "#", fill = F)
 
 TMB::compile("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("../../current/Dirichlet_Multinomial_Dom/code/TMB_models/fullRE_ME_multinomial"))
@@ -127,11 +132,6 @@ singlelambda_res
 
 #----------------------------------------------------------------------#
 
-enough_samples = readLines("~/Desktop/CT_sufficient_samples.txt")
-df_all_samples = data.frame(do.call('rbind', lapply(enough_samples, function(i) rbind(c(i, 'signatures'), c(i, "nucleotidesubstitution1")))))
-nonexogenous = read.table("../../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t", comment.char = "#", fill = F)
-library(parallel)
-
 mclapply(1:nrow(df_all_samples),
          function(idx){
            i = df_all_samples[idx,]
@@ -227,6 +227,29 @@ mclapply(which(df_all_samples$X2 == "signatures"),
              #                                 paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
            }
          })
+
+mclapply(which(df_all_samples$X2 == "signatures"),
+         function(idx){
+           i = df_all_samples[idx,]
+           typedata = i[1,2]
+           obj_subset <- give_subset_sigs_TMBobj(load_PCAWG(ct = i[1,1], typedata = i[1,2]),
+                                                 sigs_to_remove = unique(nonexogenous$V1))
+           if(dim(obj_subset$Y)[2] <  dim(load_PCAWG(ct = i[1,1], typedata = i[1,2])$Y)[2]){
+             x = wrapper_run_TMB(object = sort_columns_TMB(obj_subset),
+                                 model = "fullRE_DM", smart_init_vals = T, use_nlminb = T)
+             x
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fulLRE_sortednonexo_DM_",
+                                             paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+             x = wrapper_run_TMB(object = sort_columns_TMB(give_subset_sigs_TMBobj(obj_subset, 'SBS12')),
+                                 model = "fullRE_DM", smart_init_vals = T, use_nlminb = T)
+             x
+             fill_covariance_matrix(arg_d = length(python_like_select_rownames(summary(x), 'beta')[,2])/2,
+                                    arg_entries_var = python_like_select_rownames(summary(x), 'logs_sd_RE')[,2],
+                                    arg_entries_cov = python_like_select_rownames(summary(x), 'cov_par_RE')[,2])
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/", "fulLRE_sortedsubsetnonexosubset_DM_",
+                                             paste0(df_all_samples[idx,], collapse = "_"), ".RDS"))
+             
+               }})
 
 mclapply(which(df_all_samples$X2 == "signatures"),
          function(idx){
