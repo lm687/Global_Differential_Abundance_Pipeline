@@ -271,7 +271,18 @@ sort_columns_TMB = function(object){
   return(object)
 }
 
-wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F){
+sort_columns_TMB_SBS1 = function(object){
+  if("SBS1" %in% colnames(object$Y)){
+    order_cats <- c(which('SBS1' != colnames(object$Y)), which('SBS1' == colnames(object$Y)))
+    object$Y = object$Y[,order_cats]
+  }else{
+    warning('There are no exposures for SBS1 in this sample. Keeping the same order')
+  }
+  return(object)
+}
+
+
+wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, initial_params=NULL){
   ## sort_columns=F, 
   
   ## if the object of data and covariates is an argument
@@ -285,7 +296,7 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F){
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
   
-  d <- ncol(data$Y)
+  d <- ncol(data$Y) ## number of signatures
   n <- ncol(data$z) ## number of INDIVIDUALS, not samples
   
   if(smart_init_vals){
@@ -297,125 +308,207 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F){
                         nrow = 2, byrow=TRUE))
   }
   
+  parameters <- list(
+    beta = beta_init,
+    u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    logs_sd_RE=rep(1, d-1),
+    cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+  )
+  
   if(model == "fullRE_M"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    # )
+    dll_name <- "fullRE_ME_multinomial"
+    rdm_vec <- "u_large"
+    # obj <- MakeADFun(data, parameters, DLL=, random = )
   }else if(model == "diagRE_M"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
-    )
-    obj <- MakeADFun(data, parameters, DLL="diagRE_ME_multinomial", random = "u_large")
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    # )
+    dll_name <- "diagRE_ME_multinomial"
+    rdm_vec <- "u_large"
+    
+    # obj <- MakeADFun(data, parameters, DLL=, random = "")
     }else if(model == "FE_DM"){
       data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
 
-      parameters <- list(
-        beta = beta_init,
-        log_lambda = matrix(c(2,2))
-      )
-      obj <- MakeADFun(data, parameters, DLL="FE_dirichletmultinomial")
+      parameters$u_large = NULL
+      parameters$logs_sd_RE = NULL
+      parameters$cov_par_RE = NULL
+      parameters <- list(parameters, log_lambda = matrix(c(2,2)))
+      # parameters <- list(
+      #   beta = beta_init,
+      #   log_lambda = matrix(c(2,2))
+      # )
+      dll_name <- "FE_dirichletmultinomial"
+      rdm_vec <- NULL
+      
+      # obj <- MakeADFun(data, parameters, DLL=)
   }else if(model == "fullRE_DM"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-      log_lambda = matrix(c(2,2))
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
+    parameters <- list(parameters,log_lambda = matrix(c(2,2)))
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   log_lambda = matrix(c(2,2))
+    # )
+    dll_name <- "fullRE_ME_dirichletmultinomial"
+    rdm_vec <- "u_large"
+    # obj <- MakeADFun(data, parameters, DLL="", random = )
   }else if(model == "diagRE_DM"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      log_lambda = matrix(c(2,2))
-    )
-    obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
-  }else if(model == "fullREDMsinglelambda"){
+    parameters$cov_par_RE = NULL
+    parameters <- list(parameters,log_lambda = matrix(c(2,2)))
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   log_lambda = matrix(c(2,2))
+    # )
+    dll_name <- "diagRE_ME_dirichletmultinomial"
+    rdm_vec <- "u_large"
+    # obj <- MakeADFun(data, parameters, DLL="", random = "")
+  }else if(model %in% c("fullREDMsinglelambda", "fullREhalfDM")){
+    stop("fullREDMsinglelambda and fullREhalfDM should be two different parts")
       data$num_individuals = n
-      parameters <- list(
-        beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
-                       nrow = 2, byrow=TRUE)),
-        u_large = matrix(rep(1, (d-1)*n), nrow=n),
-        logs_sd_RE=rep(1, d-1),
-        cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-        log_lambda = 1
-      )
-      obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
+      
+      parameters <- list(parameters, log_lambda = 1.1)
+      # parameters <- list(
+      #   beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+      #                  nrow = 2, byrow=TRUE)),
+      #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      #   logs_sd_RE=rep(1, d-1),
+      #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      #   log_lambda = 1
+      # )
+      rdm_vec <- "u_large"
+      dll_name <- "fullRE_dirichletmultinomial_single_lambda"
+      # obj <- MakeADFun(data, parameters, DLL="", random = )
   }else if(model == "fullREDMsinglelambda2"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
-    parameters <- list(
-      beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
-                     nrow = 2, byrow=TRUE)),
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-      log_lambda = 1
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda2", random = "u_large")
+    
+    parameters <- list(parameters, log_lambda = 1.1)
+    
+    # parameters <- list(
+    #   beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+    #                  nrow = 2, byrow=TRUE)),
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   log_lambda = 1
+    # )
+    rdm_vec <- "u_large"
+    dll_name <- "fullRE_dirichletmultinomial_single_lambda2"
+    # obj <- MakeADFun(data, parameters, DLL="", random = )
   }else if(model == "diagREDMsinglelambda"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      log_lambda = 2
-    )
-    obj <- MakeADFun(data, parameters, DLL="diagRE_dirichletmultinomial_single_lambda", random = "u_large")
+    parameters$cov_par_RE = NULL
+    parameters <- list(parameters, log_lambda = 1.1)
+    
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   log_lambda = 2
+    # )
+    dll_name <- "diagRE_dirichletmultinomial_single_lambda"
+    rdm_vec <- "u_large"
+    
+    # obj <- MakeADFun(data, parameters, DLL="", random = "")
   }else if(model == "FEDMsinglelambda"){
     data$num_individuals = NULL
-    parameters <- list(
-      beta = beta_init,
-      log_lambda = 2
-    )
-    obj <- MakeADFun(data, parameters, DLL="FE_dirichletmultinomial_single_lambda")
+    parameters$u_large = NULL
+    parameters$logs_sd_RE = NULL
+    parameters$cov_par_RE = NULL
+    parameters <- list(parameters, log_lambda = 1.1)
+    
+    # parameters <- list(
+    #   beta = beta_init,
+    #   log_lambda = 2
+    # )
+    dll_name <- "FE_dirichletmultinomial_single_lambda"
+    rdm_vec <- NULL
+    
+    # obj <- MakeADFun(data, parameters, DLL="")
   }else if(model == "fullRE_dirichletmultinomial_singlelambda_REv2"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-      log_lambda = 2,
-      u_large1 = matrix(runif(n)),
-      u_large2 = matrix(runif(n)),
-      u_large3 = matrix(runif(n)),
-      u_large4 = matrix(runif(n))
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda_REv2",
-                     random = c("u_large1", "u_large2","u_large3", "u_large4"))
+    
+    parameters$u_large = NULL
+    parameters <- list(parameters,
+                       u_large1 = matrix(runif(n)),
+                       u_large2 = matrix(runif(n)),
+                       u_large3 = matrix(runif(n)),
+                       u_large4 = matrix(runif(n)),
+                       log_lambda=1.2)
+    
+    # parameters <- list(
+    #   beta = beta_init,
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   log_lambda = 2,
+    #   u_large1 = matrix(runif(n)),
+    #   u_large2 = matrix(runif(n)),
+    #   u_large3 = matrix(runif(n)),
+    #   u_large4 = matrix(runif(n))
+    # )
+    rdm_vec <- c("u_large1", "u_large2","u_large3", "u_large4")
+    dll_name <- "fullRE_dirichletmultinomial_single_lambda_REv2"
+    # obj <- MakeADFun(data, parameters, DLL="",
+    #                  random = )
   }else if(model == "fullRE_multinomial_REv2"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-      u_large1 = matrix(runif(n)),
-      u_large2 = matrix(runif(n)),
-      u_large3 = matrix(runif(n)),
-      u_large4 = matrix(runif(n))
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial_REv2",
-                     random = c("u_large1", "u_large2","u_large3", "u_large4"))
+    parameters$u_large = NULL
+    parameters <- list(parameters,
+                       u_large1 = matrix(runif(n)),
+                       u_large2 = matrix(runif(n)),
+                       u_large3 = matrix(runif(n)),
+                       u_large4 = matrix(runif(n)))
+    # parameters <- list(
+    #   beta = beta_init,
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   u_large1 = matrix(runif(n)),
+    #   u_large2 = matrix(runif(n)),
+    #   u_large3 = matrix(runif(n)),
+    #   u_large4 = matrix(runif(n))
+    # )
+    dll_name <- "fullRE_ME_multinomial_REv2"
+    rdm_vec <- c("u_large1", "u_large2","u_large3", "u_large4")
+    # obj <- MakeADFun(data, parameters, DLL="",
+    #                  random = )
   }else{
     stop('Specify correct <model>\n')
+  }
+  
+  if(!is.null(initial_params)){
+    ## initial parameters are passed as arguments
+    parameters <- initial_params
+  }
+  
+  if(is.null(rdm_vec)){
+    ## fixed effects model
+    obj <- MakeADFun(data, parameters, DLL=dll_name)
+  }else{
+    ## random effects model
+    obj <- MakeADFun(data, parameters, DLL=dll_name, random = rdm_vec)
   }
   
   if(use_nlminb){
@@ -487,7 +580,7 @@ give_summary_per_sample = function(TMB_object, verbatim=T){
   }
 }
 
-give_summary_of_runs2 = function(vector_TMB_objects, long_return){
+give_summary_of_runs2 = function(vector_TMB_objects, long_return, verbatim=T){
   timeout_bool = sapply(vector_TMB_objects, typeof) == "character"
   hessian_positivedefinite_bool = sapply(vector_TMB_objects[!timeout_bool], function(i){
     if(length(i) == 1){FALSE}else{i$pdHess}})
@@ -503,7 +596,7 @@ give_summary_of_runs2 = function(vector_TMB_objects, long_return){
 }
 
 
-give_summary_of_runs = function(vector_TMB_objects, long_return){
+give_summary_of_runs = function(vector_TMB_objects, long_return, verbati=T){
   if(verbatim){
     stop('Check give_summary_of_runs2 instead')
   }
@@ -1124,3 +1217,118 @@ give_interval_plots_2 = function(df_rank, data_object,loglog=F, title){
   
   return(a)
 }
+
+give_betas <- function(TMB_obj){
+  matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
+}
+
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T){
+  if(typeof(TMB_obj) == 'character'){
+    ggplot()
+  }else{
+    .summary_betas <- summary(TMB_obj)
+    .summary_betas <- cbind.data.frame(python_like_select_rownames(.summary_betas, 'beta'),
+                                       type_beta=rep(c('Intercept', 'Slope')),
+                                       LogR=rep(1:(nrow(python_like_select_rownames(.summary_betas, 'beta'))/2), each=2))
+    if(!is.null(names_cats)){
+      .summary_betas$LogR = names_cats[.summary_betas$LogR]
+    }
+    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))+
+      geom_hline(yintercept = 0, lty='dashed', col='blue')+
+      geom_point()+
+      geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
+      ggtitle('Slopes')+facet_wrap(.~type_beta, scales = "free")
+    
+    if(rotate_axis){
+      plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+    }
+    
+    if(!TMB_obj$pdHess){
+      plt + annotate("text", x = 0, y=.5, label="not PD")
+    }else{
+      plt
+    }
+  }
+}
+
+
+give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
+                                    bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
+                                    path_to_data= "../../../data/"){
+  
+  if(model == "fullRE_M"){
+    if(!bool_nonexo)    list_estimates <- fullRE_M
+    if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
+  }else if(model == "fullRE_DM"){
+    if(!bool_nonexo)    list_estimates <- fullRE_DMSL
+    if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
+  }else if(model == "sparseRE_DM"){
+    if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
+  }
+  
+  obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
+                                                       sigs_to_remove = sigs_to_remove))
+  dmin1 <- ncol(obj_data$Y)-1
+  cov_vec = rep(0, (dmin1**2-dmin1)/2)
+  
+  if(model %in% c("fullRE_M", "fullRE_DM")){
+    cov_vec = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE')
+    ###**** I AM NOT SURE ABOUT THIS BIT BELOW! ARE THEY SD OR VAR???*****###
+    ### implementing them as though they were sd ###
+    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }else if(model == "sparseRE_DM"){
+    cov_vec[as.numeric(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,"V2"], ',')[[1]])] = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_RE_part')
+    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }
+  
+  cov_mat <- fill_covariance_matrix(arg_d = dmin1,
+                                    arg_entries_var = var_vec,
+                                    arg_entries_cov = cov_vec)
+  cov_mat_v2 <- fill_covariance_matrix(arg_d = dmin1,
+                                       arg_entries_var = var_vec_v2,
+                                       arg_entries_cov = cov_vec)
+  # cov_matb <- fill_covariance_matrix(arg_d = dmin1,
+  #                                   arg_entries_var = var_vec**2,
+  #                                   arg_entries_cov = cov_vec)
+  
+  beta_mat = matrix(python_like_select_name(list_estimates[[ct]]$par.fixed, 'beta'), nrow=2)
+  
+  n_sim = 1000
+  x_sim = cbind(1, rep(c(0,1), n_sim))
+  u_sim = mvtnorm::rmvnorm(n = n_sim, mean = rep(0,dmin1), sigma = cov_mat)
+  
+  theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
+  
+  if(model %in% c('sparseRE_DM', 'fullRE_DM')){
+    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
+  }else if(model %in% c("fullRE_M")){
+    alpha = softmax(cbind(theta, 0))
+  }else{
+    stop('Check softmax step')
+  }
+  
+  if(model %in% c('sparseRE_DM', 'fullRE_DM')){
+    probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
+  }else if(model %in% c("fullRE_M")){
+    probs = alpha
+  }
+  
+  probs_obs = normalise_rw(obj_data$Y)
+  all_probs = rbind(probs_obs, probs)
+  
+  if(bool_give_PCA){
+    pca <- prcomp(all_probs)
+    df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
+                               sig_of_interest=all_probs[,sig_of_interest],
+                               group=c('early','late'))
+    return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+
+                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group))))
+  }else{
+    return(all_probs)
+  }
+  
+}
+
+vector_cats_to_logR <- function(i){paste0(i[-length(i)], '/', i[length(i)])}
