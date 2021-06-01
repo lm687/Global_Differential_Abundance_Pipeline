@@ -37,7 +37,7 @@ dyn.load(dynlib("../../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
 source("../../2_inference_TMB/helper_TMB.R")
 source("../../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
 
-enough_samples = read.table("~/Desktop/CT_sufficient_samples.txt", comment.char='#')[,1]
+enough_samples = read.table("../../../data/restricted/pcawg/CT_sufficient_samples.txt", comment.char='#')[,1]
 ct <- enough_samples[5]
 ct
 nonexogenous = read.table("../../../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t", comment.char = "#", fill = F)
@@ -519,6 +519,14 @@ ggplot(fullRE_DMSL_SBS1_betas_all, aes(x=ct, col=logR, y=beta.Estimate))+geom_po
   theme(axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1))
 ggsave("../../../results/results_TMB/pcawg/all_betas_all_ct.pdf", width = 25, height = 15)
 
+multiple_obs_SBS1_betas <- fullRE_DMSL_SBS1_betas_all %>% dplyr::select(logR) %>% table > 2
+ggplot(fullRE_DMSL_SBS1_betas_all %>% filter(logR %in% names(multiple_obs_SBS1_betas[multiple_obs_SBS1_betas])), aes(x=ct, col=logR, y=beta.Estimate))+geom_point()+
+  facet_wrap(.~logR, scales = "free_x", nrow=5)+
+  geom_errorbar(aes(ymin=`beta.Estimate`-`beta.Std..Error`, ymax=`beta.Estimate`+`beta.Std..Error`), width=.1)+
+  geom_hline(yintercept = 0, col='blue', lty='dashed')+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1))
+
+
 fullRE_DMSL_SBS1_betas_all$exogenous = (gsub("/.*", "", fullRE_DMSL_SBS1_betas_all$logR) %in% nonexogenous$V1)
 ggplot(fullRE_DMSL_SBS1_betas_all, aes(x=logR, y=beta.Estimate, col=exogenous))+geom_point()+
   facet_wrap(.~ct, scales = "free_x", nrow=5)+
@@ -578,5 +586,11 @@ sortedDM <- wrapper_run_TMB(model = "fullRE_DM",
                              cov_par_RE = python_like_select_name(sortedM$par.fixed, 'cov_par_RE'),
                              log_lambda = matrix(c(2,2))))
 sortedDM
+
+non_duplicated_rows <- function(i){
+  rownames(i)[duplicated(rownames(i))] = paste0(rownames(i)[duplicated(rownames(i))], "_2")
+  i
+}
+createBarplot(normalise_rw(non_duplicated_rows(Lymph_CLL_obj$Y)), order_labels = names(sort(rowSums(non_duplicated_rows(Lymph_CLL_obj$Y)), decreasing = F)))
 
 
