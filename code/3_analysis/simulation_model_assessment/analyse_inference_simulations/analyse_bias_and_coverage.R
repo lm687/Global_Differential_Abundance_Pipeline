@@ -4,19 +4,41 @@ require(TMB)
 require(reshape2)
 require(ggplot2)
 source("../../../2_inference_TMB/helper_TMB.R")
-idx_dataset = 3 ## idx for beta slope and beta intercept true parameters
+
+# idx_dataset_betaintercept = 1 ## idx for beta intercept true parameters
+# idx_dataset_betaslope = 2 ## idx for beta slope true parameters
+# idx_dataset_cov = 1 ## idx for beta slope true parameters
+idx_dataset_betaintercept = "1d4" ## idx for beta intercept true parameters
+idx_dataset_betaslope = "1d4" ## idx for beta slope true parameters
+idx_dataset_cov = "1d4" ## idx for beta slope true parameters
+
+plot_only_converged <- TRUE
+if(plot_only_converged){
+  add_convergence <- '_onlyconverged_'
+}else{
+  add_convergence <- 'withnonconverged_'
+}
+
+model <- 'fullREDMsinglelambda_'
+name_dataset <- "multiple_GenerationHnorm_"
+
+# model <- "fullREM_"
+# name_dataset <- "multiple_generationMGnorm_"
+
 
 # model <- 'diagREDMsinglelambda'
 # model <- 'fullREDMsinglelambda_'
 # model <- 'diagREDM'
 # model <- "fullREM"
-model <- "fullREDM_"
+# model <- "fullREDM_"
 # model <- "diagREM"
 # model <- "FEDMsinglelambda"
 optimiser <- 'nlminb'
 
+# name_dataset <- "multiple_GenerationHnorm_"
 # name_dataset <- "multiple_GenerationCnormdiagRE_"
-name_dataset <- "multiple_GenerationCnorm_"
+# name_dataset <- "multiple_GenerationCnorm_"
+# name_dataset <- "multiple_GenerationGnorm_"
 # name_dataset <- "multiple_GenerationMGnorm_"
 # name_dataset <- "multiple_generationMGnorm_"
 # name_dataset <- "multiple_generationMGnorm_80_180_100_6_0_"
@@ -26,19 +48,20 @@ name_dataset0 <- paste0(strsplit(name_dataset, '_')[[1]][1:2], sep = '_', collap
 
 fles = list.files("../../../../data/assessing_models_simulation/datasets/", full.names = T)
 fles <- fles[grep(paste0(name_dataset, "*"), fles)]
-fles <- fles[grep(paste0("betaintercept", idx_dataset, "_betaslope", idx_dataset, "*"), fles)]
+fles <- fles[grep(paste0("betaintercept", idx_dataset_betaintercept, "_betaslope", idx_dataset_betaslope, "_covmat", idx_dataset_cov, "*"), fles)]
 x <- lapply(fles, readRDS)
 lst <- list.files(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/", optimiser, "/"), full.names = T)
 lst <- lst[grepl(name_dataset, lst)]
 lst <- lst[grepl(model, lst)]
-lst <- lst[grep(paste0("betaintercept", idx_dataset, "_betaslope", idx_dataset, "*"), lst)]
+lst <- lst[grep(paste0("betaintercept", idx_dataset_betaintercept, "_betaslope", idx_dataset_betaslope, "_covmat", idx_dataset_cov, "*"), lst)]
 
 all_pd <- lapply(lst, function(i){x <- readRDS(i); try(x$pdHess)})
 all_pd[sapply(all_pd, typeof) == 'character'] = FALSE
 all_pd_list <- as.vector(unlist(all_pd))
 
 table(all_pd_list)
-lst = lst[all_pd_list]
+lst0 <- lst
+if(plot_only_converged) lst = lst[all_pd_list]
 runs <- lapply(lst, readRDS)
 
 summaries = lapply(runs, function(i){
@@ -72,7 +95,14 @@ summaries_melt = data.frame(melt(summaries2), stringsAsFactors = F)
 summaries_melt$Var1 = as.character(summaries_melt$Var1)
 summaries_melt$idx_param = rep(1:sum(summaries_melt$Var2 == 1), length(lst))
 summaries_melt[summaries_melt$Var1 == "log_lambda", "value"] = exp(summaries_melt[summaries_melt$Var1 == "log_lambda", "value"])
-summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])
+if(model %in% c("fullREM_")){
+  # summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])
+  summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = (exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"]))
+}else if(model %in% c("fullREDMsinglelambda_")){
+  summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])**2
+}else{
+  stop()
+}
 
 summaries_melt[summaries_melt$Var1 == "log_lambda", "Var1"] = "lambda"
 summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "Var1"] = "sd_RE"
@@ -82,6 +112,11 @@ if(name_dataset0 %in% c("multiple_GenerationCnormdiagRE_", "multiple_GenerationC
   sds = rep(x[[1]]$sd_RE, x[[1]]$d-1)
 }else if(name_dataset0 %in% c("multiple_GenerationMGnorm_", "multiple_generationMGnorm_")){
   sds = x[[1]]$sd_RE
+}else if(name_dataset0 %in% c("multiple_GenerationHnorm_")){
+  cov_mat_true = readRDS(paste0("../../../../data/assessing_models_simulation/additional_files/multiple_fixed_covmat", idx_dataset_cov, ".RDS"))
+  sds <- diag(cov_mat_true)
+  covs <- cov_mat_true[upper.tri(cov_mat_true)]
+  covs_true <- TRUE
 }
 
 if(model %in% c("fullREM_")){
@@ -103,9 +138,16 @@ if(model %in% c("fullREM_")){
     }
     overdisp <- x[[1]]$lambda[1]
   }
+  
+  if(covs_true){
+    ## we have covariances
+    covs <- covs
+  }else{
+    covs <- rep(0,((x[[1]]$d-1)**2-(x[[1]]$d-1))/2)
+  }
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 sds, ##sd RE ## this is particular to GenerationCnorm
-                rep(0,((x[[1]]$d-1)**2-(x[[1]]$d-1))/2), ## covariances RE
+                covs, ## covariances RE
                 overdisp)
 }else if(model %in% c("diagREDM_", "diagREDMsinglelambda_" )){
   if(model == "diagREDM_"){
@@ -133,7 +175,9 @@ summaries_melt$subtract = summaries_melt$value - rep(true_vals, length(lst))
 ggplot(summaries_melt, aes(x=idx_param, y=subtract, group=idx_param))+
   geom_abline(slope = 0, intercept = 0, lty='dashed', col='blue')+
   geom_boxplot()+facet_wrap(~Var1, scales = "free", nrow=1)+labs(x="Parameter", y="Bias")
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_", name_dataset, optimiser, '_', model, idx_dataset, "_bias.pdf"), width = 10, height = 3.5)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_", 
+            name_dataset, optimiser, '_', model, idx_dataset_betaintercept, '_',
+            idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence, "bias.pdf"), width = 10, height = 3.5)
 # summaries_mat = matrix(summaries_melt$value, nrow=sum(summaries_melt$Var2 == 1))
 
 
@@ -164,16 +208,71 @@ sapply(1:length(true_vals), function(i){
 })
 rownames(confints) = rownames(summaries[[1]])
 
-df_coverage <- cbind.data.frame(parameter=make.names(rownames(confints), unique = T), CI=apply(confints, 1, mean))
+df_coverage <- cbind.data.frame(parameter=make.names(rownames(confints), unique = T), CI=apply(confints, 1, mean, na.rm=T))
 df_coverage$type_param = gsub("\\..*", "", df_coverage$parameter)
 df_coverage$type_param[df_coverage$type_param == "beta"] = c('beta_intercept', 'beta_slope')
 ggplot(df_coverage,
        aes(x=parameter, y=CI, group=1))+geom_abline(slope = 0, intercept = 0.95, col='blue', lty='dashed')+
   geom_line()+geom_point()+facet_wrap(.~type_param, scales = "free_x", nrow=1)+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset, optimiser,'_',  model, idx_dataset, "_coverage.pdf"), width = 10, height = 3.5)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset,
+              optimiser,'_',  model, idx_dataset_betaintercept, '_', idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence,
+              "coverage.pdf"), width = 10, height = 3.5)
 
 # summaries[[1]]
 # true_vals
 
 # sapply(x, `[`, 'beta')
+
+as.vector(x[[1]]$beta)
+python_like_select_rownames(summaries[[1]], 'beta')[,1]
+
+as.vector(x[[1]]$lambda)
+exp(python_like_select_rownames(summaries[[1]], 'log_lambda')[1])
+
+## What converged, what didn't?
+## (what are the difference between the runs?)
+
+runs_nonconverged <- lapply(lst0[!all_pd_list], readRDS)
+runs
+
+runs_nonconverged_list <- lapply(runs_nonconverged, function(j) try(j$par.fixed))
+runs_nonconverged_list <- runs_nonconverged_list[sapply(runs_nonconverged_list, typeof) == "double"]
+
+comparison_conv_notconv <- rbind(cbind.data.frame(melt(runs_nonconverged_list), conv='not_conv'),
+      cbind.data.frame(melt(lapply(runs, function(j) try(j$par.fixed))), conv='converged'))
+comparison_conv_notconv$param_name = make.names(names(runs[[1]]$par.fixed), unique = T)
+
+comparison_conv_notconv$param_type <- gsub("\\..*", "", comparison_conv_notconv$param_name)
+p <- ggplot(comparison_conv_notconv, aes(x=interaction(conv, param_name), y=value, col=conv))+
+  geom_boxplot()+facet_wrap(.~param_type, scales = "free", nrow=1)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+gp <- ggplotGrob(p)
+# get gtable columns corresponding to the facets (5 & 9, in this case)
+facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]
+
+# get the number of unique x-axis values per facet (1 & 3, in this case)
+x.var <- sapply(ggplot_build(p)$layout$panel_scales_x,
+                function(l) length(l$range$range))
+
+# change the relative widths of the facet columns based on
+# how many unique x-axis values are in each facet
+gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1, 2, 0.3, 1)
+# gp <- ggplotGrob(a)
+
+pdf(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset,
+           optimiser,'_',  model, idx_dataset_betaintercept, '_', idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence,
+           "comparison_nonconv.pdf"), width = 10, height = 3.5)
+grid::grid.draw(gp)
+dev.off()
+ggplot(comparison_conv_notconv, aes(x=interaction(conv, param_name), y=value, col=conv))+
+  geom_violin()+geom_point(alpha=0.1)+facet_wrap(.~param_name, scales = "free", nrow=3)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset,
+              optimiser,'_',  model, idx_dataset_betaintercept, '_', idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence,
+              "comparison_nonconv2.pdf"), width = 15, height = 5.5)

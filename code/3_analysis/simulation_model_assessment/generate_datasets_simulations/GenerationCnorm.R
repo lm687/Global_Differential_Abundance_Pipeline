@@ -57,15 +57,15 @@ if(is.null(opt$beta_intercept_input)){
   beta[1,] = readRDS(opt$beta_intercept_input)
 }
 
-if(beta_gamma_shape == 0){
-  ## if non-differentially abundant, make it truly non-differentially abundant, i.e. exactly zero
-  beta[2,] = 0
-}else{
-  if(is.null(opt$beta_slope_input)){
-    beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
+if(is.null(opt$beta_slope_input)){
+  if(beta_gamma_shape == 0){
+    ## if non-differentially abundant, make it truly non-differentially abundant, i.e. exactly zero
+    beta[2,] = 0
+    }else{
+      beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
+    }
   }else{
-    beta[2,] = readRDS(opt$beta_slope_input)
-  }
+  beta[2,] = readRDS(opt$beta_slope_input)
 }
 
 ## Random effects

@@ -18,7 +18,7 @@ rule all:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
       # expand("../data/restricted/pcawg/pcawg_restricted_snv_counts/{sample}", sample=config["samples"]),
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
-      expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type="signaturesmutSigExtractor", cancer_type=cancer_types),
+      # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type="signaturesmutSigExtractor", cancer_type=cancer_types),
 ## [Inference] Running stan code on PCAWG
       # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
 ## [Benchmarking] Creating synthetic datasets
@@ -85,6 +85,12 @@ rule all:
       #  beta_intensity = 0, model="fullREDMsinglelambda", itnum=range(100),\
       #  fixed_beta_intercept="betaintercept3", sdRE_input='sdRE1',\
       # fixed_beta_slope="betaslope3", optimiser='nlminb')
+    	expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
+    		datasetgeneration="GenerationHnorm",  n=80, nlambda=180,\
+    		lmbda=5, d=5,\
+    		beta_intensity = 0, model="fullREDMsinglelambda", itnum=range(100),\
+    		fixed_beta_intercept="betaintercept1d4", sdRE_input="covmat1d4",\
+    		fixed_beta_slope="betaslope1d4", optimiser='nlminb')
 
 rule index_vcf:
     input:
@@ -135,20 +141,20 @@ rule inference:
 ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}
 #conda deactivate"""
 
-rule simulate_for_comparison:
-    input:
-        "../data/assessing_models_simulation/{datasetgeneration}"
-    params:
-        datasetgeneration = "{datasetgeneration}",
-        n = "{n}",
-        nlambda = "{nlambda}",
-        lmbda = "{lmbda}",
-        d = "{d}",
-        beta_intensity = "{beta_intensity}",
-    output:
-       "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
-    shell:
-       "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
+# rule simulate_for_comparison:
+#     input:
+#         "../data/assessing_models_simulation/{datasetgeneration}"
+#     params:
+#         datasetgeneration = "{datasetgeneration}",
+#         n = "{n}",
+#         nlambda = "{nlambda}",
+#         lmbda = "{lmbda}",
+#         d = "{d}",
+#         beta_intensity = "{beta_intensity}",
+#     output:
+#        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
+#     shell:
+#        "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output}"
 
 rule simulate_for_comparison_multiple:
     input:
@@ -188,17 +194,17 @@ rule inference_simulation_stan:
 Rscript --vanilla 2_inference/fit_simulations.R --infile {input} --output {output} --niterations {params.nits} --model {params.model}
 #conda deactivate"""
 
-rule inference_simulation_TMB:
-    input:
-        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
-    log:
-        "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Model{model}.log"
-    params:
-       model="{model}",
-    output:
-       "../data/assessing_models_simulation/inference_results/TMB/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}.RDS"
-    shell:
-       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model}"
+# rule inference_simulation_TMB:
+#     input:
+#         "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
+#     log:
+#         "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Model{model}.log"
+#     params:
+#        model="{model}",
+#     output:
+#        "../data/assessing_models_simulation/inference_results/TMB/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}.RDS"
+#     shell:
+#        "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model}"
 
 rule inference_simulation_TMB_multiple:
     input:

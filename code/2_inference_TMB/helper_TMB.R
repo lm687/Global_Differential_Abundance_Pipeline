@@ -383,11 +383,10 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     dll_name <- "diagRE_ME_dirichletmultinomial"
     rdm_vec <- "u_large"
     # obj <- MakeADFun(data, parameters, DLL="", random = "")
-  }else if(model %in% c("fullREDMsinglelambda", "fullREhalfDM")){
-    stop("fullREDMsinglelambda and fullREhalfDM should be two different parts")
+  }else if(model  == "fullREDMsinglelambda"){
       data$num_individuals = n
+      parameters$log_lambda = 1.1
       
-      parameters <- list(parameters, log_lambda = 1.1)
       # parameters <- list(
       #   beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
       #                  nrow = 2, byrow=TRUE)),
@@ -399,7 +398,14 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
       rdm_vec <- "u_large"
       dll_name <- "fullRE_dirichletmultinomial_single_lambda"
       # obj <- MakeADFun(data, parameters, DLL="", random = )
-  }else if(model == "fullREDMsinglelambda2"){
+  }else if(model == "fullREhalfDM"){
+  stop("fullREhalfDM used to be done with  fullRE_dirichletmultinomial_single_lambda")
+  data$num_individuals = n
+  
+  parameters <- list(parameters, log_lambda = 1.1)
+  rdm_vec <- "u_large"
+  dll_name <- "CHANGETHIS"
+}else if(model == "fullREDMsinglelambda2"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
@@ -439,7 +445,7 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     parameters$logs_sd_RE = NULL
     parameters$cov_par_RE = NULL
     parameters <- list(parameters, log_lambda = 1.1)
-    
+
     # parameters <- list(
     #   beta = beta_init,
     #   log_lambda = 2
@@ -945,10 +951,11 @@ normalise_cl <- function(x){
 give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F){
   require(gridExtra)
   obj = load_PCAWG(ct, typedata, simulation)
-  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T)+ggtitle('Early raw')
-  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T)+ggtitle('Late raw')
-  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')
-  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T)+ggtitle('Early raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T)+ggtitle('Late raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  
   if(!legend_on){
     a <- a+guides(fill=F)
     b <- b+guides(fill=F)
@@ -1254,16 +1261,21 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T){
 
 give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
                                     bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
-                                    path_to_data= "../../../data/"){
+                                    path_to_data= "../../../data/", tmb_object=NULL){
   
-  if(model == "fullRE_M"){
-    if(!bool_nonexo)    list_estimates <- fullRE_M
-    if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
-  }else if(model == "fullRE_DM"){
-    if(!bool_nonexo)    list_estimates <- fullRE_DMSL
-    if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
-  }else if(model == "sparseRE_DM"){
-    if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
+  if(is.null(tmb_object)){
+    if(model == "fullRE_M"){
+      if(!bool_nonexo)    list_estimates <- fullRE_M
+      if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
+    }else if(model == "fullRE_DM"){
+      if(!bool_nonexo)    list_estimates <- fullRE_DMSL
+      if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
+    }else if(model == "sparseRE_DM"){
+      if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
+    }
+  }else{
+    list_estimates <- list()
+    list_estimates[[ct]] <- tmb_object
   }
   
   obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
@@ -1271,7 +1283,7 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
   dmin1 <- ncol(obj_data$Y)-1
   cov_vec = rep(0, (dmin1**2-dmin1)/2)
   
-  if(model %in% c("fullRE_M", "fullRE_DM")){
+  if(model %in% c("fullRE_M", "fullRE_DM", "fullRE_DMSL")){
     cov_vec = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE')
     ###**** I AM NOT SURE ABOUT THIS BIT BELOW! ARE THEY SD OR VAR???*****###
     ### implementing them as though they were sd ###
@@ -1301,7 +1313,7 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
   
   theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
   
-  if(model %in% c('sparseRE_DM', 'fullRE_DM')){
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL')){
     alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
   }else if(model %in% c("fullRE_M")){
     alpha = softmax(cbind(theta, 0))
@@ -1309,7 +1321,7 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
     stop('Check softmax step')
   }
   
-  if(model %in% c('sparseRE_DM', 'fullRE_DM')){
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL')){
     probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
   }else if(model %in% c("fullRE_M")){
     probs = alpha
@@ -1332,3 +1344,8 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
 }
 
 vector_cats_to_logR <- function(i){paste0(i[-length(i)], '/', i[length(i)])}
+
+non_duplicated_rows <- function(i){
+  rownames(i)[duplicated(rownames(i))] = paste0(rownames(i)[duplicated(rownames(i))], "_2")
+  i
+}
