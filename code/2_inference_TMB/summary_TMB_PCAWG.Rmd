@@ -74,7 +74,7 @@ source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySi
 ```
 
 ```{r, read_ct, echo=FALSE}
-enough_samples = read.table("~/Desktop/CT_sufficient_samples.txt", comment.char='#')[,1]
+enough_samples = read.table("../../data/restricted/pcawg/CT_sufficient_samples.txt", comment.char='#')[,1]
 nonexogenous = read.table("../../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t",
                           comment.char = "#", fill = F)
 subset_sigs_sparse_cov_idx_nonexo <- read.table("../../current/subset_sigs_sparse_cov_idx_nonexo.txt", stringsAsFactors = F, fill = T)
@@ -270,7 +270,7 @@ effect_size <- sapply(enough_samples, function(ct){
 })
 ```
 
-```{r, all_pvals_analysis_plots, echo=FALSE, dependson=c('all_pvals_analysis'), warning=FALSE, fig.height=6}
+```{r, all_pvals_analysis_plots, echo=FALSE, dependson=c('all_pvals_analysis'), warning=FALSE, fig.height=4}
 
 grid.arrange(ggplot(cbind.data.frame(pvals_DM=pvals_DM, pvals_DMnonexo=pvals_DMnonexo,
                         num_samples=as.numeric(num_samples),
@@ -285,19 +285,43 @@ ggplot(cbind.data.frame(pvals_DM=pvals_DM, pvals_DMnonexo=pvals_DMnonexo,
        aes(x=(pvals_DM), y=(pvals_DMnonexo), col=num_samples,
            label=ct))+geom_point()+
   geom_hline(yintercept = (0.05))+geom_vline(xintercept = (0.05))+
-  geom_label_repel()+theme(legend.position = "bottom"),
-ggplot(cbind.data.frame(effect_size=as.numeric(effect_size), minlogpval=-log(as.numeric(pvals_DM)),
-                        label=enough_samples), aes(x=effect_size, y=minlogpval, label=label))+
-  geom_point()+geom_label_repel(alpha=0.2)
-, ncol=2)
+  geom_label_repel()+theme(legend.position = "bottom"), ncol=2)
 
+ggplot(cbind.data.frame(effect_size=as.numeric(effect_size),
+                        num_samples=as.numeric(num_samples),
+                        minlogpval=-log(as.numeric(pvals_DM)),
+                        label=enough_samples),
+       aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
+           label=label, col=num_samples))+
+  geom_point()+geom_label_repel(alpha=0.2)+
+  theme(legend.position = "bottom")
 # 
 # plot(pvals_fullRE_M, pvals_DM)
 # 
 ```
 
+```{r, all_pvals_analysis_plots_2, echo=FALSE, dependson=c('all_pvals_analysis'), warning=FALSE, fig.height=8}
+
+ggplot(cbind.data.frame(pvals_DM=pvals_DM, pvals_DMnonexo=pvals_DMnonexo,
+                        num_samples=as.numeric(num_samples),
+                        ct=enough_samples,
+                        pvals_DM_censored=sapply(-log(pvals_DM),
+                                                 function(i) min(i, 25)),
+                        pvals_DMnonexo_censored=sapply(-log(pvals_DMnonexo), 
+                                                       function(i) min(i, 25))),
+       aes(x=pvals_DM_censored, y=pvals_DMnonexo_censored,
+           size=num_samples, col=ct,
+           label=ct))+geom_point()+
+  geom_hline(yintercept = -log(0.05))+geom_vline(xintercept = -log(0.05))+
+  geom_label_repel(size=3.2, alpha=0.6)+  theme_bw()+
+  theme(legend.position = "bottom", legend.text=element_text(size=8))+
+  labs(x='- Log p-value all signatures', y='- Log p-value nonexogenous signatures')+
+  guides(size=FALSE, col=guide_legend(ncol=4))
+
+```
+
 \subsection{All betas with SBS1 as baseline}
-```{r, SBS1_betas, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+```{r, SBS1_betas, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.height=6}
 fullRE_DMSL_SBS1_betas <- lapply(fullRE_DMSL_SBS1, function(i){
   .x <- try(give_betas(i)[2,])
   if((typeof(.x) == 'character')){
@@ -337,15 +361,40 @@ ggplot(fullRE_DMSL_SBS1_betas_all, aes(x=ct, col=logR, y=beta.Estimate))+geom_po
   theme(axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1), legend.position = "bottom")
 ```
 
-```{r, SBS1_betas_plotsb, echo=FALSE, warning=FALSE, message=FALSE, fig.height=13, fig.width=9}
+```{r, SBS1_betas_plotsb, echo=FALSE, warning=FALSE, message=FALSE, fig.height=9, fig.width=9}
+
+sort_with_letters <- function(i){
+  .order <- order(as.numeric(gsub("[a-z]", "", i)))
+  i[.order]
+}
 
 multiple_obs_SBS1_betas <- fullRE_DMSL_SBS1_betas_all %>% dplyr::select(logR) %>% table > 3
-ggplot(fullRE_DMSL_SBS1_betas_all %>% filter(logR %in% names(multiple_obs_SBS1_betas[multiple_obs_SBS1_betas])), aes(x=ct, col=logR, y=beta.Estimate))+geom_point()+
-  facet_wrap(.~logR, scales = "free_x", nrow=5)+
+ggplot(fullRE_DMSL_SBS1_betas_all %>% filter(logR %in% names(multiple_obs_SBS1_betas[multiple_obs_SBS1_betas])),
+       aes(x=ct,
+           col=ct, y=beta.Estimate))+geom_point()+
+  facet_wrap(.~factor(logR, levels=paste0('SBS', sort_with_letters(unique(gsub('SBS', '', gsub('/.*', '', logR)))), '/SBS1')), scales = "free_x", nrow=4)+
   geom_errorbar(aes(ymin=`beta.Estimate`-`beta.Std..Error`, ymax=`beta.Estimate`+`beta.Std..Error`), width=.1)+
   geom_hline(yintercept = 0, col='blue', lty='dashed')+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1))
-
+  theme_bw()+
+  theme(#axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), legend.position = "bottom",
+        text = element_text(size=20), legend.text=element_text(size=8))
+  
+ggplot(fullRE_DMSL_SBS1_betas_all %>% filter(logR %in% names(multiple_obs_SBS1_betas[multiple_obs_SBS1_betas])),
+       aes(x=ct,
+           col=ct, y=beta.Estimate))+geom_point()+
+  facet_wrap(.~logR, scales = "free_x", nrow=4)+
+  geom_errorbar(aes(ymin=`beta.Estimate`-`beta.Std..Error`, ymax=`beta.Estimate`+`beta.Std..Error`), width=.1)+
+  geom_hline(yintercept = 0, col='blue', lty='dashed')+
+  theme_bw()+
+  theme(#axis.text.x = element_text(angle = 45, vjust = 1.0, hjust=1),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), legend.position = "bottom",
+        text = element_text(size=20), legend.text=element_text(size=8))
+  
 # ggsave("../../../results/results_TMB/pcawg/all_betas_all_ct.pdf", width = 25, height = 15)
 ```
 
@@ -360,6 +409,27 @@ ggplot(fullRE_DMSL_SBS1_betas_all, aes(x=logR, y=beta.Estimate, col=exogenous))+
 # ggsave("../../../results/results_TMB/pcawg/all_betas_all_ct_byct.pdf", width = 12, height = 12)
 ```
 \newpage
+
+
+How many signatures so we have in total and how many nonexogenous ones?
+```{r, num_cats_sigs, echo=FALSE, warning=FALSE, message=FALSE}
+signature_roo0 <- sapply(fles_roo[grepl('_signatures_', fles_roo)], readRDS)
+signature_roo_active <- sapply(signature_roo0, function(i) try(slot(i, 'count_matrices_active')))
+names(signature_roo_active) <- gsub("_signatures_ROO.RDS", "", basename(fles_roo[grepl('_signatures_', fles_roo)]))
+
+num_cats_nonexo <- lapply(names(signature_roo_active), function(j){
+  .nonexoncol <- try(ncol(signature_roo_active[[j]][[1]][,!(colnames(signature_roo_active[[j]][[1]]) %in% nonexogenous$V1)]))
+  try(c(ifelse(is.null(ncol(signature_roo_active[[j]][[1]])), yes = NA, no = ncol(signature_roo_active[[j]][[1]])),
+        ifelse(is.null(.nonexoncol), NA, .nonexoncol)))})
+names(num_cats_nonexo) <- names(signature_roo_active)
+num_cats_nonexo <- num_cats_nonexo[ (typeof(num_cats_nonexo) != "character") & sapply(num_cats_nonexo, function(i) typeof(i[[1]]) != "character")]
+ggplot(cbind.data.frame(ct=names(num_cats_nonexo),
+                      do.call('rbind', num_cats_nonexo)), aes(x=`1`, y=`2`, label=ct))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+
+  geom_point()+
+  geom_label_repel(size=3)+labs(x='Number of active signatures', y='Number of nonexogenous active signatures')+theme_bw()
+```
+
 
 \section{Analysis per cancer type}
 
@@ -534,6 +604,20 @@ grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simula
 
 73/359=20\% of values are not included in the confidence interval of the DMSL.
 
+\subsubsection{Correlations of signatures}
+To add: the observed values, and the correlations of the normalised signatures
+```{r, BoneOsteosarc_correlations, echo=FALSE, fig.height=3.5}
+
+grid.arrange(ggplot(melt(give_all_correlations(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[["Bone-Osteosarc"]],
+                 data_object = obj_Bone_Osteosarc_nonexo,
+                 print_plot = F, nreps = 2, model = "M")[[1]])), aes(x=value))+geom_density()+
+  ggtitle('Correlations of fitted values\n(fullRE M)'),
+ggplot(melt(give_all_correlations(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[["Bone-Osteosarc"]],
+                 data_object = obj_Bone_Osteosarc_nonexo,
+                 print_plot = F, nreps = 2, model = "DMSL", integer_overdispersion_param=1)[[1]])), aes(x=value))+geom_density()+
+  ggtitle('Correlations of fitted values\n(diag DMSL)'), ncol=2)
+
+```
 
 \subsubsection{Signatures from mutSigExtractor}
 
@@ -710,20 +794,23 @@ sim_Breast_AdenoCA[[2]]+ggtitle('Simulation of Breast Adenocarcinoma samples')
 ct <- "Breast-AdenoCA"
 integer_overdispersion_param_DMSL <- 1
 obj_Breast_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Breast_AdenoCA, sigs_to_remove = nonexogenous$V1)
-grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+
+for(loglog_it in c(T,F)){
+  grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
                  data_object = obj_Breast_AdenoCA_nonexo,
                  print_plot = F, nreps = 20, model = "M")), function(i){
                    lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
                                                           rank_number=1:length(j)) )})[[1]],
                  data_object = obj_Breast_AdenoCA_nonexo,
-                 loglog = F, title = 'Breast_AdenoCA_nonexo (M)'),
+                 loglog = loglog_it, title = 'Breast_AdenoCA_nonexo (M)'),
  give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
                  data_object = obj_Breast_AdenoCA_nonexo,
                  print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
                    lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
                                                           rank_number=1:length(j)) )})[[1]],
                  data_object = obj_Breast_AdenoCA_nonexo,
-                 loglog = F, title = 'Breast_AdenoCA_nonexo (DMSL)'), ncol=2)
+                 loglog = loglog_it, title = 'Breast_AdenoCA_nonexo (DMSL)'), ncol=2)
+}
 ```
 
 
@@ -907,7 +994,7 @@ melt(all_summaries) %>% filter(value==ct)
 
 
 \subsubsection{Re-running of fitting}
-Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo HEREEE
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo
 ```{r CNSGBM3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
 TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
@@ -1242,11 +1329,125 @@ colnames(obj_CNS_Oligo$Y)
 
 \subsubsection{Convergence table}
 
-We only have converged results for the multinomial with full RE, and the DM with a single lambda (diag and sparse RE). It is the same for nonexogenous signatures.
-
+Pretty much everything has converged
 ```{r CNSOligo2, echo=FALSE, dependson=c('summary_convergence')}
 ct <- "CNS-Oligo"
 melt(all_summaries) %>% filter(value==ct)
+```
+
+
+<!-- \subsubsection{Potentially problematic signatures} -->
+
+<!-- We notice that there are no truly problematic signatures (SBS15 has the most zeros; 50\%). -->
+<!-- ```{r, CNSOligo1d} -->
+<!-- colSums(obj_CNS_Oligo$Y == 0)/nrow(obj_CNS_Oligo$Y) -->
+<!-- colSums(obj_CNS_Oligo$Y)/sum(obj_CNS_Oligo$Y) -->
+<!-- ``` -->
+
+
+
+\subsubsection{Betas}
+
+```{r, CNSOligo_betas}
+ct <- "CNS-Oligo"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_M[[ct]])+ggtitle(paste0(ct, '\n fullRE_M')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+  plot_betas(fullRE_DMDL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMDL_nonexo')), nrow=2)
+```
+
+
+
+```{r, CNSOligo_DA, echo=FALSE, message=FALSE, results='hide'}
+pval_CNS_Oligo <- wald_TMB_wrapper(fullRE_DMSL_nonexo[["CNS-Oligo"]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_CNS_Oligo`.
+
+\subsubsection{Covariance matrices}
+
+
+
+```{r, CNSOligo_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('CNS_Oligo_additional_runs')}
+ct <- "CNS-Oligo"
+models_it_CNS_Oligo <- c('fullRE_M', 'fullRE_DMSL', 'fullRE_DMSL_nonexo')
+covmats_CNS_Oligo <- lapply(models_it_CNS_Oligo,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_CNS_Oligo) <- models_it_CNS_Oligo
+
+## because it's fullRE_M, it's sorted
+colnames(covmats_CNS_Oligo[['fullRE_M']]) <- rownames(covmats_CNS_Oligo[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_CNS_Oligo)$Y))
+colnames(covmats_CNS_Oligo[['fullRE_DMSL']]) <- rownames(covmats_CNS_Oligo[['fullRE_DMSL']]) <- vector_cats_to_logR(colnames(obj_CNS_Oligo$Y))
+colnames(covmats_CNS_Oligo[['fullRE_DMSL_nonexo']]) <- rownames(covmats_CNS_Oligo[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_CNS_Oligo, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_CNS_Oligo)){pheatmap(covmats_CNS_Oligo[[i]], cluster_rows = F, cluster_cols = F, main = models_it_CNS_Oligo[i])}
+```
+
+
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, CNSOligo_sim, echo=FALSE}
+sim_CNS_Oligo <- give_sim_from_estimates("CNS-Oligo", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                       tmb_object=fullRE_DMSL_nonexo[["CNS-Oligo"]])
+sim_CNS_Oligo[[2]]+ggtitle('Simulation of CNS-Oligo samples')
+
+```
+
+
+
+\subsubsection{Ranked plot for coverage}
+The values for DMSL nonexo look considerably better than for M nonexo.
+```{r, CNSOligo_ranked_plot}
+ct <- "CNS-Oligo"
+integer_overdispersion_param_DMSL <- 1
+obj_CNS_Oligo_nonexo <- give_subset_sigs_TMBobj(obj_CNS_Oligo, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_CNS_Oligo_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_CNS_Oligo_nonexo,
+                 loglog = F, title = 'obj_CNS_Oligo (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
+                 data_object = obj_CNS_Oligo_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_CNS_Oligo_nonexo,
+           loglog = F, title = 'obj_CNS_Oligo (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+These are the signatures from mutSigExtractor:
+```{r, CNSOligo_mutsigextractor}
+obj_CNS_Oligo_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_CNS_Oligo_mutSigExtractor, legend_on = FALSE)
+```
+
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, CNSOligo_sortedbynummuts, fig.height=3}
+createBarplot(normalise_rw(non_duplicated_rows(obj_CNS_Oligo$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_CNS_Oligo$Y)),
+                                        decreasing = F)))
 ```
 
 <!-- -------------------------------------------------------------------- -->
@@ -1254,10 +1455,852 @@ melt(all_summaries) %>% filter(value==ct)
 <!-- -------------------------------------------------------------------- -->
 
 \subsection{CNS-PiloAstro}
+
+\subsection{CNS-PiloAstro}
+\subsubsection{Barplot and general statistics}
+```{r CNSPiloAstro1, echo=FALSE}
+ct <- "CNS-PiloAstro"
+obj_CNS_PiloAstro <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_CNS_PiloAstro, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r CNSPiloAstro1b, echo=FALSE}
+dim(obj_CNS_PiloAstro$Y)
+```
+
+The signatures are:
+```{r CNSPiloAstro1c, echo=FALSE}
+colnames(obj_CNS_PiloAstro$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+We have converged results for everything except for full RE DM, in the case of all signatures (with only nonexo everything has).
+
+```{r CNSPiloAstro2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "CNS-PiloAstro"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M to fit fullRE_DMSL (all sigs, as the one with nonexo has already converged)
+```{r CNSPiloAstro3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "CNS-PiloAstro"
+
+obj_CNSPiloAstro <- sort_columns_TMB(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"))
+sortedM_CNSPiloAstro <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_CNSPiloAstro)
+sortedM_CNSPiloAstro
+```
+
+
+```{r CNSPiloAstro3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_CNSPiloAstro$Y)-1
+
+sortedDM_CNSPiloAstro <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_CNSPiloAstro,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_CNSPiloAstro$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_CNSPiloAstro$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_CNSPiloAstro$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_CNSPiloAstro$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_CNSPiloAstro
+
+```
+
+
+
+If we use the values of the fullRE M as initial values for the fullRE DMSL still do not converge:
+```{r CNSPiloAstro3b, echo=FALSE, message=FALSE, dependson=c('CNSPiloAstro3')}
+sortedDM_CNSPiloAstro$pdHess
+```
+
+
+
+
+\subsubsection{Potentially problematic signatures}
+
+We notice that there are no truly problematic signatures (SBS15 has the most zeros; 50\%).
+```{r, CNSPiloAstro1d}
+colSums(obj_CNS_PiloAstro$Y == 0)/nrow(obj_CNS_PiloAstro$Y)
+colSums(obj_CNS_PiloAstro$Y)/sum(obj_CNS_PiloAstro$Y)
+```
+
+SBS19 and SBS23 are quite sparse.
+
+
+
+```{r, CNS_PiloAstro_additional_runs, dependson=c('additional_runs')}
+additional_sortedMnonexo[["CNS-PiloAstro"]] <- sortedM_CNSPiloAstro
+additional_sortedDMSLnonexo[["CNS-PiloAstro"]] <- sortedDM_CNSPiloAstro
+```
+
+\subsubsection{Betas}
+
+```{r, CNSPiloAstro_betas}
+ct <- "CNS-PiloAstro"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+  plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+  plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+
+```{r, CNSPiloAstro_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "CNS-PiloAstro"
+pval_CNS_PiloAstro <- wald_TMB_wrapper(fullRE_DMSL_nonexo[[ct]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_CNS_PiloAstro`.
+
+
+\subsubsection{Covariance matrices}
+
+
+
+```{r, CNSPiloAstro_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('CNS_PiloAstro_additional_runs')}
+ct <- "CNS-PiloAstro"
+# models_it_CNS_PiloAstro <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_CNS_PiloAstro <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_CNS_PiloAstro <- lapply(models_it_CNS_PiloAstro,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_CNS_PiloAstro) <- models_it_CNS_PiloAstro
+## because it's fullRE_M, it's sorted
+colnames(covmats_CNS_PiloAstro[['fullRE_M']]) <- rownames(covmats_CNS_PiloAstro[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_CNS_PiloAstro)$Y))
+colnames(covmats_CNS_PiloAstro[['fullRE_M_nonexo']]) <- rownames(covmats_CNS_PiloAstro[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_CNS_PiloAstro, nonexogenous$V1)$Y))
+colnames(covmats_CNS_PiloAstro[['fullRE_DMSL_nonexo']]) <- rownames(covmats_CNS_PiloAstro[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_CNS_PiloAstro, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_CNS_PiloAstro)){pheatmap(covmats_CNS_PiloAstro[[i]], cluster_rows = F, cluster_cols = F, main = models_it_CNS_PiloAstro[i])}
+```
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, CNSPiloAstro_sim, echo=FALSE}
+sim_CNS_PiloAstro <- give_sim_from_estimates(ct = "CNS-PiloAstro", typedata = "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                      tmb_object=fullRE_DMSL_nonexo[["CNS-PiloAstro"]])
+sim_CNS_PiloAstro[[2]]+ggtitle('Simulation of CNS-PiloAstro samples')
+
+```
+
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, CNSPiloAstro_ranked_plot}
+ct <- "CNS-PiloAstro"
+integer_overdispersion_param_DMSL <- 1
+obj_CNS_PiloAstro_nonexo <- give_subset_sigs_TMBobj(obj_CNS_PiloAstro, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_CNS_PiloAstro_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_CNS_PiloAstro_nonexo,
+                 loglog = F, title = 'obj_CNS_PiloAstro (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
+                 data_object = obj_CNS_PiloAstro_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_CNS_PiloAstro_nonexo,
+           loglog = F, title = 'obj_CNS_PiloAstro (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are a bit more chaotic:
+```{r, CNSPiloAstro_mutsigextractor}
+obj_CNS_PiloAstro_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_CNS_PiloAstro_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations, with perhaps SBS9 being slightly found in the rightmost side preferentially.
+```{r, CNSPiloAstro_sortedbynummuts}
+createBarplot(normalise_rw(non_duplicated_rows(obj_CNS_PiloAstro$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_CNS_PiloAstro$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{ColoRect-AdenoCA}
+
+\subsection{ColoRect-AdenoCA}
+\subsubsection{Barplot and general statistics}
+```{r ColoRectAdenoCA1, echo=FALSE}
+ct <- "ColoRect-AdenoCA"
+obj_ColoRect_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_ColoRect_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r ColoRectAdenoCA1b, echo=FALSE}
+dim(obj_ColoRect_AdenoCA$Y)
+```
+
+The signatures are:
+```{r ColoRectAdenoCA1c, echo=FALSE}
+colnames(obj_ColoRect_AdenoCA$Y)
+```
+
+
+
+\subsubsection{Convergence table}
+
+We only have converged results for the multinomial with diag RE, when including all mutations. For exogenous mutations, full DMSL is has not converged.
+
+```{r ColoRectAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "ColoRect-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo
+```{r ColoRectAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "ColoRect-AdenoCA"
+
+obj_ColoRectAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct,
+                                                                           typedata = "signatures",
+                                                                           path_to_data = "../../data/"),
+                                                                nonexogenous$V1))
+colnames(obj_ColoRectAdenoCA)
+sortedM_ColoRectAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_ColoRectAdenoCA)
+sortedM_ColoRectAdenoCA
+```
+
+
+Now the fullM doesn't converge (even though the original fullRE M nonexo did converge?), so I cannot use all the parameters to find the starting parameters of the DM, as some are NA. I can however use some, such as beta.
+
+
+What parameters are NA?
+```{r ColoRectAdenoCA3a1, echo=FALSE, message=FALSE, dependson=c('libraries')}
+sortedM_ColoRectAdenoCA$par.fixed
+```
+
+Betas, logsd and covariances are not NA. Therefore, we use these values as starting values, and give an empty random effects matrix.
+
+```{r ColoRectAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide', eval=T}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_ColoRectAdenoCA$Y)-1
+
+initial_params_colorect <- list(
+                             beta = matrix(python_like_select_name(sortedM_ColoRectAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(0, nrow=length(sortedM_ColoRectAdenoCA$par.random) %/% dmin1,
+                                              ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_ColoRectAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_ColoRectAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2)
+
+# sortedDM_ColoRectAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+#                            object = obj_ColoRectAdenoCA,
+#                            smart_init_vals = F, use_nlminb = T,
+#                            initial_params = initial_params_colorect)
+# sortedDM_ColoRectAdenoCA
+
+```
+
+I get the error "gradient function must rerurn a number vector of length 43" for some reason I don't understand - it's as though the initial values I am giving are not correct.
+
+```{r ColoRectAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('ColoRectAdenoCA3')}
+# sortedDM_ColoRectAdenoCA$pdHess
+```
+
+\subsubsection{Potentially problematic signatures}
+
+```{r, ColoRectAdenoCA1d}
+colSums(obj_ColoRect_AdenoCA$Y == 0)/nrow(obj_ColoRect_AdenoCA$Y)
+colSums(obj_ColoRect_AdenoCA$Y)/sum(obj_ColoRect_AdenoCA$Y)
+```
+
+\subsubsection{Betas}
+
+```{r, ColoRectAdenoCA_betas}
+ct <- "ColoRect-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+  plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+  plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')
+                                                 ), nrow=2)
+```
+
+```{r, ColoRectAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "ColoRect-AdenoCA"
+pval_ColoRect_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+We use the results from the diagonal RE single lambda DM nonexo to test for differential abundance, giving a p-value of `r pval_ColoRect_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+```{r, ColoRectAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('ColoRect_AdenoCA_additional_runs')}
+ct <- "ColoRect-AdenoCA"
+models_it_ColoRect_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_ColoRect_AdenoCA <- lapply(models_it_ColoRect_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_ColoRect_AdenoCA) <- models_it_ColoRect_AdenoCA
+## because it's fullRE_M, it's sorted
+colnames(covmats_ColoRect_AdenoCA[['fullRE_M']]) <- rownames(covmats_ColoRect_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_ColoRect_AdenoCA)$Y))
+colnames(covmats_ColoRect_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_ColoRect_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_ColoRect_AdenoCA, nonexogenous$V1)$Y))
+colnames(covmats_ColoRect_AdenoCA[['fullRE_DMSL_nonexo']]) <- rownames(covmats_ColoRect_AdenoCA[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_ColoRect_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_ColoRect_AdenoCA)){pheatmap(covmats_ColoRect_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_ColoRect_AdenoCA[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+I am simulating using the full effects multinomial, because the function <give_sim_from_estimates> needs to be adapted to diagDMSL.
+
+```{r, ColoRectAdenoCA_sim, echo=FALSE}
+sim_ColoRect_AdenoCA <- give_sim_from_estimates("ColoRect-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_M", bool_nonexo = F,
+                                      tmb_object=(fullRE_M_nonexo[["ColoRect-AdenoCA"]]),
+                                      sig_of_interest = "SBS14")
+sim_ColoRect_AdenoCA[[2]]+ggtitle('Simulation of ColoRect-AdenoCA samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, ColoRectAdenoCA_ranked_plot}
+ct <- "ColoRect-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_ColoRect_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_ColoRect_AdenoCA, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_ColoRect_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_ColoRect_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_ColoRect_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_ColoRect_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_ColoRect_AdenoCA_nonexo,
+           loglog = F, title = 'obj_ColoRect_AdenoCA (diag DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+```{r, ColoRectAdenoCA_mutsigextractor}
+obj_ColoRect_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_ColoRect_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: very clearly there are a few samples with very high number of mutations that also have a completely different mutational signature exposure.
+```{r, ColoRectAdenoCA_sortedbynummuts, fig.height=2, fig.width=4}
+createBarplot(normalise_rw(non_duplicated_rows(obj_ColoRect_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_ColoRect_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Eso-AdenoCA}
+
+\subsubsection{Barplot and general statistics}
+```{r EsoAdenoCA1, echo=FALSE}
+ct <- "Eso-AdenoCA"
+obj_Eso_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Eso_AdenoCA, legend_on = TRUE)
+```
+
+The number of samples and signatures is:
+```{r EsoAdenoCA1b, echo=FALSE}
+dim(obj_Eso_AdenoCA$Y)
+```
+
+The signatures are:
+```{r EsoAdenoCA1c, echo=FALSE}
+colnames(obj_Eso_AdenoCA$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+None of the fullRE have converged when including all signatures. When including nonexo, all but fullRE_DMSL_nonexo (using either the highest absolute signature or SBS1) have converged.
+```{r EsoAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Eso-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo
+```{r EsoAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Eso-AdenoCA"
+
+obj_EsoAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                      nonexogenous$V1))
+sortedM_EsoAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_EsoAdenoCA, use_nlminb=T)
+sortedM_EsoAdenoCA
+
+```
+
+which has a positive-semidefinite covariance matrix, i.e. has converged
+
+```{r EsoAdenoCA3convergence, echo=FALSE, message=FALSE, dependson=c('libraries')}
+sortedM_EsoAdenoCA$pdHess
+```
+
+The fullRE DMSL hasn't, though: 
+```{r EsoAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_EsoAdenoCA$Y)-1
+
+sortedDM_EsoAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_EsoAdenoCA,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_EsoAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_EsoAdenoCA$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_EsoAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_EsoAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_EsoAdenoCA
+```
+
+```{r EsoAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('EsoAdenoCA3')}
+sortedDM_EsoAdenoCA$pdHess
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We notice that there are no truly problematic signatures (SBS30 has the most zeros; 54.6\%).
+```{r, EsoAdenoCA1d}
+colSums(obj_Eso_AdenoCA$Y == 0)/nrow(obj_Eso_AdenoCA$Y)
+colSums(obj_Eso_AdenoCA$Y)/sum(obj_Eso_AdenoCA$Y)
+```
+
+\subsubsection{Betas}
+
+```{r, EsoAdenoCA_betas}
+ct <- "Eso-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, EsoAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+pval_Eso_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[["Eso-AdenoCA"]])
+```
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Eso_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+```{r, EsoAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Eso_AdenoCA_additional_runs')}
+ct <- "Eso-AdenoCA"
+# models_it_Eso_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Eso_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
+covmats_Eso_AdenoCA <- lapply(models_it_Eso_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Eso_AdenoCA) <- models_it_Eso_AdenoCA
+## because it's fullRE_M, it's sorted
+colnames(covmats_Eso_AdenoCA[['fullRE_M']]) <- rownames(covmats_Eso_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Eso_AdenoCA)$Y))
+colnames(covmats_Eso_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_Eso_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Eso_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Eso_AdenoCA)){pheatmap(covmats_Eso_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Eso_AdenoCA[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+```{r, EsoAdenoCA_sim, echo=FALSE}
+sim_Eso_AdenoCA <- give_sim_from_estimates("Eso-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                       tmb_object=diagRE_DMSL_nonexo[[ct]],
+                                      sig_of_interest='SBS2')
+sim_Eso_AdenoCA[[2]]+ggtitle('Simulation of Eso-AdenoCA samples')
+```
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, EsoAdenoCA_ranked_plot}
+ct <- "Eso-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Eso_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Eso_AdenoCA, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Eso_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Eso_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Eso_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Eso_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Eso_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Eso_AdenoCA (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, EsoAdenoCA_mutsigextractor}
+obj_Eso_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Eso_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is a trend of samples with more mutations having more SBS17b and less SBS5, relatively.
+```{r, EsoAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Eso_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Eso_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Head-SCC}
+
+\subsubsection{Barplot and general statistics}
+```{r HeadSCC1, echo=FALSE}
+ct <- "Head-SCC"
+obj_Head_SCC <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Head_SCC, legend_on = TRUE)
+```
+
+The number of samples and signatures is:
+```{r HeadSCC1b, echo=FALSE}
+dim(obj_Head_SCC$Y)
+```
+
+The signatures are:
+```{r HeadSCC1c, echo=FALSE}
+colnames(obj_Head_SCC$Y)
+```
+
+\subsubsection{Convergence table}
+
+We don't have converged results for the multinomial with full RE, but for nonexogenous signatures everything has.
+
+```{r HeadSCC2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Head-SCC"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+\subsubsection{Re-running of fitting}
+We don't need refitting, as the results have already converged.
+
+
+\subsubsection{Potentially problematic signatures}
+
+SBS33 is likely to be problematic.
+```{r, HeadSCC1d}
+colSums(obj_Head_SCC$Y == 0)/nrow(obj_Head_SCC$Y)
+colSums(obj_Head_SCC$Y)/sum(obj_Head_SCC$Y)
+```
+
+\subsubsection{Betas}
+
+```{r, HeadSCC_betas}
+ct <- "Head-SCC"
+
+grid.arrange(plot_betas(fullRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+             plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+             plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+             plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+  plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+  plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, HeadSCC_DA, echo=FALSE, message=FALSE, results='hide'}
+pval_Head_SCC <- wald_TMB_wrapper(fullRE_DMSL_nonexo[["Head-SCC"]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Head_SCC`.
+
+\subsubsection{Covariance matrices}
+
+```{r, HeadSCC_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Head_SCC_additional_runs')}
+ct <- "Head-SCC"
+# models_it_Head_SCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Head_SCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_Head_SCC <- lapply(models_it_Head_SCC,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Head_SCC) <- models_it_Head_SCC
+## because it's fullRE_M, it's sorted
+colnames(covmats_Head_SCC[['fullRE_M']]) <- rownames(covmats_Head_SCC[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Head_SCC)$Y))
+colnames(covmats_Head_SCC[['fullRE_M_nonexo']]) <- rownames(covmats_Head_SCC[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Head_SCC, nonexogenous$V1)$Y))
+colnames(covmats_Head_SCC[['fullRE_DMSL_nonexo']]) <- rownames(covmats_Head_SCC[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Head_SCC, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Head_SCC)){pheatmap(covmats_Head_SCC[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Head_SCC[i])}
+```
+
+\subsubsection{Simulation under inferred data}
+```{r, HeadSCC_sim, echo=FALSE}
+sim_Head_SCC <- give_sim_from_estimates("Head-SCC", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F, sig_of_interest="SBS2",
+                                       tmb_object=fullRE_DMSL_nonexo[["Head-SCC"]])
+sim_Head_SCC[[2]]+ggtitle('Simulation of Head-SCC samples')
+
+```
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, HeadSCC_ranked_plot}
+ct <- "Head-SCC"
+integer_overdispersion_param_DMSL <- 1
+obj_Head_SCC_nonexo <- give_subset_sigs_TMBobj(obj_Head_SCC, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Head_SCC_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Head_SCC_nonexo,
+                 loglog = F, title = 'obj_Head_SCC (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Head_SCC_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Head_SCC_nonexo,
+           loglog = F, title = 'obj_Head_SCC (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, HeadSCC_mutsigextractor}
+obj_Head_SCC_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Head_SCC_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, HeadSCC_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Head_SCC$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Head_SCC$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Kidney-ChRCC}
+
+\subsubsection{Barplot and general statistics}
+```{r KidneyChRCC1, echo=FALSE}
+ct <- "Kidney-ChRCC"
+obj_Kidney_ChRCC <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Kidney_ChRCC, legend_on = TRUE)
+```
+
+The number of samples and signatures is:
+```{r KidneyChRCC1b, echo=FALSE}
+dim(obj_Kidney_ChRCC$Y)
+```
+
+The signatures are:
+```{r KidneyChRCC1c, echo=FALSE}
+colnames(obj_Kidney_ChRCC$Y)
+```
+
+\subsubsection{Convergence table}
+
+For all signatures, no fullRE model has converged. For nonexogenous ones, all have.
+```{r KidneyChRCC2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Kidney-ChRCC"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+We do not need to re-run any model fitting.
+
+\subsubsection{Potentially problematic signatures}
+
+We notice that SBS17a and SBS17b are perhaps problematic.
+```{r, KidneyChRCC1d}
+colSums(obj_Kidney_ChRCC$Y == 0)/nrow(obj_Kidney_ChRCC$Y)
+colSums(obj_Kidney_ChRCC$Y)/sum(obj_Kidney_ChRCC$Y)
+```
+
+
+\subsubsection{Betas}
+
+```{r, KidneyChRCC_betas}
+ct <- "Kidney-ChRCC"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, KidneyChRCC_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Kidney-ChRCC"
+pval_Kidney_ChRCC <- wald_TMB_wrapper(fullRE_DMSL_nonexo[[ct]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Kidney_ChRCC`.
+
+\subsubsection{Covariance matrices}
+
+```{r, KidneyChRCC_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Kidney_ChRCC_additional_runs')}
+ct <- "Kidney-ChRCC"
+# models_it_Kidney_ChRCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Kidney_ChRCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_Kidney_ChRCC <- lapply(models_it_Kidney_ChRCC,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Kidney_ChRCC) <- models_it_Kidney_ChRCC
+## because it's fullRE_M, it's sorted
+colnames(covmats_Kidney_ChRCC[['fullRE_M']]) <- rownames(covmats_Kidney_ChRCC[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Kidney_ChRCC)$Y))
+colnames(covmats_Kidney_ChRCC[['fullRE_M_nonexo']]) <- rownames(covmats_Kidney_ChRCC[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Kidney_ChRCC, nonexogenous$V1)$Y))
+colnames(covmats_Kidney_ChRCC[['fullRE_DMSL_nonexo']]) <- rownames(covmats_Kidney_ChRCC[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Kidney_ChRCC, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Kidney_ChRCC)){pheatmap(covmats_Kidney_ChRCC[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Kidney_ChRCC[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+```{r, KidneyChRCC_sim, echo=FALSE}
+sim_Kidney_ChRCC <- give_sim_from_estimates("Kidney-ChRCC", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                       tmb_object=fullRE_DMSL_nonexo[["Kidney-ChRCC"]], sig_of_interest='SBS17b')
+sim_Kidney_ChRCC[[2]]+ggtitle('Simulation of Kidney-ChRCC samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, KidneyChRCC_ranked_plot}
+ct <- "Kidney-ChRCC"
+integer_overdispersion_param_DMSL <- 1
+obj_Kidney_ChRCC_nonexo <- give_subset_sigs_TMBobj(obj_Kidney_ChRCC, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Kidney_ChRCC_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Kidney_ChRCC_nonexo,
+                 loglog = F, title = 'obj_Kidney_ChRCC (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[["Kidney-ChRCC"]],
+                 data_object = obj_Kidney_ChRCC_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Kidney_ChRCC_nonexo,
+           loglog = F, title = 'obj_Kidney_ChRCC (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, KidneyChRCC_mutsigextractor}
+obj_Kidney_ChRCC_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Kidney_ChRCC_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, KidneyChRCC_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Kidney_ChRCC$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Kidney_ChRCC$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Kidney-RCC.clearcell}
 \subsection{Kidney-RCC.papillary}
 \subsection{Liver-HCC}
@@ -1265,6 +2308,168 @@ melt(all_summaries) %>% filter(value==ct)
 \subsection{Lung-SCC}
 \subsection{Lymph-BNHL}
 \subsection{Lymph-CLL}
+
+\subsubsection{Barplot and general statistics}
+```{r LymphCLL1, echo=FALSE}
+ct <- "Lymph-CLL"
+obj_Lymph_CLL <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lymph_CLL, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r LymphCLL1b, echo=FALSE}
+dim(obj_Lymph_CLL$Y)
+```
+
+The signatures are:
+```{r LymphCLL1c, echo=FALSE}
+colnames(obj_Lymph_CLL$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+We have converged results in most cases
+
+```{r LymphCLL2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Lymph-CLL"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+\subsubsection{Potentially problematic signatures}
+SBS9 has quite a lot of zeros.
+```{r, LymphCLL1d}
+colSums(obj_Lymph_CLL$Y == 0)/nrow(obj_Lymph_CLL$Y)
+colSums(obj_Lymph_CLL$Y)/sum(obj_Lymph_CLL$Y)
+```
+
+
+
+\subsubsection{Betas}
+
+```{r, LymphCLL_betas}
+ct <- "Lymph-CLL"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+  plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+
+```{r, LymphCLL_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Lymph-CLL"
+pval_Lymph_CLL <- wald_TMB_wrapper(fullRE_DMSL_nonexo[[ct]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Lymph_CLL`.
+
+
+\subsubsection{Covariance matrices}
+
+
+
+```{r, LymphCLL_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Lymph_CLL_additional_runs')}
+ct <- "Lymph-CLL"
+# models_it_Lymph_CLL <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Lymph_CLL <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_Lymph_CLL <- lapply(models_it_Lymph_CLL,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Lymph_CLL) <- models_it_Lymph_CLL
+## because it's fullRE_M, it's sorted
+colnames(covmats_Lymph_CLL[['fullRE_M']]) <- rownames(covmats_Lymph_CLL[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Lymph_CLL)$Y))
+colnames(covmats_Lymph_CLL[['fullRE_M_nonexo']]) <- rownames(covmats_Lymph_CLL[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lymph_CLL, nonexogenous$V1)$Y))
+colnames(covmats_Lymph_CLL[['fullRE_DMSL_nonexo']]) <- rownames(covmats_Lymph_CLL[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lymph_CLL, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Lymph_CLL)){pheatmap(covmats_Lymph_CLL[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Lymph_CLL[i])}
+```
+
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, LymphCLL_sim, echo=FALSE}
+sim_Lymph_CLL <- give_sim_from_estimates("Lymph-CLL", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                       tmb_object=fullRE_DMSL_nonexo[["Lymph-CLL"]], sig_of_interest='SBS9')
+sim_Lymph_CLL[[2]]+ggtitle('Simulation of Lymph-CLL samples')
+
+```
+
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, LymphCLL_ranked_plot}
+ct <- "Lymph-CLL"
+integer_overdispersion_param_DMSL <- 1
+obj_Lymph_CLL_nonexo <- give_subset_sigs_TMBobj(obj_Lymph_CLL, sigs_to_remove = nonexogenous$V1)
+for(loglog_bool_it in c(T,F)){
+  .full_rankedplot <-    give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[["Lymph-CLL"]],
+                   data_object = obj_Lymph_CLL_nonexo,
+                   print_plot = F, nreps = 100, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                     lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                            rank_number=1:length(j)) )})[[1]],
+                   data_object = obj_Lymph_CLL_nonexo,
+             loglog = loglog_bool_it, title = 'obj_Lymph_CLL nonexo (fullRE DMSL)')
+  grid.arrange(
+    give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                   data_object = obj_Lymph_CLL_nonexo,
+                   print_plot = F, nreps = 100, model = "M")), function(i){
+                     lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                            rank_number=1:length(j)) )})[[1]],
+                   data_object = obj_Lymph_CLL_nonexo,
+                   loglog = loglog_bool_it, title = 'obj_Lymph_CLL nonexo (M)'),
+    .full_rankedplot, ncol=2)
+
+  grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                   data_object = obj_Lymph_CLL_nonexo,
+                   print_plot = F, nreps = 100, model = "DMSL",
+                   integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                     lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                            rank_number=1:length(j)) )})[[1]],
+                   data_object = obj_Lymph_CLL_nonexo,
+                   loglog = loglog_bool_it, title = 'obj_Lymph_CLL nonexo (diagRE DMSL)'),
+               .full_rankedplot, ncol=2)
+
+}
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+These are the signatures from mutSigExtractor:
+```{r, LymphCLL_mutsigextractor}
+obj_Lymph_CLL_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lymph_CLL_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: SBS9 and SBS25 seem to be somewhat associated with samples with a high number of mutations.
+```{r, LymphCLL_sortedbynummuts}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Lymph_CLL$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Lymph_CLL$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Myeloid-MPN}
 \subsection{Ovary-AdenoCA}
 \subsection{Panc-AdenoCA}
@@ -1282,7 +2487,8 @@ melt(all_summaries) %>% filter(value==ct)
 ```{r, all_pvals_improved, echo=FALSE, results='asis'}
 all_pvals <- rbind.data.frame(cbind.data.frame(ct='Bone-Osteosarc', pvalue=pval_bone_osteosarc, model='diagRE_DMSL_nonexo'),
                               cbind.data.frame(ct='Breast-AdenoCA', pvalue=pval_Breast_AdenoCA, model='diagRE_DMSL_nonexo'),
-                              cbind.data.frame(ct='Cervix-SCC', pvalue=pval_Cervix_SCC, model='fullRE_DMSL_nonexo')                   
+                              cbind.data.frame(ct='Cervix-SCC', pvalue=pval_Cervix_SCC, model='fullRE_DMSL_nonexo') ,
+                              cbind.data.frame(ct='CNS-Oligo', pvalue=pval_CNS_Oligo, model='fullRE_DMSL_nonexo')
                               )
 
 xtable::print.xtable(xtable::xtable(all_pvals), digits=c(0,10,0))
@@ -1420,4 +2626,10 @@ for(i in names(roo_obj2)){
 }
 ```
 
+```{r, all_pvals_2}
+cbind.data.frame(pvals_fullRE_M=pvals_fullRE_M,
+                 pvals_diagRE_DM=pvals_diagRE_DM,
+                 pvals_DM=pvals_DM,
+                 pvals_DMnonexo=pvals_DMnonexo)
 
+```

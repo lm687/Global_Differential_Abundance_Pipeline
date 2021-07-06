@@ -1174,6 +1174,7 @@ simulate_from_DMSL_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix,
       x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
     sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* softmax(c(logRmat[l,], 0)))))
   }else{
+    ## univariate RE
     sim_thetas = softmax(cbind(sapply(1:dmin1,
                                       function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
                                  give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
@@ -1258,6 +1259,10 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T){
   }
 }
 
+give_length_cov <- function(dim1_covmat){
+  (dim1_covmat**2)/2 - dim1_covmat
+}
+
 
 give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
                                     bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
@@ -1293,6 +1298,12 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
     cov_vec[as.numeric(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,"V2"], ',')[[1]])] = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_RE_part')
     var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
     var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }else if(model %in% c("diagRE_M", "diagRE_DM", "diagRE_DMSL")){
+    cov_vec = rep(0, give_length_cov(length(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))))
+    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }else{
+    stop('Specify correct <model>')
   }
   
   cov_mat <- fill_covariance_matrix(arg_d = dmin1,
@@ -1313,7 +1324,7 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
   
   theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
   
-  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL')){
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
     alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
   }else if(model %in% c("fullRE_M")){
     alpha = softmax(cbind(theta, 0))
@@ -1321,11 +1332,13 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
     stop('Check softmax step')
   }
   
-  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL')){
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
     probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
   }else if(model %in% c("fullRE_M")){
     probs = alpha
-  }
+  }else{
+      stop('Check probabilities step')
+    }
   
   probs_obs = normalise_rw(obj_data$Y)
   all_probs = rbind(probs_obs, probs)
@@ -1334,7 +1347,8 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
     pca <- prcomp(all_probs)
     df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
                                sig_of_interest=all_probs[,sig_of_interest],
-                               group=c('early','late'))
+                               group=c(rep(c('early','late')[obj_data$x[,2]+1]),
+                                       rep(c('early','late'), n_sim)))
     return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+
                   geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group))))
   }else{
@@ -1348,4 +1362,8 @@ vector_cats_to_logR <- function(i){paste0(i[-length(i)], '/', i[length(i)])}
 non_duplicated_rows <- function(i){
   rownames(i)[duplicated(rownames(i))] = paste0(rownames(i)[duplicated(rownames(i))], "_2")
   i
+}
+
+give_all_correlations <- function(j){
+  outer(1:nrow(j), 1:nrow(j), Vectorize(function(i,k){cor(j[i,], j[k,])}))
 }
