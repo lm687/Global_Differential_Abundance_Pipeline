@@ -1345,6 +1345,9 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
   
   if(bool_give_PCA){
     pca <- prcomp(all_probs)
+    
+    if(! (sig_of_interest %in% colnames(all_probs))){stop('Specify a <sig_of_interest> present in the dataset')}
+    
     df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
                                sig_of_interest=all_probs[,sig_of_interest],
                                group=c(rep(c('early','late')[obj_data$x[,2]+1]),
