@@ -2302,11 +2302,984 @@ createBarplot(normalise_rw(non_duplicated_rows(obj_Kidney_ChRCC$Y)),
 ```
 
 \subsection{Kidney-RCC.clearcell}
+\subsubsection{Barplot and general statistics}
+```{r KidneyRCCclearcell1, echo=FALSE}
+ct <- "Kidney-RCC.clearcell"
+obj_Kidney_RCCclearcell <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Kidney_RCCclearcell, legend_on = TRUE)
+```
+
+
+The number of samples and signatures is:
+```{r KidneyRCCclearcell1b, echo=FALSE}
+dim(obj_Kidney_RCCclearcell$Y)
+```
+
+The signatures are:
+```{r KidneyRCCclearcell1c, echo=FALSE}
+colnames(obj_Kidney_RCCclearcell$Y)
+```
+
+\subsubsection{Convergence table}
+
+Essentially, everything has converged.
+
+```{r KidneyRCCclearcell2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Kidney-RCC.clearcell"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+
+\subsubsection{Potentially problematic signatures}
+
+There are no problematic signatures.
+```{r, KidneyRCCclearcell1d}
+colSums(obj_Kidney_RCCclearcell$Y == 0)/nrow(obj_Kidney_RCCclearcell$Y)
+colSums(obj_Kidney_RCCclearcell$Y)/sum(obj_Kidney_RCCclearcell$Y)
+```
+
+We would need to run \verb|fullRE_DMSL|, because it timed out.
+
+\subsubsection{Betas}
+
+```{r, KidneyRCCclearcell_betas}
+ct <- "Kidney-RCC.clearcell"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, KidneyRCCclearcell_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Kidney-RCC.clearcell"
+pval_Kidney_RCCclearcell <- wald_TMB_wrapper(fullRE_DMSL_nonexo[[ct]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Kidney_RCCclearcell`.
+
+\subsubsection{Covariance matrices}
+
+```{r, KidneyRCCclearcell_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Kidney_RCCclearcell_additional_runs')}
+ct <- "Kidney-RCC.clearcell"
+# models_it_Kidney_RCCclearcell <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Kidney_RCCclearcell <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_Kidney_RCCclearcell <- lapply(models_it_Kidney_RCCclearcell,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Kidney_RCCclearcell) <- models_it_Kidney_RCCclearcell
+## because it's fullRE_M, it's sorted
+colnames(covmats_Kidney_RCCclearcell[['fullRE_M']]) <- rownames(covmats_Kidney_RCCclearcell[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Kidney_RCCclearcell)$Y))
+colnames(covmats_Kidney_RCCclearcell[['fullRE_M_nonexo']]) <- rownames(covmats_Kidney_RCCclearcell[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Kidney_RCCclearcell, nonexogenous$V1)$Y))
+colnames(covmats_Kidney_RCCclearcell[['fullRE_DMSL_nonexo']]) <- rownames(covmats_Kidney_RCCclearcell[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Kidney_RCCclearcell, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Kidney_RCCclearcell)){pheatmap(covmats_Kidney_RCCclearcell[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Kidney_RCCclearcell[i])}
+```
+
+\subsubsection{Simulation under inferred data}
+```{r, KidneyRCCclearcell_sim, echo=FALSE}
+sim_Kidney_RCCclearcell <- give_sim_from_estimates("Kidney-RCC.clearcell", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F, sig_of_interest='SBS12',
+                                       tmb_object=fullRE_DMSL_nonexo[["Kidney-RCC.clearcell"]])
+sim_Kidney_RCCclearcell[[2]]+ggtitle('Simulation of Kidney-RCC.clearcell samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, KidneyRCCclearcell_ranked_plot}
+ct <- "Kidney-RCC.clearcell"
+integer_overdispersion_param_DMSL <- 1
+obj_Kidney_RCCclearcell_nonexo <- give_subset_sigs_TMBobj(obj_Kidney_RCCclearcell, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Kidney_RCCclearcell_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Kidney_RCCclearcell_nonexo,
+                 loglog = F, title = 'obj_Kidney_RCCclearcell (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Kidney_RCCclearcell_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Kidney_RCCclearcell_nonexo,
+           loglog = F, title = 'obj_Kidney_RCCclearcell (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, KidneyRCCclearcell_mutsigextractor}
+obj_Kidney_RCCclearcell_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Kidney_RCCclearcell_mutSigExtractor, legend_on = FALSE)
+```
+
+I should check if this grey exposure corresponds to SBS40.
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations except for perhaps the very few with highest exposure.
+```{r, KidneyRCCclearcell_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Kidney_RCCclearcell$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Kidney_RCCclearcell$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Kidney-RCC.papillary}
+It looks very similar to clear cell, looking generally at the signatures.
+
+\subsubsection{Barplot and general statistics}
+```{r KidneyRCCpapillary1, echo=FALSE}
+ct <- "Kidney-RCC.papillary"
+obj_Kidney_RCCpapillary <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Kidney_RCCpapillary, legend_on = TRUE)
+```
+
+The number of samples and signatures is:
+```{r KidneyRCCpapillary1b, echo=FALSE}
+dim(obj_Kidney_RCCpapillary$Y)
+```
+
+The signatures are:
+```{r KidneyRCCpapillary1c, echo=FALSE}
+colnames(obj_Kidney_RCCpapillary$Y)
+```
+
+\subsubsection{Convergence table}
+
+Although fulLRE DMSL has in one case converged, it hasn't when using SBS1 as baseline. The nonexogenous version has not converged, but M has.
+
+
+```{r KidneyRCCpapillary2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Kidney-RCC.papillary"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo. We first re-run M.
+```{r KidneyRCCpapillary3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Kidney-RCC.papillary"
+
+obj_KidneyRCCpapillary <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_KidneyRCCpapillary <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_KidneyRCCpapillary)
+sortedM_KidneyRCCpapillary
+```
+
+The we use it to re-run DM.
+```{r KidneyRCCpapillary3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_KidneyRCCpapillary$Y)-1
+
+sortedDM_KidneyRCCpapillary <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_KidneyRCCpapillary,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_KidneyRCCpapillary$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_KidneyRCCpapillary$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_KidneyRCCpapillary$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_KidneyRCCpapillary$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_KidneyRCCpapillary
+
+```
+
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo do converge:
+```{r KidneyRCCpapillary3b, echo=FALSE, message=FALSE, dependson=c('KidneyRCCpapillary3')}
+sortedDM_KidneyRCCpapillary$pdHess
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, KidneyRCCpapillary1d}
+colSums(obj_Kidney_RCCpapillary$Y == 0)/nrow(obj_Kidney_RCCpapillary$Y)
+colSums(obj_Kidney_RCCpapillary$Y)/sum(obj_Kidney_RCCpapillary$Y)
+```
+SBS29 is found in relatively small quantities.
+
+```{r, Kidney_RCCpapillary_additional_runs, dependson=c('additional_runs'), echo=FALSE}
+additional_sortedMnonexo[["Kidney-RCC.papillary"]] <- sortedM_KidneyRCCpapillary
+additional_sortedDMSLnonexo[["Kidney-RCC.papillary"]] <- sortedDM_KidneyRCCpapillary
+```
+
+\subsubsection{Betas}
+
+```{r, KidneyRCCpapillary_betas}
+ct <- "Kidney-RCC.papillary"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_KidneyRCCpapillary)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+```{r, KidneyRCCpapillary_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Kidney-RCC.papillary"
+pval_Kidney_RCCpapillary <- wald_TMB_wrapper(sortedDM_KidneyRCCpapillary)
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Kidney_RCCpapillary`.
+
+\subsubsection{Covariance matrices}
+
+```{r, KidneyRCCpapillary_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Kidney_RCCpapillary_additional_runs')}
+ct <- "Kidney-RCC.papillary"
+# models_it_Kidney_RCCpapillary <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Kidney_RCCpapillary <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
+covmats_Kidney_RCCpapillary <- lapply(models_it_Kidney_RCCpapillary,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Kidney_RCCpapillary) <- models_it_Kidney_RCCpapillary
+## because it's fullRE_M, it's sorted
+colnames(covmats_Kidney_RCCpapillary[['fullRE_M']]) <- rownames(covmats_Kidney_RCCpapillary[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Kidney_RCCpapillary)$Y))
+colnames(covmats_Kidney_RCCpapillary[['fullRE_M_nonexo']]) <- rownames(covmats_Kidney_RCCpapillary[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Kidney_RCCpapillary, nonexogenous$V1)$Y))
+colnames(covmats_Kidney_RCCpapillary[['additional_sortedDMSLnonexo']]) <- rownames(covmats_Kidney_RCCpapillary[['additional_sortedDMSLnonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Kidney_RCCpapillary, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Kidney_RCCpapillary)){pheatmap(covmats_Kidney_RCCpapillary[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Kidney_RCCpapillary[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+```{r, KidneyRCCpapillary_sim, echo=FALSE}
+sim_Kidney_RCCpapillary <- give_sim_from_estimates("Kidney-RCC.papillary", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest='SBS22',
+                                       tmb_object=sortedDM_KidneyRCCpapillary)
+sim_Kidney_RCCpapillary[[2]]+ggtitle('Simulation of Kidney-RCC.papillary samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+What has happened here?
+
+```{r, KidneyRCCpapillary_ranked_plot, echo=FALSE}
+ct <- "Kidney-RCC.papillary"
+integer_overdispersion_param_DMSL <- 1
+obj_Kidney_RCCpapillary_nonexo <- give_subset_sigs_TMBobj(obj_Kidney_RCCpapillary, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Kidney_RCCpapillary_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Kidney_RCCpapillary_nonexo,
+                 loglog = F, title = 'obj_Kidney_RCCpapillary (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sortedDM_KidneyRCCpapillary,
+                 data_object = obj_Kidney_RCCpapillary_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Kidney_RCCpapillary_nonexo,
+           loglog = F, title = 'obj_Kidney_RCCpapillary (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, KidneyRCCpapillary_mutsigextractor}
+obj_Kidney_RCCpapillary_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Kidney_RCCpapillary_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, KidneyRCCpapillary_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Kidney_RCCpapillary$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Kidney_RCCpapillary$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Liver-HCC}
+\subsubsection{Barplot and general statistics}
+```{r LiverHCC1, echo=FALSE}
+ct <- "Liver-HCC"
+obj_Liver_HCC <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Liver_HCC, legend_on = TRUE)
+```
+
+
+The number of samples and signatures is:
+```{r LiverHCC1b, echo=FALSE}
+dim(obj_Liver_HCC$Y)
+```
+
+The signatures are:
+```{r LiverHCC1c, echo=FALSE}
+colnames(obj_Liver_HCC$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+The fullRE versions with all signatures have not converged. Neither has \verb|fullRE_M_nonexo|, but \verb|fullRE_DMSL_nonexo| has.
+```{r LiverHCC2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Liver-HCC"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, LiverHCC1d}
+colSums(obj_Liver_HCC$Y == 0)/nrow(obj_Liver_HCC$Y)
+colSums(obj_Liver_HCC$Y)/sum(obj_Liver_HCC$Y)
+```
+
+SBS28 is only present in 7\% of samples and has extremely low exposure - we could consider removing it.
+
+
+\subsubsection{Betas}
+
+```{r, LiverHCC_betas}
+ct <- "Liver-HCC"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+```{r, LiverHCC_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Liver-HCC"
+pval_Liver_HCC <- wald_TMB_wrapper(fullRE_DMSL_nonexo[[ct]])
+```
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Liver_HCC`.
+
+\subsubsection{Covariance matrices}
+
+```{r, LiverHCC_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Liver_HCC_additional_runs')}
+ct <- "Liver-HCC"
+# models_it_Liver_HCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Liver_HCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_Liver_HCC <- lapply(models_it_Liver_HCC,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Liver_HCC) <- models_it_Liver_HCC
+## because it's fullRE_M, it's sorted
+colnames(covmats_Liver_HCC[['fullRE_M']]) <- rownames(covmats_Liver_HCC[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Liver_HCC)$Y))
+colnames(covmats_Liver_HCC[['fullRE_M_nonexo']]) <- rownames(covmats_Liver_HCC[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Liver_HCC, nonexogenous$V1)$Y))
+colnames(covmats_Liver_HCC[['fullRE_DMSL_nonexo']]) <- rownames(covmats_Liver_HCC[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Liver_HCC, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Liver_HCC)){pheatmap(covmats_Liver_HCC[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Liver_HCC[i])}
+```
+
+\subsubsection{Simulation under inferred data}
+```{r, LiverHCC_sim, echo=FALSE}
+sim_Liver_HCC <- give_sim_from_estimates("Liver-HCC", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest='SBS19',
+                                       tmb_object=fullRE_DMSL_nonexo[["Liver-HCC"]])
+sim_Liver_HCC[[2]]+ggtitle('Simulation of Liver-HCC samples')
+
+```
+
+
+
+\subsubsection{Ranked plot for coverage}
+
+Remember that fullRE M has not converged, and it should be re-run:
+```{r, LiverHCC_ranked_plot}
+ct <- "Liver-HCC"
+integer_overdispersion_param_DMSL <- 1
+obj_Liver_HCC_nonexo <- give_subset_sigs_TMBobj(obj_Liver_HCC, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Liver_HCC_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Liver_HCC_nonexo,
+                 loglog = F, title = 'obj_Liver_HCC (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Liver_HCC_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Liver_HCC_nonexo,
+           loglog = F, title = 'obj_Liver_HCC (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, LiverHCC_mutsigextractor}
+obj_Liver_HCC_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Liver_HCC_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, LiverHCC_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Liver_HCC$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Liver_HCC$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Lung-AdenoCA}
+How can we have such few samples?
+\subsubsection{Barplot and general statistics}
+```{r LungAdenoCA1, echo=FALSE}
+ct <- "Lung-AdenoCA"
+obj_Lung_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lung_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r LungAdenoCA1b, echo=FALSE}
+dim(obj_Lung_AdenoCA$Y)
+```
+
+The signatures are:
+```{r LungAdenoCA1c, echo=FALSE}
+colnames(obj_Lung_AdenoCA$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+No fullRE DMSL have converged.
+```{r LungAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Lung-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo. We re-run fullRE_M_nonexo and it has converged:
+```{r LungAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Lung-AdenoCA"
+
+obj_LungAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_LungAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_LungAdenoCA)
+sortedM_LungAdenoCA
+```
+
+But fullRE DMSL hasn't:
+```{r LungAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_LungAdenoCA$Y)-1
+
+sortedDM_LungAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_LungAdenoCA,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_LungAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_LungAdenoCA$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_LungAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_LungAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_LungAdenoCA
+```
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo does not converge:
+```{r LungAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('LungAdenoCA3')}
+sortedDM_LungAdenoCA$pdHess
+```
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, LungAdenoCA1d}
+colSums(obj_Lung_AdenoCA$Y == 0)/nrow(obj_Lung_AdenoCA$Y)
+colSums(obj_Lung_AdenoCA$Y)/sum(obj_Lung_AdenoCA$Y)
+```
+None seem to be problematic.
+
+
+\subsubsection{Betas}
+
+```{r, LungAdenoCA_betas}
+ct <- "Lung-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, LungAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Lung-AdenoCA"
+pval_Lung_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Lung_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+```{r, LungAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Lung_AdenoCA_additional_runs')}
+ct <- "Lung-AdenoCA"
+# models_it_Lung_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Lung_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
+covmats_Lung_AdenoCA <- lapply(models_it_Lung_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Lung_AdenoCA) <- models_it_Lung_AdenoCA
+## because it's fullRE_M, it's sorted
+colnames(covmats_Lung_AdenoCA[['fullRE_M']]) <- rownames(covmats_Lung_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Lung_AdenoCA)$Y))
+colnames(covmats_Lung_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_Lung_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lung_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Lung_AdenoCA)){pheatmap(covmats_Lung_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Lung_AdenoCA[i])}
+```
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, LungAdenoCA_sim, echo=FALSE}
+sim_Lung_AdenoCA <- give_sim_from_estimates("Lung-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest='SBS9',
+                                       tmb_object=diagRE_DMSL_nonexo[["Lung-AdenoCA"]])
+sim_Lung_AdenoCA[[2]]+ggtitle('Simulation of Lung-AdenoCA samples')
+
+```
+
+\subsubsection{Ranked plot for coverage}
+
+THIS IS PROBABLY INCORRECT! THE OBJECT SHOULD BE SORTED
+```{r, LungAdenoCA_ranked_plot}
+ct <- "Lung-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Lung_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Lung_AdenoCA, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Lung_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Lung_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Lung_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Lung_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Lung_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Lung_AdenoCA (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, LungAdenoCA_mutsigextractor}
+obj_Lung_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lung_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is a trend in which SBS5 decreases and SBS4 increases with the number of mutations.
+```{r, LungAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Lung_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Lung_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Lung-SCC}
+\subsubsection{Barplot and general statistics}
+```{r LungSCC1, echo=FALSE}
+ct <- "Lung-SCC"
+obj_Lung_SCC <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lung_SCC, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r LungSCC1b, echo=FALSE}
+dim(obj_Lung_SCC$Y)
+```
+
+The signatures are:
+```{r LungSCC1c, echo=FALSE}
+colnames(obj_Lung_SCC$Y)
+```
+
+\subsubsection{Convergence table}
+
+We have converged results in most cases, and all in nonexo.
+
+```{r LungSCC2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Lung-SCC"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures; none are.
+```{r, LungSCC1d}
+colSums(obj_Lung_SCC$Y == 0)/nrow(obj_Lung_SCC$Y)
+colSums(obj_Lung_SCC$Y)/sum(obj_Lung_SCC$Y)
+```
+
+\subsubsection{Betas}
+
+Very clear example of only one signature changing:
+```{r, LungSCC_betas}
+ct <- "Lung-SCC"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(fullRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+```{r, LungSCC_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Lung-SCC"
+pval_Lung_SCC <- wald_TMB_wrapper(fullRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Lung_SCC`.
+
+\subsubsection{Covariance matrices}
+
+```{r, LungSCC_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Lung_SCC_additional_runs')}
+ct <- "Lung-SCC"
+# models_it_Lung_SCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Lung_SCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
+covmats_Lung_SCC <- lapply(models_it_Lung_SCC,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Lung_SCC) <- models_it_Lung_SCC
+## because it's fullRE_M, it's sorted
+colnames(covmats_Lung_SCC[['fullRE_M']]) <- rownames(covmats_Lung_SCC[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Lung_SCC)$Y))
+colnames(covmats_Lung_SCC[['fullRE_M_nonexo']]) <- rownames(covmats_Lung_SCC[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lung_SCC, nonexogenous$V1)$Y))
+colnames(covmats_Lung_SCC[['fullRE_DMSL_nonexo']]) <- rownames(covmats_Lung_SCC[['fullRE_DMSL_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lung_SCC, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Lung_SCC)){pheatmap(covmats_Lung_SCC[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Lung_SCC[i])}
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, LungSCC_ranked_plot, echo=FALSE}
+ct <- "Lung-SCC"
+integer_overdispersion_param_DMSL <- 1
+obj_Lung_SCC_nonexo <- give_subset_sigs_TMBobj(obj_Lung_SCC, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Lung_SCC_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Lung_SCC_nonexo,
+                 loglog = F, title = 'obj_Lung_SCC (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Lung_SCC_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Lung_SCC_nonexo,
+           loglog = F, title = 'obj_Lung_SCC (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, LungSCC_mutsigextractor}
+obj_Lung_SCC_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lung_SCC_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, LungSCC_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Lung_SCC$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Lung_SCC$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Lymph-BNHL}
+\subsubsection{Barplot and general statistics}
+```{r LymphBNHL1, echo=FALSE}
+ct <- "Lymph-BNHL"
+obj_Lymph_BNHL <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lymph_BNHL, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r LymphBNHL1b, echo=FALSE}
+dim(obj_Lymph_BNHL$Y)
+```
+
+The signatures are:
+```{r LymphBNHL1c, echo=FALSE}
+colnames(obj_Lymph_BNHL$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+fullRE_DMSL_nonexo had not run, and fullRE_M_nonexo didn't converge.
+```{r LymphBNHL2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Lymph-BNHL"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo. Very clearly there are too many signatures.
+```{r LymphBNHL3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Lymph-BNHL"
+
+obj_LymphBNHL <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_LymphBNHL <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_LymphBNHL)
+sortedM_LymphBNHL
+```
+
+Which signatures should be omitted from the analysis?
+
+```{r, LymphBNHL_remove_small_signatures, fig.height=2}
+
+ggplot(melt(obj_LymphBNHL$Y), aes(x=Var2, y=value+1))+geom_violin()+scale_y_continuous(trans = "log2")
+
+```
+
+SBS13 and SBS39 should definitely be removed.
+
+```{r LymphBNHL3_subset, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Lymph-BNHL"
+
+obj_LymphBNHL <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                c(nonexogenous$V1, 'SBS13', 'SBS39')))
+sortedM_LymphBNHL <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_LymphBNHL, use_nlminb=T)
+sortedM_LymphBNHL
+```
+
+Has fullRE M now converged?
+converge:
+```{r LymphBNHL3_subset_conv, echo=FALSE, message=FALSE, dependson=c('LymphBNHL3')}
+sortedM_LymphBNHL$pdHess
+```
+
+it has. I now run DM with this subset
+
+```{r LymphBNHL3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_LymphBNHL$Y)-1
+
+sortedDM_LymphBNHL <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_LymphBNHL,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_LymphBNHL$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_LymphBNHL$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_LymphBNHL$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_LymphBNHL$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_LymphBNHL
+
+```
+
+Its convergence is as follows:
+
+```{r LymphBNHL3b, echo=FALSE, message=FALSE, dependson=c('LymphBNHL3')}
+sortedDM_LymphBNHL$pdHess
+```
+
+it has also converged
+
+```{r, Lymph_BNHL_additional_runs, dependson=c('additional_runs')}
+additional_sortedMnonexo[["Lymph-BNHL"]] <- sortedM_LymphBNHL
+additional_sortedDMSLnonexo[["Lymph-BNHL"]] <- sortedDM_LymphBNHL
+```
+
+
+\subsubsection{Betas}
+
+```{r, LymphBNHL_betas}
+ct <- "Lymph-BNHL"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(additional_sortedMnonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(additional_sortedDMSLnonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, LymphBNHL_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Lymph-BNHL"
+pval_Lymph_BNHL <- wald_TMB_wrapper(sortedDM_LymphBNHL)
+```
+We use the results from the full RE single lambda DM with the subset of signatures (removing thw two problematic ones) to test for differential abundance, giving a p-value of `r pval_Lymph_BNHL`.
+
+\subsubsection{Covariance matrices}
+
+```{r, LymphBNHL_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Lymph_BNHL_additional_runs')}
+ct <- "Lymph-BNHL"
+models_it_Lymph_BNHL <- c('fullRE_M', 'additional_sortedMnonexo', 'additional_sortedDMSLnonexo')
+covmats_Lymph_BNHL <- lapply(models_it_Lymph_BNHL,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Lymph_BNHL) <- models_it_Lymph_BNHL
+## because it's fullRE_M, it's sorted
+colnames(covmats_Lymph_BNHL[['fullRE_M']]) <- rownames(covmats_Lymph_BNHL[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Lymph_BNHL)$Y))
+colnames(covmats_Lymph_BNHL[['additional_sortedMnonexo']]) <- rownames(covmats_Lymph_BNHL[['additional_sortedMnonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lymph_BNHL,c(nonexogenous$V1, 'SBS13', 'SBS39'))$Y))
+colnames(covmats_Lymph_BNHL[['additional_sortedDMSLnonexo']]) <- rownames(covmats_Lymph_BNHL[['additional_sortedDMSLnonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Lymph_BNHL,c(nonexogenous$V1, 'SBS13', 'SBS39'))$Y))
+for(i in 1:length(covmats_Lymph_BNHL)){pheatmap(covmats_Lymph_BNHL[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Lymph_BNHL[i])}
+```
+
+\subsubsection{Simulation under inferred data}
+```{r, LymphBNHL_sim, echo=FALSE}
+sim_Lymph_BNHL <- give_sim_from_estimates("Lymph-BNHL", "signatures",
+                                      sigs_to_remove=c(unique(nonexogenous$V1), 'SBS13', 'SBS39'),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest='SBS6',
+                                       tmb_object=sortedDM_LymphBNHL)
+sim_Lymph_BNHL[[2]]+ggtitle('Simulation of Lymph-BNHL samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+Should it be simply give_subset_sigs_TMBobj or additionally also sort_columns_TMB? If I only use give_subset_sigs_TMBobj I get very strange results. This should perhaps be changed to all chunks above!!
+```{r, LymphBNHL_ranked_plot}
+ct <- "Lymph-BNHL"
+integer_overdispersion_param_DMSL <- 1
+obj_Lymph_BNHL_nonexo <- sort_columns_TMB(give_subset_sigs_TMBobj(obj_Lymph_BNHL,
+                                                 sigs_to_remove = c(nonexogenous$V1, 'SBS13', 'SBS39')))
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sortedM_LymphBNHL,
+                 data_object = obj_Lymph_BNHL_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Lymph_BNHL_nonexo,
+                 loglog = F, title = 'obj_Lymph_BNHL (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sortedDM_LymphBNHL,
+                 data_object = obj_Lymph_BNHL_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Lymph_BNHL_nonexo,
+           loglog = F, title = 'obj_Lymph_BNHL (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, LymphBNHL_mutsigextractor}
+obj_Lymph_BNHL_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Lymph_BNHL_mutSigExtractor, legend_on = FALSE)
+```
+something must have gone wrong here.
+
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, LymphBNHL_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Lymph_BNHL$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Lymph_BNHL$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Lymph-CLL}
 
 \subsubsection{Barplot and general statistics}
@@ -2350,6 +3323,8 @@ colSums(obj_Lymph_CLL$Y)/sum(obj_Lymph_CLL$Y)
 
 
 \subsubsection{Betas}
+
+It's interesting the very high correlation between intercept and slope betas.
 
 ```{r, LymphCLL_betas}
 ct <- "Lymph-CLL"
@@ -2463,23 +3438,1644 @@ give_barplot_from_obj(obj = obj_Lymph_CLL_mutSigExtractor, legend_on = FALSE)
 ```
 
 Exposures sorted by increasing number of mutations: SBS9 and SBS25 seem to be somewhat associated with samples with a high number of mutations.
-```{r, LymphCLL_sortedbynummuts}
+```{r, LymphCLL_sortedbynummuts, fig.height=2}
 createBarplot(normalise_rw(non_duplicated_rows(obj_Lymph_CLL$Y)),
               order_labels = names(sort(rowSums(non_duplicated_rows(obj_Lymph_CLL$Y)),
                                         decreasing = F)))
 ```
 
 
+
 \subsection{Myeloid-MPN}
+
+\subsubsection{Barplot and general statistics}
+```{r MyeloidMPN1, echo=FALSE}
+ct <- "Myeloid-MPN"
+obj_Myeloid_MPN <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Myeloid_MPN, legend_on = TRUE)
+```
+
+The number of samples and signatures is:
+```{r MyeloidMPN1b, echo=FALSE}
+dim(obj_Myeloid_MPN$Y)
+```
+
+The signatures are:
+```{r MyeloidMPN1c, echo=FALSE}
+colnames(obj_Myeloid_MPN$Y)
+```
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. The fullRE DMSL have not converged, or have not run.
+
+```{r MyeloidMPN2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Myeloid-MPN"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r MyeloidMPN3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Myeloid-MPN"
+
+obj_MyeloidMPN <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_MyeloidMPN <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_MyeloidMPN)
+sortedM_MyeloidMPN
+```
+
+```{r MyeloidMPN3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_MyeloidMPN$Y)-1
+
+sortedDM_MyeloidMPN <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_MyeloidMPN,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_MyeloidMPN$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_MyeloidMPN$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_MyeloidMPN$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_MyeloidMPN$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_MyeloidMPN
+
+```
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo do converge:
+```{r MyeloidMPN3b, echo=FALSE, message=FALSE, dependson=c('MyeloidMPN3')}
+sortedDM_MyeloidMPN$pdHess
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures. There are none.
+```{r, MyeloidMPN1d}
+colSums(obj_Myeloid_MPN$Y == 0)/nrow(obj_Myeloid_MPN$Y)
+colSums(obj_Myeloid_MPN$Y)/sum(obj_Myeloid_MPN$Y)
+```
+
+```{r, Myeloid_MPN_additional_runs, dependson=c('additional_runs')}
+additional_sortedMnonexo[["Myeloid-MPN"]] <- sortedM_MyeloidMPN
+additional_sortedDMSLnonexo[["Myeloid-MPN"]] <- sortedDM_MyeloidMPN
+```
+
+
+```{r, MyeloidMPN_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Myeloid-MPN"
+pval_Myeloid_MPN <- wald_TMB_wrapper(sortedDM_MyeloidMPN)
+```
+
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Myeloid_MPN`.
+
+
+\subsubsection{Betas}
+
+```{r, MyeloidMPN_betas}
+ct <- "Myeloid-MPN"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_MyeloidMPN)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')), nrow=2)
+```
+
+\subsubsection{Covariance matrices}
+
+```{r, MyeloidMPN_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Myeloid_MPN_additional_runs')}
+ct <- "Myeloid-MPN"
+models_it_Myeloid_MPN <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
+covmats_Myeloid_MPN <- lapply(models_it_Myeloid_MPN,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Myeloid_MPN) <- models_it_Myeloid_MPN
+## because it's fullRE_M, it's sorted
+colnames(covmats_Myeloid_MPN[['fullRE_M']]) <- rownames(covmats_Myeloid_MPN[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Myeloid_MPN)$Y))
+colnames(covmats_Myeloid_MPN[['fullRE_M_nonexo']]) <- rownames(covmats_Myeloid_MPN[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Myeloid_MPN, nonexogenous$V1)$Y))
+colnames(covmats_Myeloid_MPN[['additional_sortedDMSLnonexo']]) <- rownames(covmats_Myeloid_MPN[['additional_sortedDMSLnonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Myeloid_MPN, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Myeloid_MPN)){pheatmap(covmats_Myeloid_MPN[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Myeloid_MPN[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+```{r, MyeloidMPN_sim, echo=FALSE}
+sim_Myeloid_MPN <- give_sim_from_estimates("Myeloid-MPN", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                       tmb_object=sortedDM_MyeloidMPN)
+sim_Myeloid_MPN[[2]]+ggtitle('Simulation of Myeloid-MPN samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, MyeloidMPN_ranked_plot}
+ct <- "Myeloid-MPN"
+integer_overdispersion_param_DMSL <- 1
+obj_Myeloid_MPN_nonexo <- (give_subset_sigs_TMBobj(obj_Myeloid_MPN, sigs_to_remove = nonexogenous$V1))
+obj_Myeloid_MPN_nonexo_sorted <- sort_columns_TMB(give_subset_sigs_TMBobj(obj_Myeloid_MPN, sigs_to_remove = nonexogenous$V1))
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Myeloid_MPN_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Myeloid_MPN_nonexo,
+                 loglog = F, title = 'obj_Myeloid_MPN (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sortedDM_MyeloidMPN,
+                 data_object = obj_Myeloid_MPN_nonexo_sorted,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Myeloid_MPN_nonexo_sorted,
+           loglog = F, title = 'obj_Myeloid_MPN (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, MyeloidMPN_mutsigextractor}
+obj_Myeloid_MPN_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Myeloid_MPN_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, MyeloidMPN_sortedbynummuts, fig.height=2, fig.width=6, echo=FALSE}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Myeloid_MPN$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Myeloid_MPN$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Ovary-AdenoCA}
+\subsubsection{Barplot and general statistics}
+```{r OvaryAdenoCA1, echo=FALSE}
+ct <- "Ovary-AdenoCA"
+obj_Ovary_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Ovary_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r OvaryAdenoCA1b, echo=FALSE}
+dim(obj_Ovary_AdenoCA$Y)
+```
+
+The signatures are:
+```{r OvaryAdenoCA1c, echo=FALSE}
+colnames(obj_Ovary_AdenoCA$Y)
+```
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. None of the all-signatures models converged (we do have many signatures!) but nonexo generally have, except fullRE_DMSL_nonexo.
+
+```{r OvaryAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Ovary-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r OvaryAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Ovary-AdenoCA"
+
+obj_OvaryAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_OvaryAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_OvaryAdenoCA)
+sortedM_OvaryAdenoCA
+```
+
+```{r OvaryAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_OvaryAdenoCA$Y)-1
+
+sortedDM_OvaryAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_OvaryAdenoCA,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_OvaryAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_OvaryAdenoCA$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_OvaryAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_OvaryAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_OvaryAdenoCA
+```
+
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo do not yet converge:
+```{r OvaryAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('OvaryAdenoCA3')}
+sortedDM_OvaryAdenoCA$pdHess
+
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures. There doesn't seem to be.
+```{r, OvaryAdenoCA1d}
+colSums(obj_Ovary_AdenoCA$Y == 0)/nrow(obj_Ovary_AdenoCA$Y)
+colSums(obj_Ovary_AdenoCA$Y)/sum(obj_Ovary_AdenoCA$Y)
+```
+
+
+\subsubsection{Betas}
+
+```{r, OvaryAdenoCA_betas}
+ct <- "Ovary-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_OvaryAdenoCA)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, OvaryAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Ovary-AdenoCA"
+pval_Ovary_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Ovary_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+Keep in mind that fullRE DMSL nonexo has not converged.
+```{r, OvaryAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Ovary_AdenoCA_additional_runs')}
+ct <- "Ovary-AdenoCA"
+# models_it_Ovary_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Ovary_AdenoCA <- c('fullRE_M_nonexo')
+covmats_Ovary_AdenoCA <- lapply(models_it_Ovary_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Ovary_AdenoCA) <- models_it_Ovary_AdenoCA
+## because it's fullRE_M, it's sorted
+# colnames(covmats_Ovary_AdenoCA[['fullRE_M']]) <- rownames(covmats_Ovary_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Ovary_AdenoCA)$Y))
+colnames(covmats_Ovary_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_Ovary_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Ovary_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Ovary_AdenoCA)){pheatmap(covmats_Ovary_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Ovary_AdenoCA[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+Using diagRE DMSL nonexo.
+
+```{r, OvaryAdenoCA_sim, echo=FALSE}
+sim_Ovary_AdenoCA <- give_sim_from_estimates("Ovary-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                       tmb_object=diagRE_DMSL_nonexo[[ct]])
+sim_Ovary_AdenoCA[[2]]+ggtitle('Simulation of Ovary-AdenoCA samples')
+
+```
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, OvaryAdenoCA_ranked_plot}
+ct <- "Ovary-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Ovary_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Ovary_AdenoCA, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Ovary_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Ovary_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Ovary_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Ovary_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Ovary_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Ovary_AdenoCA (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, OvaryAdenoCA_mutsigextractor}
+obj_Ovary_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Ovary_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, OvaryAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Ovary_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Ovary_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Panc-AdenoCA}
+\subsubsection{Barplot and general statistics}
+```{r PancAdenoCA1, echo=FALSE}
+ct <- "Panc-AdenoCA"
+obj_Panc_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Panc_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r PancAdenoCA1b, echo=FALSE}
+dim(obj_Panc_AdenoCA$Y)
+```
+
+The signatures are:
+```{r PancAdenoCA1c, echo=FALSE}
+colnames(obj_Panc_AdenoCA$Y)
+```
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. Most runs have converged. fullRE_DMSL_nonexo hadn't run.
+
+```{r PancAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Panc-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo. M hasn't converged.
+```{r PancAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Panc-AdenoCA"
+
+obj_PancAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_PancAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_PancAdenoCA)
+sortedM_PancAdenoCA
+```
+
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures. SBS17a is potentially problematic.
+```{r, PancAdenoCA1d}
+colSums(obj_Panc_AdenoCA$Y == 0)/nrow(obj_Panc_AdenoCA$Y)
+colSums(obj_Panc_AdenoCA$Y)/sum(obj_Panc_AdenoCA$Y)
+```
+
+From the violin plot, none seem too problematic.
+```{r, obj_Panc_AdenoCA_remove_small_signatures, fig.height=2}
+ggplot(melt(obj_Panc_AdenoCA$Y), aes(x=Var2, y=value+1))+geom_violin()+scale_y_continuous(trans = "log2")
+```
+
+\subsubsection{Betas}
+
+```{r, PancAdenoCA_betas}
+ct <- "Panc-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+```{r, PancAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Panc-AdenoCA"
+pval_Panc_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Panc_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+```{r, PancAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Panc_AdenoCA_additional_runs')}
+ct <- "Panc-AdenoCA"
+# models_it_Panc_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Panc_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
+covmats_Panc_AdenoCA <- lapply(models_it_Panc_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Panc_AdenoCA) <- models_it_Panc_AdenoCA
+## because it's fullRE_M, it's sorted
+colnames(covmats_Panc_AdenoCA[['fullRE_M']]) <- rownames(covmats_Panc_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Panc_AdenoCA)$Y))
+colnames(covmats_Panc_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_Panc_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Panc_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Panc_AdenoCA)){pheatmap(covmats_Panc_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Panc_AdenoCA[i])}
+```
+
+
+\subsubsection{Simulation under inferred data}
+That's not a good simulation, using diagRE DMSL!
+
+```{r, PancAdenoCA_sim, echo=FALSE}
+sim_Panc_AdenoCA <- give_sim_from_estimates("Panc-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                       tmb_object=diagRE_DMSL_nonexo[["Panc-AdenoCA"]])
+sim_Panc_AdenoCA[[2]]+ggtitle('Simulation of Panc-AdenoCA samples')
+
+```
+
+Multinomial doesn't look great either
+```{r, PancAdenoCA_sim_M, echo=FALSE}
+sim_Panc_AdenoCA <- give_sim_from_estimates("Panc-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_M", bool_nonexo = F,
+                                       tmb_object=fullRE_M_nonexo[["Panc-AdenoCA"]])
+sim_Panc_AdenoCA[[2]]+ggtitle('Simulation of Panc-AdenoCA samples\nUsing multinomial')
+
+```
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, PancAdenoCA_ranked_plot}
+ct <- "Panc-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Panc_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Panc_AdenoCA, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Panc_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Panc_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Panc_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Panc_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Panc_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Panc_AdenoCA (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, PancAdenoCA_mutsigextractor}
+obj_Panc_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Panc_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, PancAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Panc_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Panc_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Panc-Endocrine}
+
+
+\subsubsection{Barplot and general statistics}
+```{r PancEndocrine1, echo=FALSE}
+ct <- "Panc-Endocrine"
+obj_Panc_Endocrine <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Panc_Endocrine, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r PancEndocrine1b, echo=FALSE}
+dim(obj_Panc_Endocrine$Y)
+```
+
+The signatures are:
+```{r PancEndocrine1c, echo=FALSE}
+colnames(obj_Panc_Endocrine$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. fullRE_DMSL and fullRE_DMSL_nonexo haven't.
+
+```{r PancEndocrine2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Panc-Endocrine"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r PancEndocrine3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Panc-Endocrine"
+
+obj_PancEndocrine <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_PancEndocrine <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_PancEndocrine)
+sortedM_PancEndocrine
+```
+
+```{r PancEndocrine3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_PancEndocrine$Y)-1
+
+sortedDM_PancEndocrine <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_PancEndocrine,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_PancEndocrine$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_PancEndocrine$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_PancEndocrine$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_PancEndocrine$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_PancEndocrine
+
+```
+
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo doesn't converge:
+```{r PancEndocrine3b, echo=FALSE, message=FALSE, dependson=c('PancEndocrine3')}
+sortedDM_PancEndocrine$pdHess
+```
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, PancEndocrine1d}
+colSums(obj_Panc_Endocrine$Y == 0)/nrow(obj_Panc_Endocrine$Y)
+colSums(obj_Panc_Endocrine$Y)/sum(obj_Panc_Endocrine$Y)
+```
+
+
+\subsubsection{Betas}
+
+```{r, PancEndocrine_betas}
+ct <- "Panc-Endocrine"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_PancEndocrine)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+```{r, PancEndocrine_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Panc-Endocrine"
+pval_Panc_Endocrine <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Panc_Endocrine`.
+
+\subsubsection{Covariance matrices}
+
+```{r, PancEndocrine_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Panc_Endocrine_additional_runs')}
+ct <- "Panc-Endocrine"
+# models_it_Panc_Endocrine <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Panc_Endocrine <- c('fullRE_M', 'fullRE_M_nonexo')
+covmats_Panc_Endocrine <- lapply(models_it_Panc_Endocrine,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Panc_Endocrine) <- models_it_Panc_Endocrine
+## because it's fullRE_M, it's sorted
+colnames(covmats_Panc_Endocrine[['fullRE_M']]) <- rownames(covmats_Panc_Endocrine[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Panc_Endocrine)$Y))
+colnames(covmats_Panc_Endocrine[['fullRE_M_nonexo']]) <- rownames(covmats_Panc_Endocrine[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Panc_Endocrine, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Panc_Endocrine)){pheatmap(covmats_Panc_Endocrine[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Panc_Endocrine[i])}
+```
+
+\subsubsection{Simulation under inferred data}
+```{r, PancEndocrine_sim, echo=FALSE}
+sim_Panc_Endocrine <- give_sim_from_estimates("Panc-Endocrine", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                       tmb_object=diagRE_DMSL_nonexo[[ct]])
+sim_Panc_Endocrine[[2]]+ggtitle('Simulation of Panc-Endocrine samples')
+
+```
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, PancEndocrine_ranked_plot}
+ct <- "Panc-Endocrine"
+integer_overdispersion_param_DMSL <- 1
+obj_Panc_Endocrine_nonexo <- give_subset_sigs_TMBobj(obj_Panc_Endocrine, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Panc_Endocrine_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Panc_Endocrine_nonexo,
+                 loglog = F, title = 'obj_Panc_Endocrine (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Panc_Endocrine_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Panc_Endocrine_nonexo,
+           loglog = F, title = 'obj_Panc_Endocrine (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, PancEndocrine_mutsigextractor}
+obj_Panc_Endocrine_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Panc_Endocrine_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is a trend with one signature only being present, and in very large amounts, in hyeprmutated samples.
+```{r, PancEndocrine_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Panc_Endocrine$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Panc_Endocrine$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Prost-AdenoCA}
+
+
+\subsubsection{Barplot and general statistics}
+```{r ProstAdenoCA1, echo=FALSE}
+ct <- "Prost-AdenoCA"
+obj_Prost_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Prost_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r ProstAdenoCA1b, echo=FALSE}
+dim(obj_Prost_AdenoCA$Y)
+```
+
+The signatures are:
+```{r ProstAdenoCA1c, echo=FALSE}
+colnames(obj_Prost_AdenoCA$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. Most have converged. fullRE_DMSL_nonexo hasn't run and needs to be re-run.
+
+```{r ProstAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Prost-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r ProstAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Prost-AdenoCA"
+
+obj_ProstAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_ProstAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_ProstAdenoCA, use_nlminb=T)
+sortedM_ProstAdenoCA
+```
+
+But DMSL hasn't:
+```{r ProstAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_ProstAdenoCA$Y)-1
+
+sortedDM_ProstAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_ProstAdenoCA,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_ProstAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_ProstAdenoCA$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_ProstAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_ProstAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_ProstAdenoCA
+
+```
+
+```{r ProstAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('ProstAdenoCA3')}
+sortedDM_ProstAdenoCA$pdHess
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures. None seem to be, although SBS33 is absent in 60\% of samples.
+```{r, ProstAdenoCA1d}
+colSums(obj_Prost_AdenoCA$Y == 0)/nrow(obj_Prost_AdenoCA$Y)
+colSums(obj_Prost_AdenoCA$Y)/sum(obj_Prost_AdenoCA$Y)
+```
+
+
+\subsubsection{Betas}
+
+```{r, ProstAdenoCA_betas}
+ct <- "Prost-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_ProstAdenoCA)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+```{r, ProstAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Prost-AdenoCA"
+pval_Prost_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Prost_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+```{r, ProstAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Prost_AdenoCA_additional_runs')}
+ct <- "Prost-AdenoCA"
+# models_it_Prost_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Prost_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
+covmats_Prost_AdenoCA <- lapply(models_it_Prost_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Prost_AdenoCA) <- models_it_Prost_AdenoCA
+## because it's fullRE_M, it's sorted
+colnames(covmats_Prost_AdenoCA[['fullRE_M']]) <- rownames(covmats_Prost_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Prost_AdenoCA)$Y))
+colnames(covmats_Prost_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_Prost_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Prost_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Prost_AdenoCA)){pheatmap(covmats_Prost_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Prost_AdenoCA[i])}
+```
+
+
+
+\subsubsection{Simulation under inferred data}
+It doesn't look great! Both seem quite different
+```{r, ProstAdenoCA_sim, echo=FALSE}
+sim_Prost_AdenoCA <- give_sim_from_estimates("Prost-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                       tmb_object=diagRE_DMSL_nonexo[[ct]])
+sim_Prost_AdenoCA[[2]]+ggtitle('Simulation of Prost-AdenoCA samples')
+
+```
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, ProstAdenoCA_ranked_plot}
+ct <- "Prost-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Prost_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Prost_AdenoCA, sigs_to_remove = nonexogenous$V1)
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Prost_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Prost_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Prost_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Prost_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Prost_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Prost_AdenoCA (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, ProstAdenoCA_mutsigextractor}
+obj_Prost_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Prost_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations, except perhaps SBS3 in the hypermutated ones.
+```{r, ProstAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Prost_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Prost_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
+
 \subsection{Skin-Melanoma.acral}
+
+\subsubsection{Barplot and general statistics}
+```{r SkinMelanomaacral1, echo=FALSE}
+ct <- "Skin-Melanoma.acral"
+obj_Skin_Melanomaacral <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Skin_Melanomaacral, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r SkinMelanomaacral1b, echo=FALSE}
+dim(obj_Skin_Melanomaacral$Y)
+```
+
+The signatures are:
+```{r SkinMelanomaacral1c, echo=FALSE}
+colnames(obj_Skin_Melanomaacral$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. They have converged even though very clearly we have very few observations and too many parameters. I thought I would have excluded this cancer type? In CT_sufficient_samples.txt it does appear but shouldn't - I don't continue the analyses for this cancer type.
+
+```{r SkinMelanomaacral2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Skin-Melanoma.acral"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
 \subsection{Skin-Melanoma.cutaneous}
+
+\subsubsection{Barplot and general statistics}
+```{r SkinMelanomacutaneous1, echo=FALSE}
+ct <- "Skin-Melanoma.cutaneous"
+obj_Skin_Melanomacutaneous <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Skin_Melanomacutaneous, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r SkinMelanomacutaneous1b, echo=FALSE}
+dim(obj_Skin_Melanomacutaneous$Y)
+```
+
+The signatures are:
+```{r SkinMelanomacutaneous1c, echo=FALSE}
+colnames(obj_Skin_Melanomacutaneous$Y)
+```
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. fullRE_DMSL have not converged.
+
+```{r SkinMelanomacutaneous2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Skin-Melanoma.cutaneous"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r SkinMelanomacutaneous3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Skin-Melanoma.cutaneous"
+
+obj_SkinMelanomacutaneous <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_SkinMelanomacutaneous <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_SkinMelanomacutaneous)
+sortedM_SkinMelanomacutaneous
+```
+
+
+```{r SkinMelanomacutaneous3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_SkinMelanomacutaneous$Y)-1
+
+sortedDM_SkinMelanomacutaneous <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_SkinMelanomacutaneous,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_SkinMelanomacutaneous$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_SkinMelanomacutaneous$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_SkinMelanomacutaneous$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_SkinMelanomacutaneous$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_SkinMelanomacutaneous
+
+```
+
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo do converge:
+```{r SkinMelanomacutaneous3b, echo=FALSE, message=FALSE, dependson=c('SkinMelanomacutaneous3')}
+sortedDM_SkinMelanomacutaneous$pdHess
+```
+
+It has converged.
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures; there are none.
+```{r, SkinMelanomacutaneous1d}
+colSums(obj_Skin_Melanomacutaneous$Y == 0)/nrow(obj_Skin_Melanomacutaneous$Y)
+colSums(obj_Skin_Melanomacutaneous$Y)/sum(obj_Skin_Melanomacutaneous$Y)
+```
+
+```{r, Skin_Melanomacutaneous_additional_runs, dependson=c('additional_runs'), echo=FALSE}
+additional_sortedMnonexo[["Skin-Melanoma.cutaneous"]] <- sortedM_SkinMelanomacutaneous
+additional_sortedDMSLnonexo[["Skin-Melanoma.cutaneous"]] <- sortedDM_SkinMelanomacutaneous
+```
+
+\subsubsection{Betas}
+
+```{r, SkinMelanomacutaneous_betas, echo=FALSE}
+ct <- "Skin-Melanoma.cutaneous"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_SkinMelanomacutaneous)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')), nrow=1)
+```
+
+
+
+
+```{r, SkinMelanomacutaneous_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Skin-Melanoma.cutaneous"
+pval_Skin_Melanomacutaneous <- wald_TMB_wrapper(sortedDM_SkinMelanomacutaneous)
+```
+
+We use the results from the full RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Skin_Melanomacutaneous`.
+
+\subsubsection{Covariance matrices}
+```{r, SkinMelanomacutaneous_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Skin_Melanomacutaneous_additional_runs')}
+ct <- "Skin-Melanoma.cutaneous"
+# models_it_Skin_Melanomacutaneous <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Skin_Melanomacutaneous <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
+covmats_Skin_Melanomacutaneous <- lapply(models_it_Skin_Melanomacutaneous,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Skin_Melanomacutaneous) <- models_it_Skin_Melanomacutaneous
+## because it's fullRE_M, it's sorted
+colnames(covmats_Skin_Melanomacutaneous[['fullRE_M']]) <- rownames(covmats_Skin_Melanomacutaneous[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Skin_Melanomacutaneous)$Y))
+colnames(covmats_Skin_Melanomacutaneous[['fullRE_M_nonexo']]) <- rownames(covmats_Skin_Melanomacutaneous[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Skin_Melanomacutaneous, nonexogenous$V1)$Y))
+colnames(covmats_Skin_Melanomacutaneous[['additional_sortedDMSLnonexo']]) <- rownames(covmats_Skin_Melanomacutaneous[['additional_sortedDMSLnonexo']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(give_subset_sigs_TMBobj(obj_Skin_Melanomacutaneous, nonexogenous$V1))$Y))
+
+for(i in 1:length(covmats_Skin_Melanomacutaneous)){pheatmap(covmats_Skin_Melanomacutaneous[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Skin_Melanomacutaneous[i])}
+```
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, SkinMelanomacutaneous_sim, echo=FALSE}
+sim_Skin_Melanomacutaneous <- give_sim_from_estimates("Skin-Melanoma.cutaneous", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="fullRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest='SBS2',
+                                       tmb_object=sortedDM_SkinMelanomacutaneous)
+sim_Skin_Melanomacutaneous[[2]]+ggtitle('Simulation of Skin-Melanoma.cutaneous samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, SkinMelanomacutaneous_ranked_plot}
+ct <- "Skin-Melanoma.cutaneous"
+integer_overdispersion_param_DMSL <- 1
+obj_Skin_Melanomacutaneous_nonexo <- give_subset_sigs_TMBobj(obj_Skin_Melanomacutaneous, sigs_to_remove = nonexogenous$V1)
+obj_Skin_Melanomacutaneous_nonexo_sorted <- sort_columns_TMB(give_subset_sigs_TMBobj(obj_Skin_Melanomacutaneous, sigs_to_remove = nonexogenous$V1))
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Skin_Melanomacutaneous_nonexo,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Skin_Melanomacutaneous_nonexo,
+                 loglog = F, title = 'obj_Skin_Melanomacutaneous (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sortedDM_SkinMelanomacutaneous,
+                 data_object = obj_Skin_Melanomacutaneous_nonexo_sorted,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Skin_Melanomacutaneous_nonexo_sorted,
+           loglog = F, title = 'obj_Skin_Melanomacutaneous (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, SkinMelanomacutaneous_mutsigextractor}
+obj_Skin_Melanomacutaneous_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Skin_Melanomacutaneous_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: SBS40 is crearly prevalent in samples with few mutations.
+```{r, SkinMelanomacutaneous_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Skin_Melanomacutaneous$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Skin_Melanomacutaneous$Y)),
+                                        decreasing = F)))
+```
+
+
+
 \subsection{Stomach-AdenoCA}
+
+\subsubsection{Barplot and general statistics}
+```{r StomachAdenoCA1, echo=FALSE}
+ct <- "Stomach-AdenoCA"
+obj_Stomach_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Stomach_AdenoCA, legend_on = TRUE)
+```
+
+
+The number of samples and signatures is:
+```{r StomachAdenoCA1b, echo=FALSE}
+dim(obj_Stomach_AdenoCA$Y)
+```
+
+The signatures are:
+```{r StomachAdenoCA1c, echo=FALSE}
+colnames(obj_Stomach_AdenoCA$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. Besides fullRE_DMSL_nonexo, we have convergence with almost everything.
+
+```{r StomachAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Stomach-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo, but M hasn't converged. We should include fewer signatures.
+```{r StomachAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Stomach-AdenoCA"
+
+obj_StomachAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_StomachAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_StomachAdenoCA,
+                           use_nlminb=T)
+sortedM_StomachAdenoCA
+```
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, StomachAdenoCA1d}
+colSums(obj_Stomach_AdenoCA$Y == 0)/nrow(obj_Stomach_AdenoCA$Y)
+colSums(obj_Stomach_AdenoCA$Y)/sum(obj_Stomach_AdenoCA$Y)
+```
+
+```{r, StomachAdenoCA_remove_small_signatures, fig.height=4}
+ggplot(melt(obj_Stomach_AdenoCA$Y), aes(x=Var2, y=value+1))+geom_violin()+scale_y_continuous(trans = "log2")+facet_wrap(.~Var2, nrow=2, scales="free_x")
+```
+
+- Removing SBS20, SBS26, fullM still hasn't converged
+- Removing SBS20, SBS26, SBS9 fullM still hasn't converged
+- Removing SBS20, SBS26, SBS9, SBS13 fullM still hasn't converged
+- Removing SBS20, SBS26, SBS9, SBS13, SBS44 fullM still hasn't converged
+
+```{r StomachAdenoCA3_subset, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Stomach-AdenoCA"
+
+obj_StomachAdenoCA_subset <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                c(nonexogenous$V1, 'SBS20', 'SBS26', 'SBS9', 'SBS13')))
+obj_StomachAdenoCA_subset <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_StomachAdenoCA, use_nlminb=T)
+obj_StomachAdenoCA_subset
+```
+
+\subsubsection{Betas}
+
+```{r, StomachAdenoCA_betas}
+ct <- "Stomach-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+```{r, StomachAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Stomach-AdenoCA"
+pval_Stomach_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Stomach_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+I do not include this section as I have had to use ony diagonal matrices.
+
+\subsubsection{Simulation under inferred data}
+```{r, StomachAdenoCA_sim, echo=FALSE}
+sim_Stomach_AdenoCA <- give_sim_from_estimates("Stomach-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest="SBS2",
+                                       tmb_object=diagRE_DMSL_nonexo[["Stomach-AdenoCA"]])
+sim_Stomach_AdenoCA[[2]]+ggtitle('Simulation of Stomach-AdenoCA samples')
+
+```
+\subsubsection{Ranked plot for coverage}
+Comparing for now only diagRE_DMSL_nonexo and sparse for nonexo. It doesn't look good.
+
+```{r, StomachAdenoCA_ranked_plot}
+ct <- "Stomach-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Stomach_AdenoCA_nonexo <- sort_columns_TMB(give_subset_sigs_TMBobj(obj_Stomach_AdenoCA, sigs_to_remove = nonexogenous$V1))
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sparseRE_DMSL_nonexo[[ct]], integer_overdispersion_param=1,
+                 data_object = obj_Stomach_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Stomach_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Stomach_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Stomach_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Stomach_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Stomach_AdenoCA (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, StomachAdenoCA_mutsigextractor}
+obj_Stomach_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Stomach_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no clear trend of signatures being associated with the number of mutations.
+```{r, StomachAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Stomach_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Stomach_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
+
+
 \subsection{Thy-AdenoCA}
+
+
+\subsubsection{Barplot and general statistics}
+```{r ThyAdenoCA1, echo=FALSE}
+ct <- "Thy-AdenoCA"
+obj_Thy_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Thy_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r ThyAdenoCA1b, echo=FALSE}
+dim(obj_Thy_AdenoCA$Y)
+```
+
+The signatures are:
+```{r ThyAdenoCA1c, echo=FALSE}
+colnames(obj_Thy_AdenoCA$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. Practically everything timed-out.
+
+```{r ThyAdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Thy-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r ThyAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Thy-AdenoCA"
+
+obj_ThyAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_ThyAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_ThyAdenoCA, use_nlminb=T)
+sortedM_ThyAdenoCA
+```
+
+
+```{r ThyAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_ThyAdenoCA$Y)-1
+
+sortedDM_ThyAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_ThyAdenoCA,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_ThyAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_ThyAdenoCA$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_ThyAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_ThyAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_ThyAdenoCA
+```
+
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo do not converge, even though there aren't many signatures:
+```{r ThyAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('ThyAdenoCA3')}
+sortedDM_ThyAdenoCA$pdHess
+
+```
+
+
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, ThyAdenoCA1d}
+colSums(obj_Thy_AdenoCA$Y == 0)/nrow(obj_Thy_AdenoCA$Y)
+colSums(obj_Thy_AdenoCA$Y)/sum(obj_Thy_AdenoCA$Y)
+```
+
+```{r, Thy_AdenoCAL_remove_small_signatures, fig.height=2}
+ggplot(melt(obj_Thy_AdenoCA$Y), aes(x=Var2, y=value+1))+geom_violin()+scale_y_continuous(trans = "log2")
+```
+
+
+\subsubsection{Betas}
+
+```{r, ThyAdenoCA_betas}
+ct <- "Thy-AdenoCA"
+
+grid.arrange(plot_betas(diagRE_M[[ct]])+ggtitle(paste0(ct, '\n diagRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(sortedM_ThyAdenoCA)+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_ThyAdenoCA)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+```{r, ThyAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Thy-AdenoCA"
+pval_Thy_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Thy_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+I do not include those.
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, ThyAdenoCA_sim, echo=FALSE}
+sim_Thy_AdenoCA <- give_sim_from_estimates("Thy-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                       tmb_object=diagRE_DMSL_nonexo[[ct]])
+sim_Thy_AdenoCA[[2]]+ggtitle('Simulation of Thy-AdenoCA samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, ThyAdenoCA_ranked_plot}
+ct <- "Thy-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Thy_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Thy_AdenoCA, sigs_to_remove = nonexogenous$V1)
+obj_Thy_AdenoCA_nonexo_sorted <- sort_columns_TMB(give_subset_sigs_TMBobj(obj_Thy_AdenoCA, sigs_to_remove = nonexogenous$V1))
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = sortedM_ThyAdenoCA,
+                 data_object = obj_Thy_AdenoCA_nonexo_sorted,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Thy_AdenoCA_nonexo_sorted,
+                 loglog = F, title = 'obj_Thy_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Thy_AdenoCA_nonexo,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Thy_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Thy_AdenoCA (DMSL)'), ncol=2)
+```
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, ThyAdenoCA_mutsigextractor}
+obj_Thy_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Thy_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is no trend of signatures being associated with the number of mutations.
+```{r, ThyAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Thy_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Thy_AdenoCA$Y)),
+                                        decreasing = F)))
+```
+
 \subsection{Uterus-AdenoCA}
+
+\subsubsection{Barplot and general statistics}
+```{r Uterus-AdenoCA1, echo=FALSE}
+ct <- "Uterus-AdenoCA"
+obj_Uterus_AdenoCA <- load_PCAWG(ct = ct, typedata = "signatures",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Uterus_AdenoCA, legend_on = TRUE)
+```
+
+
+
+The number of samples and signatures is:
+```{r Uterus-AdenoCA1b, echo=FALSE}
+dim(obj_Uterus_AdenoCA$Y)
+```
+
+The signatures are:
+```{r Uterus-AdenoCA1c, echo=FALSE}
+colnames(obj_Uterus_AdenoCA$Y)
+```
+
+
+\subsubsection{Convergence table}
+
+These are the results for the convergence of models fits. Almost everything has converged.
+
+```{r Uterus-AdenoCA2, echo=FALSE, dependson=c('summary_convergence')}
+ct <- "Uterus-AdenoCA"
+melt(all_summaries) %>% filter(value==ct)
+```
+
+\subsubsection{Re-running of fitting}
+Using fullRE_M_nonexo to fit fullRE_DMSL_nonexo.
+```{r UterusAdenoCA3, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+ct <- "Uterus-AdenoCA"
+
+obj_UterusAdenoCA <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signatures",
+                                                           path_to_data = "../../data/"),
+                                                nonexogenous$V1))
+sortedM_UterusAdenoCA <- wrapper_run_TMB(model = "fullRE_M",
+                           object = obj_UterusAdenoCA)
+sortedM_UterusAdenoCA
+```
+
+
+```{r UterusAdenoCA3a2, echo=FALSE, message=FALSE, dependson=c('libraries'), results='hide'}
+## use params from ME M for ME DM
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+
+dmin1 <- ncol(obj_UterusAdenoCA$Y)-1
+
+sortedDM_UterusAdenoCA <- wrapper_run_TMB(model = "fullREDMsinglelambda",
+                           object = obj_UterusAdenoCA,
+                           smart_init_vals = F, use_nlminb = T,
+                           initial_params = list(
+                             beta = matrix(python_like_select_name(sortedM_UterusAdenoCA$par.fixed, 'beta'), nrow=2),
+                             u_large = matrix(sortedM_UterusAdenoCA$par.random, ncol=dmin1),
+                             logs_sd_RE=python_like_select_name(sortedM_UterusAdenoCA$par.fixed, 'logs_sd_RE'),
+                             cov_par_RE = python_like_select_name(sortedM_UterusAdenoCA$par.fixed, 'cov_par_RE'),
+                             log_lambda = 2))
+sortedDM_UterusAdenoCA
+
+```
+
+If we use the values of the fullRE M exo as initial values for the fullRE DMSL exo doesn't converge:
+```{r UterusAdenoCA3b, echo=FALSE, message=FALSE, dependson=c('UterusAdenoCA3')}
+sortedDM_UterusAdenoCA$pdHess
+```
+
+\subsubsection{Potentially problematic signatures}
+
+We explore whether there are problematic signatures:
+```{r, UterusAdenoCA1d}
+colSums(obj_Uterus_AdenoCA$Y == 0)/nrow(obj_Uterus_AdenoCA$Y)
+colSums(obj_Uterus_AdenoCA$Y)/sum(obj_Uterus_AdenoCA$Y)
+```
+
+
+\subsubsection{Betas}
+
+```{r, UterusAdenoCA_betas}
+ct <- "Uterus-AdenoCA"
+
+grid.arrange(plot_betas(fullRE_M[[ct]])+ggtitle(paste0(ct, '\n fullRE_M')),
+plot_betas(fullRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n fullRE_DMSL')),
+plot_betas(diagRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL')),
+plot_betas(sparseRE_DMSL[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL')), nrow=2)
+
+grid.arrange(
+  plot_betas(fullRE_M_nonexo[[ct]])+ggtitle(paste0(ct, '\n fullRE_M_nonexo')),
+  plot_betas(sortedDM_UterusAdenoCA)+ggtitle(paste0(ct, '\n fullRE_DMSL_nonexo')),
+plot_betas(diagRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n diagRE_DMSL_nonexo')),
+plot_betas(sparseRE_DMSL_nonexo[[ct]])+ggtitle(paste0(ct, '\n sparseRE_DMSL_nonexo')), nrow=2)
+```
+
+
+
+```{r, UterusAdenoCA_DA, echo=FALSE, message=FALSE, results='hide'}
+ct <- "Uterus-AdenoCA"
+pval_Uterus_AdenoCA <- wald_TMB_wrapper(diagRE_DMSL_nonexo[[ct]])
+```
+
+We use the results from the diag RE single lambda DM to test for differential abundance, giving a p-value of `r pval_Uterus_AdenoCA`.
+
+\subsubsection{Covariance matrices}
+
+```{r, UterusAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Uterus_AdenoCA_additional_runs')}
+ct <- "Uterus-AdenoCA"
+# models_it_Uterus_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
+models_it_Uterus_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
+covmats_Uterus_AdenoCA <- lapply(models_it_Uterus_AdenoCA,
+                                 function(i){
+     fill_covariance_matrix(arg_d = length(python_like_select_name(get(i)[[ct]]$par.fixed, 'beta'))/2,
+                            arg_entries_var = python_like_select_name(get(i)[[ct]]$par.fixed, 'logs_sd_RE'),
+                            arg_entries_cov = python_like_select_name(get(i)[[ct]]$par.fixed, 'cov_par_RE'))
+                                 })
+names(covmats_Uterus_AdenoCA) <- models_it_Uterus_AdenoCA
+## because it's fullRE_M, it's sorted
+colnames(covmats_Uterus_AdenoCA[['fullRE_M']]) <- rownames(covmats_Uterus_AdenoCA[['fullRE_M']]) <- vector_cats_to_logR(colnames(sort_columns_TMB(obj_Uterus_AdenoCA)$Y))
+colnames(covmats_Uterus_AdenoCA[['fullRE_M_nonexo']]) <- rownames(covmats_Uterus_AdenoCA[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Uterus_AdenoCA, nonexogenous$V1)$Y))
+
+for(i in 1:length(covmats_Uterus_AdenoCA)){pheatmap(covmats_Uterus_AdenoCA[[i]], cluster_rows = F, cluster_cols = F, main = models_it_Uterus_AdenoCA[i])}
+```
+
+
+
+\subsubsection{Simulation under inferred data}
+```{r, UterusAdenoCA_sim, echo=FALSE}
+sim_Uterus_AdenoCA <- give_sim_from_estimates("Uterus-AdenoCA", "signatures",
+                                      sigs_to_remove=unique(nonexogenous$V1),
+                                      bool_give_PCA = T, path_to_data= "../../data/",
+                                      model="diagRE_DMSL", bool_nonexo = F,
+                                      sig_of_interest='SBS6',
+                                       tmb_object=diagRE_DMSL_nonexo[["Uterus-AdenoCA"]])
+sim_Uterus_AdenoCA[[2]]+ggtitle('Simulation of Uterus-AdenoCA samples')
+
+```
+
+
+\subsubsection{Ranked plot for coverage}
+
+```{r, UterusAdenoCA_ranked_plot}
+ct <- "Uterus-AdenoCA"
+integer_overdispersion_param_DMSL <- 1
+obj_Uterus_AdenoCA_nonexo <- give_subset_sigs_TMBobj(obj_Uterus_AdenoCA, sigs_to_remove = nonexogenous$V1)
+obj_Uterus_AdenoCA_nonexo_sorted <- sort_columns_TMB(give_subset_sigs_TMBobj(obj_Uterus_AdenoCA, sigs_to_remove = nonexogenous$V1))
+grid.arrange(give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo[[ct]],
+                 data_object = obj_Uterus_AdenoCA_nonexo_sorted,
+                 print_plot = F, nreps = 20, model = "M")), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Uterus_AdenoCA_nonexo,
+                 loglog = F, title = 'obj_Uterus_AdenoCA (M)'),
+ give_interval_plots_2(df_rank = lapply(list(give_ranked_plot_simulation(tmb_fit_object = diagRE_DMSL_nonexo[[ct]],
+                 data_object = obj_Uterus_AdenoCA_nonexo_sorted,
+                 print_plot = F, nreps = 20, model = "DMSL", integer_overdispersion_param = integer_overdispersion_param_DMSL)), function(i){
+                   lapply(i, function(j) cbind.data.frame(sorted_value=as.vector(j),
+                                                          rank_number=1:length(j)) )})[[1]],
+                 data_object = obj_Uterus_AdenoCA_nonexo,
+           loglog = F, title = 'obj_Uterus_AdenoCA (DMSL)'), ncol=2)
+```
+
+
+\subsubsection{Signatures from mutSigExtractor}
+
+The signatures from mutSigExtractor are as follows:
+```{r, UterusAdenoCA_mutsigextractor}
+obj_Uterus_AdenoCA_mutSigExtractor <- load_PCAWG(ct = ct, typedata = "signaturesmutSigExtractor",
+                                   path_to_data = "../../data/")
+give_barplot_from_obj(obj = obj_Uterus_AdenoCA_mutSigExtractor, legend_on = FALSE)
+```
+
+Exposures sorted by increasing number of mutations: there is a trend of hypermutated samples being very chaotic.
+```{r, UterusAdenoCA_sortedbynummuts, fig.height=2, fig.width=6}
+createBarplot(normalise_rw(non_duplicated_rows(obj_Uterus_AdenoCA$Y)),
+              order_labels = names(sort(rowSums(non_duplicated_rows(obj_Uterus_AdenoCA$Y)),
+                                        decreasing = F)))
+```
 
 
 \section{All p-values for non-exogenous signatures}
