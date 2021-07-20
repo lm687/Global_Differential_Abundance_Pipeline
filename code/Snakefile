@@ -69,9 +69,21 @@ rule all:
       expand("../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS",\
        datasetgeneration="GenerationCnorm",  n=80, nlambda=180,\
        lmbda=9, d=6,\
-       beta_intensity = 0, model="diagREDM", itnum=range(100),
+       beta_intensity = 0, model="diagREDM", itnum=range(1000),
        fixed_beta_intercept="betaintercept1",
-      fixed_beta_slope="betaslope1")
+      fixed_beta_slope="betaslope1"),
+      expand("../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS",\
+       datasetgeneration="GenerationCnorm",  n=80, nlambda=180,\
+       lmbda=9, d=6,\
+       beta_intensity = 0, model="fullREDM", itnum=range(1000),
+       fixed_beta_intercept="betaintercept1",
+      fixed_beta_slope="betaslope1"),
+      expand("../data/assessing_models_simulation/inference_results/TMB/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_it{itnum}.RDS",\
+       datasetgeneration="GenerationCnorm",  n=80, nlambda=180,\
+       lmbda=9, d=6,\
+       beta_intensity = 0, model="fullREDM", itnum=range(1000),
+       fixed_beta_intercept="betaintercept2",
+      fixed_beta_slope="betaslope2")
 
 
 rule index_vcf:
