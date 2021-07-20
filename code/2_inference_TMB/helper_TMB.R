@@ -645,7 +645,7 @@ load_posteriors = function(fle_rdata){
 }
 
 wald_generalised = function(v, sigma){
-  warning('20201218: sigma**(1/2) has now been replaced by (as we had before sometime in November) sigma')
+  # warning('20201218: sigma**(1/2) has now been replaced by (as we had before sometime in November) sigma')
   chisqrt_stat = t(v) %*% solve(sigma) %*% v
   pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
@@ -655,8 +655,13 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-    if(is.na(idx_beta)){
-      NA
+    if(length(idx_beta) == 1){
+      if(is.na(idx_beta)){
+        NA
+      }else{
+        if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
+        NA
+      }
     }else{
       wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
     }
@@ -671,7 +676,7 @@ select_slope = function(i){
 
 select_slope_2 = function(i, verbatim=TRUE){
   if(is.null(dim(i))){
-    if(verbatim) warning('As per 27 August it seems clear that this version, and not <select_slope>, is correct')
+    # if(verbatim) warning('As per 27 August it seems clear that this version, and not <select_slope>, is correct')
     i[c(F,T)]
   }else{
     i[,c(F,T)]
@@ -948,13 +953,13 @@ normalise_cl <- function(x){
   }
 }
 
-give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F){
+give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F, ...){
   require(gridExtra)
   obj = load_PCAWG(ct, typedata, simulation)
-  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T)+ggtitle('Early raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
-  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T)+ggtitle('Late raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
-  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
-  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T, ...)+ggtitle('Late normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
   
   if(!legend_on){
     a <- a+guides(fill=F)
@@ -1074,18 +1079,24 @@ is_slope = function(v){
   bool_isbetaslope
 }
 
-give_barplot_from_obj <- function(obj, legend_on=F){
-  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T)+ggtitle('Early raw')
-  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T)+ggtitle('Late raw')
-  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')
-  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')
+give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, ...){
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T, ...)+ggtitle('Late normalised')
   if(!legend_on){
     a <- a+guides(fill=F)
     b <- b+guides(fill=F)
     c <- c+guides(fill=F)
     d <- d+guides(fill=F)
   }
-  grid.arrange(a, b, c, d, top=title)
+  if(legend_bottom){
+    a <- a+theme(legend.position='bottom')
+    b <- b+theme(legend.position='bottom')
+    c <- c+theme(legend.position='bottom')
+    d <- d+theme(legend.position='bottom')
+  }
+  grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
 }
 
 give_ranked_plot_simulation = function(tmb_fit_object, data_object, print_plot = T, nreps = 1, model, integer_overdispersion_param){
@@ -1202,7 +1213,7 @@ give_interval_plots = function(df_rank, data_object, loglog=F){
   return(a)
 }
 
-give_interval_plots_2 = function(df_rank, data_object,loglog=F, title){
+give_interval_plots_2 = function(df_rank, data_object,loglog=F, title, theme_bw=F){
   xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
   xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
                                                        max_interval=quantile(sorted_value, probs = c(0.975)),
@@ -1221,6 +1232,10 @@ give_interval_plots_2 = function(df_rank, data_object,loglog=F, title){
     ggtitle(title, subtitle=paste0(paste0(names(table(xx_summary$col)), ':', table(xx_summary$col)), collapse ='; '))+
     theme(legend.position = "bottom")
   
+  if(theme_bw){
+    a = a+theme_bw()+theme(legend.position = "bottom")
+  }
+  
   if(loglog){a=a+ scale_y_continuous(trans = "log")+scale_x_continuous(trans = "log") }
   
   return(a)
@@ -1230,15 +1245,22 @@ give_betas <- function(TMB_obj){
   matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
 }
 
-plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T){
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T){
   if(typeof(TMB_obj) == 'character'){
-    ggplot()
+    if(theme_bw){
+      ggplot()+theme_bw()
+    }else{
+      ggplot()
+    }
   }else{
     .summary_betas <- summary(TMB_obj)
     .summary_betas <- cbind.data.frame(python_like_select_rownames(.summary_betas, 'beta'),
                                        type_beta=rep(c('Intercept', 'Slope')),
                                        LogR=rep(1:(nrow(python_like_select_rownames(.summary_betas, 'beta'))/2), each=2))
     if(!is.null(names_cats)){
+      if(remove_SBS){
+        names_cats <- gsub("SBS", "", names_cats) 
+      }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
     }
     plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))+
@@ -1247,12 +1269,16 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T){
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
       ggtitle('Slopes')+facet_wrap(.~type_beta, scales = "free")
     
+    if(theme_bw){
+      plt <- plt + theme_bw()
+    }
+    
     if(rotate_axis){
-      plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+      plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
     }
     
     if(!TMB_obj$pdHess){
-      plt + annotate("text", x = 0, y=.5, label="not PD")
+      plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
     }else{
       plt
     }
@@ -1260,13 +1286,14 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T){
 }
 
 give_length_cov <- function(dim1_covmat){
-  (dim1_covmat**2)/2 - dim1_covmat
+  ((dim1_covmat**2) - dim1_covmat )/2
 }
 
 
 give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
                                     bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
-                                    path_to_data= "../../../data/", tmb_object=NULL){
+                                    path_to_data= "../../../data/", tmb_object=NULL, obj_data=NULL,
+                                    nrow_pca_plot=2){
   
   if(is.null(tmb_object)){
     if(model == "fullRE_M"){
@@ -1283,8 +1310,11 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
     list_estimates[[ct]] <- tmb_object
   }
   
-  obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
+  if(is.null(obj_data)){
+    warning('WARNING! Here I am sorting the columns of TMB, I should not in all cases. Specify <obj_data> if needed')
+    obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
                                                        sigs_to_remove = sigs_to_remove))
+  }
   dmin1 <- ncol(obj_data$Y)-1
   cov_vec = rep(0, (dmin1**2-dmin1)/2)
   
@@ -1352,8 +1382,8 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
                                sig_of_interest=all_probs[,sig_of_interest],
                                group=c(rep(c('early','late')[obj_data$x[,2]+1]),
                                        rep(c('early','late'), n_sim)))
-    return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+
-                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group))))
+    return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+labs(col=sig_of_interest)+
+                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group),nrow=nrow_pca_plot)))
   }else{
     return(all_probs)
   }
