@@ -52,7 +52,7 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
   }else if(typedata == "nucleotidesubstitution3"){
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
-  }else if(typedata == "signatures"){
+  }else if(grepl("signatures", typedata)){
     if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0)){
       ## no active signatures
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
@@ -265,19 +265,38 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
 #   return(sdreport(obj))
 # }
 
-wrapper_run_TMB = function(model, object=NULL, sort_columns=F, smart_init_vals=T){
+sort_columns_TMB = function(object){
+  order_cats <- order(colSums(object$Y), decreasing = F) ## increasing so that the last category is the highest
+  object$Y = object$Y[,order_cats]
+  return(object)
+}
+
+sort_columns_TMB_SBS1 = function(object){
+  if("SBS1" %in% colnames(object$Y)){
+    order_cats <- c(which('SBS1' != colnames(object$Y)), which('SBS1' == colnames(object$Y)))
+    object$Y = object$Y[,order_cats]
+  }else{
+    warning('There are no exposures for SBS1 in this sample. Keeping the same order')
+  }
+  return(object)
+}
+
+
+wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, initial_params=NULL){
+  ## sort_columns=F, 
   
   ## if the object of data and covariates is an argument
   data = object
   
-  if(sort_columns){
-    data$Y = data$Y[,order(colSums(data$Y), decreasing = T)]
-  }
+  # if(sort_columns){
+  #   order_cats = order(colSums(data$Y), decreasing = T)
+  #   data$Y = data$Y[,order_cats]
+  # }
   
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
   
-  d <- ncol(data$Y)
+  d <- ncol(data$Y) ## number of signatures
   n <- ncol(data$z) ## number of INDIVIDUALS, not samples
   
   if(smart_init_vals){
@@ -289,72 +308,233 @@ wrapper_run_TMB = function(model, object=NULL, sort_columns=F, smart_init_vals=T
                         nrow = 2, byrow=TRUE))
   }
   
+  parameters <- list(
+    beta = beta_init,
+    u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    logs_sd_RE=rep(1, d-1),
+    cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+  )
+  
   if(model == "fullRE_M"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    # )
+    dll_name <- "fullRE_ME_multinomial"
+    rdm_vec <- "u_large"
+    # obj <- MakeADFun(data, parameters, DLL=, random = )
   }else if(model == "diagRE_M"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial", random = "u_large")
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
+    # )
+    dll_name <- "diagRE_ME_multinomial"
+    rdm_vec <- "u_large"
+    
+    # obj <- MakeADFun(data, parameters, DLL=, random = "")
     }else if(model == "FE_DM"){
       data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
 
-      parameters <- list(
-        beta = beta_init,
-        log_lambda = matrix(c(2,2))
-      )
-      obj <- MakeADFun(data, parameters, DLL="FE_dirichletmultinomial")
+      parameters$u_large = NULL
+      parameters$logs_sd_RE = NULL
+      parameters$cov_par_RE = NULL
+      parameters <- list(parameters, log_lambda = matrix(c(2,2)))
+      # parameters <- list(
+      #   beta = beta_init,
+      #   log_lambda = matrix(c(2,2))
+      # )
+      dll_name <- "FE_dirichletmultinomial"
+      rdm_vec <- NULL
+      
+      # obj <- MakeADFun(data, parameters, DLL=)
   }else if(model == "fullRE_DM"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-      log_lambda = matrix(c(2,2))
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
+    parameters <- list(parameters,log_lambda = matrix(c(2,2)))
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   log_lambda = matrix(c(2,2))
+    # )
+    dll_name <- "fullRE_ME_dirichletmultinomial"
+    rdm_vec <- "u_large"
+    # obj <- MakeADFun(data, parameters, DLL="", random = )
   }else if(model == "diagRE_DM"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      log_lambda = matrix(c(2,2))
-    )
-    obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
-  }else if(model == "fullRE_Mcat"){
+    parameters$cov_par_RE = NULL
+    parameters <- list(parameters,log_lambda = matrix(c(2,2)))
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   log_lambda = matrix(c(2,2))
+    # )
+    dll_name <- "diagRE_ME_dirichletmultinomial"
+    rdm_vec <- "u_large"
+    # obj <- MakeADFun(data, parameters, DLL="", random = "")
+  }else if(model  == "fullREDMsinglelambda"){
+      data$num_individuals = n
+      parameters$log_lambda = 1.1
+      
+      # parameters <- list(
+      #   beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+      #                  nrow = 2, byrow=TRUE)),
+      #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+      #   logs_sd_RE=rep(1, d-1),
+      #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+      #   log_lambda = 1
+      # )
+      rdm_vec <- "u_large"
+      dll_name <- "fullRE_dirichletmultinomial_single_lambda"
+      # obj <- MakeADFun(data, parameters, DLL="", random = )
+  }else if(model == "fullREhalfDM"){
+  stop("fullREhalfDM used to be done with  fullRE_dirichletmultinomial_single_lambda")
+  data$num_individuals = n
+  
+  parameters <- list(parameters, log_lambda = 1.1)
+  rdm_vec <- "u_large"
+  dll_name <- "CHANGETHIS"
+}else if(model == "fullREDMsinglelambda2"){
     data$num_individuals = n
-    parameters <- list(
-      beta = beta_init,
-      u_large = matrix(rep(1, (d-1)*n), nrow=n),
-      logs_sd_RE=rep(1, d-1),
-      cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2)
-    )
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_multinomial_categorical", random = "u_large")
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
+    parameters <- list(parameters, log_lambda = 1.1)
+    
+    # parameters <- list(
+    #   beta = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+    #                  nrow = 2, byrow=TRUE)),
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   log_lambda = 1
+    # )
+    rdm_vec <- "u_large"
+    dll_name <- "fullRE_dirichletmultinomial_single_lambda2"
+    # obj <- MakeADFun(data, parameters, DLL="", random = )
+  }else if(model == "diagREDMsinglelambda"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    
+    parameters$cov_par_RE = NULL
+    parameters <- list(parameters, log_lambda = 1.1)
+    
+    # parameters <- list(
+    #   beta = beta_init,
+    #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
+    #   logs_sd_RE=rep(1, d-1),
+    #   log_lambda = 2
+    # )
+    dll_name <- "diagRE_dirichletmultinomial_single_lambda"
+    rdm_vec <- "u_large"
+    
+    # obj <- MakeADFun(data, parameters, DLL="", random = "")
+  }else if(model == "FEDMsinglelambda"){
+    data$num_individuals = NULL
+    parameters$u_large = NULL
+    parameters$logs_sd_RE = NULL
+    parameters$cov_par_RE = NULL
+    parameters <- list(parameters, log_lambda = 1.1)
+
+    # parameters <- list(
+    #   beta = beta_init,
+    #   log_lambda = 2
+    # )
+    dll_name <- "FE_dirichletmultinomial_single_lambda"
+    rdm_vec <- NULL
+    
+    # obj <- MakeADFun(data, parameters, DLL="")
+  }else if(model == "fullRE_dirichletmultinomial_singlelambda_REv2"){
+    data$num_individuals = n
+    
+    parameters$u_large = NULL
+    parameters <- list(parameters,
+                       u_large1 = matrix(runif(n)),
+                       u_large2 = matrix(runif(n)),
+                       u_large3 = matrix(runif(n)),
+                       u_large4 = matrix(runif(n)),
+                       log_lambda=1.2)
+    
+    # parameters <- list(
+    #   beta = beta_init,
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   log_lambda = 2,
+    #   u_large1 = matrix(runif(n)),
+    #   u_large2 = matrix(runif(n)),
+    #   u_large3 = matrix(runif(n)),
+    #   u_large4 = matrix(runif(n))
+    # )
+    rdm_vec <- c("u_large1", "u_large2","u_large3", "u_large4")
+    dll_name <- "fullRE_dirichletmultinomial_single_lambda_REv2"
+    # obj <- MakeADFun(data, parameters, DLL="",
+    #                  random = )
+  }else if(model == "fullRE_multinomial_REv2"){
+    data$num_individuals = n
+    parameters$u_large = NULL
+    parameters <- list(parameters,
+                       u_large1 = matrix(runif(n)),
+                       u_large2 = matrix(runif(n)),
+                       u_large3 = matrix(runif(n)),
+                       u_large4 = matrix(runif(n)))
+    # parameters <- list(
+    #   beta = beta_init,
+    #   logs_sd_RE=rep(1, d-1),
+    #   cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+    #   u_large1 = matrix(runif(n)),
+    #   u_large2 = matrix(runif(n)),
+    #   u_large3 = matrix(runif(n)),
+    #   u_large4 = matrix(runif(n))
+    # )
+    dll_name <- "fullRE_ME_multinomial_REv2"
+    rdm_vec <- c("u_large1", "u_large2","u_large3", "u_large4")
+    # obj <- MakeADFun(data, parameters, DLL="",
+    #                  random = )
   }else{
     stop('Specify correct <model>\n')
   }
-  obj$hessian <- TRUE
-  opt <- do.call("optim", obj)
-  opt
-  opt$hessian ## <-- FD hessian from optim
-  return(sdreport(obj))
+  
+  if(!is.null(initial_params)){
+    ## initial parameters are passed as arguments
+    parameters <- initial_params
+  }
+  
+  if(is.null(rdm_vec)){
+    ## fixed effects model
+    obj <- MakeADFun(data, parameters, DLL=dll_name)
+  }else{
+    ## random effects model
+    obj <- MakeADFun(data, parameters, DLL=dll_name, random = rdm_vec)
+  }
+  
+  if(use_nlminb){
+    opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max)
+  }else{
+    obj$hessian <- TRUE
+    opt <- do.call("optim", obj)
+    opt
+    opt$hessian ## <-- FD hessian from optim
+  }
+  return_report <- sdreport(obj)
+  # if(sort_columns){
+  #   ## return results in the original order
+  #   order_cats
+  #   return_report$par.fixed[grepl('beta', names(return_report$par.fixed))] = as.vector(matrix(python_like_select_name(return_report$par.fixed, 'beta'), nrow=2)[,order_cats])
+  #   return_report$cov.fixed
+  #   return_report
+  # }
+  
+  return(return_report)
 }
 
 python_like_select = function(vector, grep_substring){
@@ -406,7 +586,7 @@ give_summary_per_sample = function(TMB_object, verbatim=T){
   }
 }
 
-give_summary_of_runs2 = function(vector_TMB_objects, long_return){
+give_summary_of_runs2 = function(vector_TMB_objects, long_return, verbatim=T){
   timeout_bool = sapply(vector_TMB_objects, typeof) == "character"
   hessian_positivedefinite_bool = sapply(vector_TMB_objects[!timeout_bool], function(i){
     if(length(i) == 1){FALSE}else{i$pdHess}})
@@ -422,7 +602,7 @@ give_summary_of_runs2 = function(vector_TMB_objects, long_return){
 }
 
 
-give_summary_of_runs = function(vector_TMB_objects, long_return){
+give_summary_of_runs = function(vector_TMB_objects, long_return, verbati=T){
   if(verbatim){
     stop('Check give_summary_of_runs2 instead')
   }
@@ -465,7 +645,7 @@ load_posteriors = function(fle_rdata){
 }
 
 wald_generalised = function(v, sigma){
-  warning('20201218: sigma**(1/2) has now been replaced by (as we had before sometime in November) sigma')
+  # warning('20201218: sigma**(1/2) has now been replaced by (as we had before sometime in November) sigma')
   chisqrt_stat = t(v) %*% solve(sigma) %*% v
   pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
@@ -475,8 +655,13 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-    if(is.na(idx_beta)){
-      NA
+    if(length(idx_beta) == 1){
+      if(is.na(idx_beta)){
+        NA
+      }else{
+        if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
+        NA
+      }
     }else{
       wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
     }
@@ -491,7 +676,7 @@ select_slope = function(i){
 
 select_slope_2 = function(i, verbatim=TRUE){
   if(is.null(dim(i))){
-    if(verbatim) warning('As per 27 August it seems clear that this version, and not <select_slope>, is correct')
+    # if(verbatim) warning('As per 27 August it seems clear that this version, and not <select_slope>, is correct')
     i[c(F,T)]
   }else{
     i[,c(F,T)]
@@ -683,7 +868,7 @@ give_subset_sigs = function(sig_obj, sigs_to_remove){
   
   if(typedata %in% c("nucleotidesubstitution1", "nucleotidesubstitution3", "simulation")){
     slot_name = "count_matrices_all"
-  }else if(typedata == "signatures"){
+  }else if(grepl("signatures", typedata)){
     if(is.null(attr(sig_obj,"count_matrices_active")[[1]]) | (length(attr(sig_obj,"count_matrices_active")[[1]]) == 0)){
       ## no active signatures
       slot_name = "count_matrices_all"
@@ -698,11 +883,55 @@ give_subset_sigs = function(sig_obj, sigs_to_remove){
   return(sig_obj)
 }
 
+give_amalgamated_exposures = function(sig_obj, list_groupings){
+  
+  if(typedata %in% c("nucleotidesubstitution1", "nucleotidesubstitution3", "simulation")){
+    slot_name = "count_matrices_all"
+  }else if(grepl("signatures", typedata)){
+    if(is.null(attr(sig_obj,"count_matrices_active")[[1]]) | (length(attr(sig_obj,"count_matrices_active")[[1]]) == 0)){
+      ## no active signatures
+      slot_name = "count_matrices_all"
+    }else{
+      slot_name = "count_matrices_active"
+    }
+  }
+  sig_obj_slot = attr(sig_obj,slot_name)
+  sig_obj_slot = lapply(sig_obj_slot, function(i){
+    new_mat = sapply(list_groupings, function(j){
+      grouped_exp <- i[,colnames(i) %in% j]
+      if(!is.null(ncol(grouped_exp))){
+        rowSums(grouped_exp)
+      }else{
+        grouped_exp
+      }
+      })
+  colnames(new_mat) = sapply(list_groupings, function(i){if(length(i)>1){paste0(i[1], '+')}else{i}})
+  return(new_mat)
+  })
+  attr(sig_obj,slot_name) = sig_obj_slot
+  return(sig_obj)
+}
+
+give_amalgamated_exposures_TMBobj = function(sig_obj, list_groupings){
+  sig_obj$Y = sapply(list_groupings, function(j){
+    grouped_exp <- sig_obj$Y[,colnames(sig_obj$Y) %in% j]
+    if(!is.null(ncol(grouped_exp))){
+      rowSums(grouped_exp)
+    }else{
+      grouped_exp
+    }
+  })
+  colnames(sig_obj$Y) = sapply(list_groupings, function(i){if(length(i)>1){paste0(i[1], '+')}else{i}})
+  return(sig_obj)
+}
+  
+
 give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
   sig_obj$Y = sig_obj$Y[,!(colnames(sig_obj$Y) %in% sigs_to_remove)]
   keep_obs = rowSums(sig_obj$Y) > 0
   sig_obj$Y = sig_obj$Y[keep_obs,]
   sig_obj$x = sig_obj$x[keep_obs,]
+  sig_obj$z = sig_obj$z[keep_obs,]
   return(sig_obj)
 }
 
@@ -724,32 +953,33 @@ normalise_cl <- function(x){
   }
 }
 
-give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F){
+give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F, ...){
   require(gridExtra)
   obj = load_PCAWG(ct, typedata, simulation)
-  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T)+ggtitle('Early raw')
-  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T)+ggtitle('Late raw')
-  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T)+ggtitle('Early normalised')
-  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T)+ggtitle('Late normalised')
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T, ...)+ggtitle('Late normalised')+ guides(shape = guide_legend(override.aes = list(size = 5)))
+  
   if(!legend_on){
-    a+guides(fill=F)
-    b+guides(fill=F)
-    c+guides(fill=F)
-    d+guides(fill=F)
+    a <- a+guides(fill=F)
+    b <- b+guides(fill=F)
+    c <- c+guides(fill=F)
+    d <- d+guides(fill=F)
   }
   grid.arrange(a, b, c, d, top=title)
 }
 
 wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, iter.max=150, init_log_lambda = 2, idx_cov_to_fill){
   dim(object$Y)
-  sort_columns=T
+  # sort_columns=T
   smart_init_vals=T
   
   data = object
   
-  if(sort_columns){
-    data$Y = data$Y[,order(colSums(data$Y), decreasing = F)]
-  }
+  # if(sort_columns){
+  #   data$Y = data$Y[,order(colSums(data$Y), decreasing = F)]
+  # }
   
   data$Y = matrix(data$Y, nrow=nrow(data$Y))
   data$x = (matrix(data$x, ncol=2))
@@ -782,6 +1012,13 @@ wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, i
   }else if(model == "diagRE_DM"){
     parameters$cov_par_RE = NULL
     obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
+  }else if(model == "fullREDMsinglelambda"){
+    parameters$log_lambda = 2
+    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
+  }else if(model == "diagREDMsinglelambda"){
+    parameters$cov_par_RE = NULL
+    parameters$log_lambda = 2
+    obj <- MakeADFun(data, parameters, DLL="diagRE_dirichletmultinomial_single_lambda", random = "u_large")
   }else if(model == "sparseRE_DM"){
     if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
     parameters$cov_par_RE = NULL
@@ -792,12 +1029,374 @@ wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, i
     }else{
       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomial_single", random = "u_large")
     }
-  }else{
+  }else if(model == "sparseRE_DMSL"){
+    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+    parameters$log_lambda = 2
+    parameters$cov_par_RE = NULL
+    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+    data$idx_params_to_infer = (idx_cov_to_fill)
+    if(length(idx_cov_to_fill) > 1){
+      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda", random = "u_large")
+    }else{
+      stop()
+    }
+  }else if(model == "sparseRE_DMSL2"){
+    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+    parameters$log_lambda = 2
+    parameters$cov_par_RE = NULL
+    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+    data$idx_params_to_infer = (idx_cov_to_fill)
+    if(length(idx_cov_to_fill) > 1){
+      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
+    }else{
+      stop()
+    }
+  }else if(model == "sparseRE_DMSL2"){
+    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+    parameters$log_lambda = 2
+    parameters$cov_par_RE = NULL
+    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+    data$idx_params_to_infer = (idx_cov_to_fill)
+    if(length(idx_cov_to_fill) > 1){
+      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
+    }else{
+      stop()
+    }
+  } else{
     stop("Incorrect <model>")
   }
 
-  opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max)
+  opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max, trace=T)
   
   if(return_report)  return(sdreport(obj))
   return(opt)
+}
+
+is_slope = function(v){
+  bool_isbetaslope = rep(F, length(v))
+  bool_isbetaslope[v == "beta"] = T
+  bool_isbetaslope[which(bool_isbetaslope)] = c(F,T)
+  bool_isbetaslope
+}
+
+give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, ...){
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T, ...)+ggtitle('Late normalised')
+  if(!legend_on){
+    a <- a+guides(fill=F)
+    b <- b+guides(fill=F)
+    c <- c+guides(fill=F)
+    d <- d+guides(fill=F)
+  }
+  if(legend_bottom){
+    a <- a+theme(legend.position='bottom')
+    b <- b+theme(legend.position='bottom')
+    c <- c+theme(legend.position='bottom')
+    d <- d+theme(legend.position='bottom')
+  }
+  grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+}
+
+give_ranked_plot_simulation = function(tmb_fit_object, data_object, print_plot = T, nreps = 1, model, integer_overdispersion_param){
+  
+  if(model == 'M'){
+    ## theta is always going to be the same. Only replicate the draws from the multinomial
+    
+    sim_theta = simulate_from_M_TMB(tmb_fit_object = tmb_fit_object, full_RE = T,
+                                    x_matrix = data_object$x, z_matrix = data_object$z)
+    
+    sim_counts = t(sapply(1:nrow(sim_theta), function(i) rmultinom(n = 1, size = sum(data_object$Y[i,]), prob = sim_theta[i,]) ) )
+    
+    if(nreps>1){
+      sim_counts = replicate(nreps, t(sapply(1:nrow(sim_theta), function(i) rmultinom(n = 1, size = sum(data_object$Y[i,]), prob = sim_theta[i,]) ) ), simplify = F)
+    }
+  }else if(model %in% c('DM', 'DMSL')){
+    give_sim_data = function(){
+      if(model == 'DM'){
+        sim_theta = simulate_from_DM_TMB(tmb_fit_object = tmb_fit_object, full_RE = T,
+                                         x_matrix = data_object$x, z_matrix = data_object$z, integer_overdispersion_param=integer_overdispersion_param)
+      }else if(model == 'DMSL'){
+        sim_theta = simulate_from_DMSL_TMB(tmb_fit_object = tmb_fit_object, full_RE = T,
+                                         x_matrix = data_object$x, z_matrix = data_object$z, integer_overdispersion_param=integer_overdispersion_param)
+      }
+      sim_counts = t(sapply(1:nrow(sim_theta), function(i) rmultinom(n = 1, size = sum(data_object$Y[i,]), prob = sim_theta[i,]) ) )
+      return(sim_counts)
+    }    
+    if(nreps>1){
+      sim_counts = replicate(nreps, give_sim_data(), simplify = F)
+    }else{
+      sim_counts = give_sim_data()
+    }
+  }else{
+    stop('Specify a correct model')
+  }
+  
+  stopifnot(all(dim(data_object$Y) == dim(sim_counts)))
+  if(print_plot)  plot(sort(data_object$Y), sort(sim_counts))
+  
+  return(sim_counts)
+  
+}
+
+
+simulate_from_M_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = softmax(cbind(logRmat, 0))
+  }else{
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+  }
+  return(sim_thetas)
+}
+
+simulate_from_DM_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix, integer_overdispersion_param){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  overdispersion_lambda = integer_overdispersion_param*exp(python_like_select_name(tmb_fit_object$par.fixed, "log_lambda")[x_matrix[,2]+1])
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* softmax(c(logRmat[l,], 0)))))
+  }else{
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* sim_thetas[l,])))
+  }
+  return(sim_thetas)
+}
+
+simulate_from_DMSL_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix, integer_overdispersion_param){
+  dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
+  overdispersion_lambda = rep(integer_overdispersion_param*exp(python_like_select_name(tmb_fit_object$par.fixed, "log_lambda")), nrow(x_matrix))
+  if(full_RE){
+    re_mat = re_vector_to_matrix(tmb_fit_object$par.random, dmin1)
+    ntimes2 = nrow(z_matrix)
+    logRmat = z_matrix %*% re_mat + 
+      x_matrix %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2)
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* softmax(c(logRmat[l,], 0)))))
+  }else{
+    ## univariate RE
+    sim_thetas = softmax(cbind(sapply(1:dmin1,
+                                      function(some_dummy_idx) give_z_matrix(length(tmb_fit_object$par.random) * 2) %*% tmb_fit_object$par.random) +
+                                 give_x_matrix(length(tmb_fit_object$par.random) * 2) %*% matrix(python_like_select_name(tmb_fit_object$par.fixed, 'beta'), nrow=2), 0))
+    sim_thetas = t(sapply(1:nrow(logRmat), function(l) MCMCpack::rdirichlet(1, overdispersion_lambda[l]* sim_thetas[l,])))
+  }
+  return(sim_thetas)
+}
+
+give_interval_plots = function(df_rank, data_object, loglog=F){
+  xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
+  xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
+                                                       max_interval=quantile(sorted_value, probs = c(0.975)),
+                                                       mean=mean(sorted_value))
+  xx_summary = xx_summary[!(duplicated(xx_summary[,c('rank_number', 'min_interval', 'max_interval')])),c('rank_number', 'min_interval', 'max_interval', 'mean')]
+  a = ggplot(cbind.data.frame(xx_summary, sorted_true=sort(data_object$Y)), aes(x=sorted_true, ymin= min_interval, ymax=max_interval))+
+    geom_abline(slope = 1, intercept = 0, lty='dashed')+
+    geom_ribbon(fill = "red", alpha=0.2)+
+    geom_point(aes(x=sorted_true, y=mean), size=0.4)+
+    geom_line(aes(x=sorted_true, y=mean))+
+    labs(x='Observed ranked value', y='Mean simulated ranked value')
+  if(loglog){
+    a = a+ scale_y_continuous(trans = "log")+scale_x_continuous(trans = "log")
+  }
+  
+  return(a)
+}
+
+give_interval_plots_2 = function(df_rank, data_object,loglog=F, title, theme_bw=F){
+  xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
+  xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
+                                                       max_interval=quantile(sorted_value, probs = c(0.975)),
+                                                       mean=mean(sorted_value))
+  xx_summary = xx_summary[!(duplicated(xx_summary[,c('rank_number', 'min_interval', 'max_interval')])),c('rank_number', 'min_interval', 'max_interval', 'mean')]
+  xx_summary <- cbind.data.frame(xx_summary, sorted_true=as.vector(data_object$Y))
+  xx_summary[,'rank_true'] = order(xx_summary$sorted_true)
+  xx_summary$col = apply(xx_summary, 1, function(i) (i['sorted_true'] > i['min_interval']) & (i['sorted_true'] < i['max_interval']) )
+  a  = ggplot(xx_summary, aes(x=sorted_true,
+                              ymin= min_interval, ymax=max_interval))+
+    geom_abline(slope = 1, intercept = 0, lty='dashed')+
+    geom_ribbon(fill = "red", alpha=0.2)+
+    geom_point(aes(x=sorted_true, y=mean, col=col), size=0.4)+
+    geom_line(aes(x=sorted_true, y=mean))+
+    labs(x='Observed value', y='Mean simulated value')+
+    ggtitle(title, subtitle=paste0(paste0(names(table(xx_summary$col)), ':', table(xx_summary$col)), collapse ='; '))+
+    theme(legend.position = "bottom")
+  
+  if(theme_bw){
+    a = a+theme_bw()+theme(legend.position = "bottom")
+  }
+  
+  if(loglog){a=a+ scale_y_continuous(trans = "log")+scale_x_continuous(trans = "log") }
+  
+  return(a)
+}
+
+give_betas <- function(TMB_obj){
+  matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
+}
+
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T){
+  if(typeof(TMB_obj) == 'character'){
+    if(theme_bw){
+      ggplot()+theme_bw()
+    }else{
+      ggplot()
+    }
+  }else{
+    .summary_betas <- summary(TMB_obj)
+    .summary_betas <- cbind.data.frame(python_like_select_rownames(.summary_betas, 'beta'),
+                                       type_beta=rep(c('Intercept', 'Slope')),
+                                       LogR=rep(1:(nrow(python_like_select_rownames(.summary_betas, 'beta'))/2), each=2))
+    if(!is.null(names_cats)){
+      if(remove_SBS){
+        names_cats <- gsub("SBS", "", names_cats) 
+      }
+      .summary_betas$LogR = names_cats[.summary_betas$LogR]
+    }
+    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))+
+      geom_hline(yintercept = 0, lty='dashed', col='blue')+
+      geom_point()+
+      geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
+      ggtitle('Slopes')+facet_wrap(.~type_beta, scales = "free")
+    
+    if(theme_bw){
+      plt <- plt + theme_bw()
+    }
+    
+    if(rotate_axis){
+      plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+    }
+    
+    if(!TMB_obj$pdHess){
+      plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
+    }else{
+      plt
+    }
+  }
+}
+
+give_length_cov <- function(dim1_covmat){
+  ((dim1_covmat**2) - dim1_covmat )/2
+}
+
+
+give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
+                                    bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
+                                    path_to_data= "../../../data/", tmb_object=NULL, obj_data=NULL,
+                                    nrow_pca_plot=2){
+  
+  if(is.null(tmb_object)){
+    if(model == "fullRE_M"){
+      if(!bool_nonexo)    list_estimates <- fullRE_M
+      if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
+    }else if(model == "fullRE_DM"){
+      if(!bool_nonexo)    list_estimates <- fullRE_DMSL
+      if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
+    }else if(model == "sparseRE_DM"){
+      if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
+    }
+  }else{
+    list_estimates <- list()
+    list_estimates[[ct]] <- tmb_object
+  }
+  
+  if(is.null(obj_data)){
+    warning('WARNING! Here I am sorting the columns of TMB, I should not in all cases. Specify <obj_data> if needed')
+    obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
+                                                       sigs_to_remove = sigs_to_remove))
+  }
+  dmin1 <- ncol(obj_data$Y)-1
+  cov_vec = rep(0, (dmin1**2-dmin1)/2)
+  
+  if(model %in% c("fullRE_M", "fullRE_DM", "fullRE_DMSL")){
+    cov_vec = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE')
+    ###**** I AM NOT SURE ABOUT THIS BIT BELOW! ARE THEY SD OR VAR???*****###
+    ### implementing them as though they were sd ###
+    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }else if(model == "sparseRE_DM"){
+    cov_vec[as.numeric(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,"V2"], ',')[[1]])] = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_RE_part')
+    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }else if(model %in% c("diagRE_M", "diagRE_DM", "diagRE_DMSL")){
+    cov_vec = rep(0, give_length_cov(length(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))))
+    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+  }else{
+    stop('Specify correct <model>')
+  }
+  
+  cov_mat <- fill_covariance_matrix(arg_d = dmin1,
+                                    arg_entries_var = var_vec,
+                                    arg_entries_cov = cov_vec)
+  cov_mat_v2 <- fill_covariance_matrix(arg_d = dmin1,
+                                       arg_entries_var = var_vec_v2,
+                                       arg_entries_cov = cov_vec)
+  # cov_matb <- fill_covariance_matrix(arg_d = dmin1,
+  #                                   arg_entries_var = var_vec**2,
+  #                                   arg_entries_cov = cov_vec)
+  
+  beta_mat = matrix(python_like_select_name(list_estimates[[ct]]$par.fixed, 'beta'), nrow=2)
+  
+  n_sim = 1000
+  x_sim = cbind(1, rep(c(0,1), n_sim))
+  u_sim = mvtnorm::rmvnorm(n = n_sim, mean = rep(0,dmin1), sigma = cov_mat)
+  
+  theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
+  
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
+    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
+  }else if(model %in% c("fullRE_M")){
+    alpha = softmax(cbind(theta, 0))
+  }else{
+    stop('Check softmax step')
+  }
+  
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
+    probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
+  }else if(model %in% c("fullRE_M")){
+    probs = alpha
+  }else{
+      stop('Check probabilities step')
+    }
+  
+  probs_obs = normalise_rw(obj_data$Y)
+  all_probs = rbind(probs_obs, probs)
+  
+  if(bool_give_PCA){
+    pca <- prcomp(all_probs)
+    
+    if(! (sig_of_interest %in% colnames(all_probs))){stop('Specify a <sig_of_interest> present in the dataset')}
+    
+    df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
+                               sig_of_interest=all_probs[,sig_of_interest],
+                               group=c(rep(c('early','late')[obj_data$x[,2]+1]),
+                                       rep(c('early','late'), n_sim)))
+    return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+labs(col=sig_of_interest)+
+                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group),nrow=nrow_pca_plot)))
+  }else{
+    return(all_probs)
+  }
+  
+}
+
+vector_cats_to_logR <- function(i){paste0(i[-length(i)], '/', i[length(i)])}
+
+non_duplicated_rows <- function(i){
+  rownames(i)[duplicated(rownames(i))] = paste0(rownames(i)[duplicated(rownames(i))], "_2")
+  i
+}
+
+give_all_correlations <- function(j){
+  outer(1:nrow(j), 1:nrow(j), Vectorize(function(i,k){cor(j[i,], j[k,])}))
 }
