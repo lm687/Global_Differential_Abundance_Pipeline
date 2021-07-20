@@ -15,29 +15,40 @@ source("helper_TMB.R")
 re_run_inference = FALSE ## use cache or not
 give_summary_runs = FALSE ## whether to run the section to see what has converged, what hasn't, etc.
 folder_robjs = "../../data/pcawg_robjects_cache/tmb_results/"
+folder_robjs_nlminb = "../../data/pcawg_robjects_cache/tmb_results/nlminb/"
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
-TMB::compile("mm_multinomial/ME_multinomial.cpp")
-dyn.load(dynlib("mm_multinomial/ME_multinomial"))
-TMB::compile("mm_multinomial/ME_dirichletmultinomial.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
-TMB::compile("mm_multinomial/ME_LNM.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/ME_LNM"))
+# TMB::compile("mm_multinomial/ME_multinomial.cpp")
+# dyn.load(dynlib("mm_multinomial/ME_multinomial"))
+# TMB::compile("mm_multinomial/ME_dirichletmultinomial.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/ME_dirichletmultinomial"))
+# TMB::compile("mm_multinomial/ME_LNM.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/ME_LNM"))
 TMB::compile("mm_multinomial/fullRE_ME_multinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial"))
 TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial"))
-TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar"))
+# TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_altpar"))
 TMB::compile("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/fullRE_ME_singlelambda_dirichletmultinomial"))
 TMB::compile("mm_multinomial/diagRE_ME_dirichletmultinomial.cpp", "-std=gnu++17")
 dyn.load(dynlib("mm_multinomial/diagRE_ME_dirichletmultinomial"))
-TMB::compile("mm_multinomial/fullRE_ME_multinomial_categorical.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial_categorical"))
-TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical.cpp", "-std=gnu++17")
-dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical"))
+TMB::compile("mm_multinomial/diagRE_ME_multinomial.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_ME_multinomial"))
+# TMB::compile("mm_multinomial/fullRE_ME_multinomial_categorical.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/fullRE_ME_multinomial_categorical"))
+# TMB::compile("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical.cpp", "-std=gnu++17")
+# dyn.load(dynlib("mm_multinomial/fullRE_ME_dirichletmultinomial_categorical"))
+TMB::compile("mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
+TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+TMB::compile("mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
+TMB::compile("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2.cpp", "-std=gnu++17")
+dyn.load(dynlib("mm_multinomial/fullRE_dirichletmultinomial_single_lambda2"))
 
 #-------------------------------------------------------------------------------------------------#
 
@@ -58,6 +69,8 @@ rownames(samples_files2) = rownames(samples_files)[samples_files$type != "nucleo
 #----------------------------------------------------------------------------------------------------#
 ## run at random
 if(re_run_inference){
+  
+  enough_samples = readLines("~/Desktop/CT_sufficient_samples.txt")
 
   mclapply(sample(which(is.na(match(rownames(samples_files2),
                                     gsub(".RDS", "", gsub("M_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
@@ -68,25 +81,55 @@ if(re_run_inference){
      saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "M_", rownames(i), ".RDS"))
   })
   
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("DM_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+
+  mclapply(sample(which(is.na(match(as.vector(sapply(enough_samples, function(i) c(paste0(i, '_signatures'), paste0(i, "_nucleotidesubstitution1")))),
+                                    gsub(".RDS", "", gsub("fullRE_DMSL_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
            function(idx){
              i = samples_files2[idx,]
-             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "DM"),
+             x = withTimeout(wrapper_run_TMB(load_PCAWG(ct = i[1,1], typedata = i[1,2]), sort_columns = T, smart_init_vals = T,
+                                             model = "fullREDMsinglelambda"),
                              timeout = 300, onTimeout = "warning")
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "DM_", rownames(i), ".RDS"))
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMSL_", rownames(i), ".RDS"))
            })
   
-  
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("LNM_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  mclapply(sample(which(is.na(match(as.vector(sapply(enough_samples, function(i) c(paste0(i, '_signatures')))),
+                                    gsub(".RDS", "", gsub("fullRE_DMSL2_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
            function(idx){
-             # mclapply(1:nrow(samples_files), function(idx){
              i = samples_files2[idx,]
-             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "LNM"),
+             x = withTimeout(wrapper_run_TMB(sort_columns_TMB(load_PCAWG(ct = i[1,1], typedata = i[1,2])), smart_init_vals = T,
+                                             model = "fullREDMsinglelambda2"),
                              timeout = 300, onTimeout = "warning")
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "LNM_", rownames(i), ".RDS"))
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMSL2_", rownames(i), ".RDS"))
            })
+  
+  mclapply(sample(which(is.na(match(as.vector(sapply(enough_samples, function(i) c(paste0(i, '_signatures'), paste0(i, "_nucleotidesubstitution1")))),
+                                    gsub(".RDS", "", gsub("diagRE_DMSL_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+           function(idx){
+             i = samples_files2[idx,]
+             x = wrapper_run_TMB(load_PCAWG(ct = i[1,1], typedata = i[1,2]), sort_columns = T, smart_init_vals = T,
+                                             model = "diagREDMsinglelambda")
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "diagRE_DMSL_", rownames(i), ".RDS"))
+           })
+  
+  # mclapply(sample(which(is.na(match(rownames(samples_files2),
+  #                                   gsub(".RDS", "", gsub("DM_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  #          function(idx){
+  #            i = samples_files2[idx,]
+  #            x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "DM"),
+  #                            timeout = 300, onTimeout = "warning")
+  #            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "DM_", rownames(i), ".RDS"))
+  #          })
+  
+  
+  # mclapply(sample(which(is.na(match(rownames(samples_files2),
+  #                                   gsub(".RDS", "", gsub("LNM_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  #          function(idx){
+  #            # mclapply(1:nrow(samples_files), function(idx){
+  #            i = samples_files2[idx,]
+  #            x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "LNM"),
+  #                            timeout = 300, onTimeout = "warning")
+  #            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "LNM_", rownames(i), ".RDS"))
+  #          })
 
   mclapply(sample(which(is.na(match(rownames(samples_files2),
                                     gsub(".RDS", "", gsub("fullRE_M_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
@@ -108,18 +151,18 @@ if(re_run_inference){
 
   ## diagonal M
   mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("diagRE_M_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+                                    gsub(".RDS", "", gsub("diagRE_M_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/optim/"))))))),
            function(idx){
              outcome_inference="Not good"
              counter_tries = 0
              while(outcome_inference != "Good" & counter_tries < 6){
                i = samples_files2[idx,]
-               x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "diagRE_M"),
+               x = withTimeout(wrapper_run_TMB(load_PCAWG(i[1,1], i[1,2]), model = "diagRE_M"),
                                timeout = 300, onTimeout = "warning")
                outcome_inference = give_summary_per_sample(x)
                counter_tries = counter_tries + 1
              }
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "diagRE_M_", rownames(i), ".RDS"))
+             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/optim/", "diagRE_M_", rownames(i), ".RDS"))
   })
   
   ## diagonal DM
@@ -140,24 +183,24 @@ if(re_run_inference){
   
   
   ## Categorical: not over-dispersed
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("fullRE_Mcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
-           function(idx){
-             i = samples_files2[idx,]
-             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_Mcat"),
-                             timeout = 300, onTimeout = "warning")
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_Mcat_", rownames(i), ".RDS"))
-           })
-  
-  ## Categorical: over-dispersed
-  mclapply(sample(which(is.na(match(rownames(samples_files2),
-                                    gsub(".RDS", "", gsub("fullRE_DMcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
-           function(idx){
-             i = samples_files2[idx,]
-             x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DMcat"),
-                             timeout = 300, onTimeout = "warning")
-             saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMcat_", rownames(i), ".RDS"))
-           })
+  # mclapply(sample(which(is.na(match(rownames(samples_files2),
+  #                                   gsub(".RDS", "", gsub("fullRE_Mcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  #          function(idx){
+  #            i = samples_files2[idx,]
+  #            x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_Mcat"),
+  #                            timeout = 300, onTimeout = "warning")
+  #            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_Mcat_", rownames(i), ".RDS"))
+  #          })
+  # 
+  # ## Categorical: over-dispersed
+  # mclapply(sample(which(is.na(match(rownames(samples_files2),
+  #                                   gsub(".RDS", "", gsub("fullRE_DMcat_", "", list.files("../../data/pcawg_robjects_cache/tmb_results/"))))))),
+  #          function(idx){
+  #            i = samples_files2[idx,]
+  #            x = withTimeout(wrapper_run_TMB(i[1,1], i[1,2], model = "fullRE_DMcat"),
+  #                            timeout = 300, onTimeout = "warning")
+  #            saveRDS(object = x, file=paste0("../../data/pcawg_robjects_cache/tmb_results/", "fullRE_DMcat_", rownames(i), ".RDS"))
+  #          })
   
 }
 
@@ -177,18 +220,18 @@ if(re_run_inference){
 #------------------------------------------------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------------------------#
-results_TMB_M = lapply( python_like_select(list.files(folder_robjs), "^M_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_M) = sapply(python_like_select(list.files(folder_robjs), "^M_"), clean_name)
-
-results_TMB_DM = lapply( python_like_select(list.files(folder_robjs), "^DM_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_DM) = sapply(python_like_select(list.files(folder_robjs), "^DM_"), clean_name)
+# results_TMB_M = lapply( python_like_select(list.files(folder_robjs), "^M_"), function(i) readRDS(paste0(folder_robjs, i)))
+# names(results_TMB_M) = sapply(python_like_select(list.files(folder_robjs), "^M_"), clean_name)
+# 
+# results_TMB_DM = lapply( python_like_select(list.files(folder_robjs), "^DM_"), function(i) readRDS(paste0(folder_robjs, i)))
+# names(results_TMB_DM) = sapply(python_like_select(list.files(folder_robjs), "^DM_"), clean_name)
 
 # results_TMB_DM_dep = lapply( python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"),
 #                              function(i) readRDS(paste0("../../data/robjects_cache/tmb_results_dep/", i)))
 # names(results_TMB_DM_dep) = sapply(python_like_select(list.files("../../data/robjects_cache/tmb_results_dep/"), "^DM_"), clean_name)
 
-results_TMB_LNM = lapply( python_like_select(list.files(folder_robjs), "^LNM_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_LNM) = sapply(python_like_select(list.files(folder_robjs), "^LNM_"), clean_name_fullRE)
+# results_TMB_LNM = lapply( python_like_select(list.files(folder_robjs), "^LNM_"), function(i) readRDS(paste0(folder_robjs, i)))
+# names(results_TMB_LNM) = sapply(python_like_select(list.files(folder_robjs), "^LNM_"), clean_name_fullRE)
 
 results_TMB_fullRE_M = lapply( python_like_select(list.files(folder_robjs), "^fullRE_M_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_fullRE_M) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_M_"), clean_name_fullRE)
@@ -203,11 +246,27 @@ names(results_TMB_diagRE_DM) = sapply(python_like_select(list.files(folder_robjs
 results_TMB_diagRE_M = lapply( python_like_select(list.files(folder_robjs), "^diagRE_M_"), function(i) readRDS(paste0(folder_robjs, i)))
 names(results_TMB_diagRE_M) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_M_"), clean_name_fullRE)
 
-results_TMB_fullRE_Mcat = lapply( python_like_select(list.files(folder_robjs), "^fullRE_Mcat_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_fullRE_Mcat) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_Mcat_"), clean_name_fullRE)
+results_TMB_fullRE_DMSL = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DMSL_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_fullRE_DMSL) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DMSL_"), clean_name_fullRE)
 
-results_TMB_fullRE_DMcat = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DMcat_"), function(i) readRDS(paste0(folder_robjs, i)))
-names(results_TMB_fullRE_DMcat) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DMcat_"), clean_name_fullRE)
+results_TMB_diagRE_DMSL = lapply( python_like_select(list.files(folder_robjs), "^diagRE_DMSL_"), function(i) readRDS(paste0(folder_robjs, i)))
+names(results_TMB_diagRE_DMSL) = sapply(python_like_select(list.files(folder_robjs), "^diagRE_DMSL_"), clean_name_fullRE)
+
+results_TMB_fullRE_DM_nlminb = lapply( python_like_select(list.files(folder_robjs_nlminb), "^fullRE_DM_"), function(i) readRDS(paste0(folder_robjs_nlminb, i)))
+names(results_TMB_fullRE_DM_nlminb) = sapply(python_like_select(list.files(folder_robjs_nlminb), "^fullRE_DM_"), clean_name_fullRE)
+
+results_TMB_fullRE_DMSL_nlminb = lapply( python_like_select(list.files(folder_robjs_nlminb), "^fullRE_DMSL_"), function(i) readRDS(paste0(folder_robjs_nlminb, i)))
+names(results_TMB_fullRE_DMSL_nlminb) = sapply(python_like_select(list.files(folder_robjs_nlminb), "^fullRE_DMSL_"), clean_name_fullRE)
+
+results_TMB_diagRE_DMSL_nlminb = lapply( python_like_select(list.files(folder_robjs_nlminb), "^diagRE_DMSL_"), function(i) readRDS(paste0(folder_robjs_nlminb, i)))
+names(results_TMB_diagRE_DMSL_nlminb) = sapply(python_like_select(list.files(folder_robjs_nlminb), "^diagRE_DMSL_"), clean_name_fullRE)
+
+
+# results_TMB_fullRE_Mcat = lapply( python_like_select(list.files(folder_robjs), "^fullRE_Mcat_"), function(i) readRDS(paste0(folder_robjs, i)))
+# names(results_TMB_fullRE_Mcat) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_Mcat_"), clean_name_fullRE)
+# 
+# results_TMB_fullRE_DMcat = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DMcat_"), function(i) readRDS(paste0(folder_robjs, i)))
+# names(results_TMB_fullRE_DMcat) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DMcat_"), clean_name_fullRE)
 
 # results_TMB_fullRE_DM = lapply( python_like_select(list.files(folder_robjs), "^fullRE_DM_altpar_"), function(i) readRDS(paste0(folder_robjs, i)))
 # names(results_TMB_fullRE_DM) = sapply(python_like_select(list.files(folder_robjs), "^fullRE_DM_altpar_"), clean_name_fullRE_2)
@@ -610,14 +669,40 @@ unlisted_stan_mean_M
 ## Determine differential abundance
 results_TMB_M
 
-pvals_M = sapply(results_TMB_M, wald_TMB_wrapper)
-pvals_DM = sapply(results_TMB_DM, wald_TMB_wrapper)
-pvals_LNM = sapply(results_TMB_LNM, wald_TMB_wrapper)
+# pvals_M = sapply(results_TMB_M, wald_TMB_wrapper)
+# pvals_DM = sapply(results_TMB_DM, wald_TMB_wrapper)
+# pvals_LNM = sapply(results_TMB_LNM, wald_TMB_wrapper)
 pvals_M_fullRE = sapply(results_TMB_fullRE_M, wald_TMB_wrapper)
+pvals_M_diagRE = sapply(results_TMB_diagRE_M, wald_TMB_wrapper)
 pvals_M_fullRE_good = pvals_M_fullRE[sapply(results_TMB_fullRE_M, give_summary_per_sample) == "Good"]
 pvals_DM_fullRE = sapply(results_TMB_fullRE_DM, function(i) try(wald_TMB_wrapper(i)))
 pvals_DM_fullRE_good = pvals_DM_fullRE[sapply(results_TMB_fullRE_DM, give_summary_per_sample) == "Good"]
+pvals_DM_diagRE = sapply(results_TMB_diagRE_DM, function(i) try(wald_TMB_wrapper(i)))
+pvals_fullRE_DMSL = sapply(results_TMB_fullRE_DMSL, function(i) try(wald_TMB_wrapper(i)))
+pvals_diagRE_DMSL = sapply(results_TMB_diagRE_DMSL, function(i) try(wald_TMB_wrapper(i)))
+pvals_DM_fullRE_nlminb = sapply(results_TMB_fullRE_DM_nlminb, function(i) try(wald_TMB_wrapper(i)))
+pvals_DMSL_fullRE_nlminb = sapply(results_TMB_fullRE_DMSL_nlminb, function(i) try(wald_TMB_wrapper(i)))
+pvals_DMSL_diagRE_nlminb = sapply(results_TMB_diagRE_DMSL_nlminb, function(i) try(wald_TMB_wrapper(i)))
+
 sapply(list(M_single=pvals_M, DM_single=pvals_DM, LNM_single=pvals_LNM, M_full=pvals_M_fullRE, DM_full=pvals_DM_fullRE), max, na.rm = TRUE)
+
+cat(paste0(apply(cbind(names(pvals_M_fullRE), pvals_M_fullRE < 0.05), 1, paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_M_fullRE < 0.05)[match(names(pvals_M_fullRE), names(pvals_DM_fullRE_good))],
+                 paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_M_diagRE < 0.05)[match(names(pvals_M_fullRE), names(pvals_M_diagRE))],
+                  paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_DM_diagRE < 0.05)[match(names(pvals_M_fullRE), names(pvals_DM_diagRE))],
+                  paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_fullRE_DMSL < 0.05)[match(names(pvals_M_fullRE), names(pvals_fullRE_DMSL))],
+                  paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_diagRE_DMSL < 0.05)[match(names(pvals_M_fullRE), names(pvals_diagRE_DMSL))],
+                  paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_DM_fullRE_nlminb < 0.05)[match(names(pvals_M_fullRE), names(pvals_DM_fullRE_nlminb))],
+                  paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_DMSL_fullRE_nlminb < 0.05)[match(names(pvals_M_fullRE), names(pvals_DMSL_fullRE_nlminb))],
+                  paste0, collapse='\t'), collapse = '\n'))
+cat(paste0(sapply(c(pvals_DMSL_diagRE_nlminb < 0.05)[match(names(pvals_M_fullRE), names(pvals_DMSL_diagRE_nlminb))],
+                  paste0, collapse='\t'), collapse = '\n'))
 
 par(mfrow=c(1,2))
 plot(pvals_M, pvals_M_fullRE)
