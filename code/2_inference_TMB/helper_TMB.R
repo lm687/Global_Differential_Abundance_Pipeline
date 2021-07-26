@@ -70,8 +70,6 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
   d = ncol(objects_sigs_per_CT_features[[1]]) ## number of signatures or features
   n = nrow(objects_sigs_per_CT_features[[1]]) ## number of samples
   
-  print(n)
-  
   # covariate matrix
   X = matrix(NA, nrow=2, ncol=2*n)
   X[1,] = 1
@@ -676,7 +674,7 @@ select_slope = function(i){
 
 select_slope_2 = function(i, verbatim=TRUE){
   if(is.null(dim(i))){
-    # if(verbatim) warning('As per 27 August it seems clear that this version, and not <select_slope>, is correct')
+    # if(verbatim) warning('As per 27 August 2020 it seems clear that this version, and not <select_slope>, is correct')
     i[c(F,T)]
   }else{
     i[,c(F,T)]
@@ -1400,3 +1398,58 @@ non_duplicated_rows <- function(i){
 give_all_correlations <- function(j){
   outer(1:nrow(j), 1:nrow(j), Vectorize(function(i,k){cor(j[i,], j[k,])}))
 }
+
+give_perturbation_TMBobj = function(exposures_cancertype_obj, addone=F){
+  ## adapted from the function give_perturbation_ROOSigs_alt
+
+  if(addone){
+    exposures_cancertype_obj$Y = exposures_cancertype_obj$Y + 1
+  }
+  
+  ## for each individual, compute the perturbation
+  apply(exposures_cancertype_obj$z, 2, function(i){
+    ## if there are two individuals
+    if(sum(i) == 2){
+      exposures_cancertype_obj$Y[which(i == 1)[1],] / exposures_cancertype_obj$Y[which(i == 1)[2],]
+    }
+  })
+  
+}
+
+give_totalperturbation_TMBobj = function(exposures_cancertype_obj, addone=F){
+  ## adapted from the function give_total_perturbation
+  
+  pert <- give_perturbation_TMBobj(exposures_cancertype_obj, addone=addone)
+  
+  mean(apply(pert, 2, function(i) sqrt(sum((i-1/(ncol(exposures_cancertype_obj$Y)))**2))))
+  
+}
+
+give_totalperturbation_TMBobj_sigaverage = function(exposures_cancertype_obj, addone=F){
+  ## adapted from the function give_total_perturbation
+  
+  pert <- give_perturbation_TMBobj(exposures_cancertype_obj, addone=addone)
+  
+  mean(apply(pert, 1, function(i) sqrt(sum((i-1/(ncol(exposures_cancertype_obj$Y)))**2))))
+  
+}
+
+give_weightedtotalperturbation_TMBobj = function(exposures_cancertype_obj, addone=F){
+
+  pert <- give_perturbation_TMBobj(exposures_cancertype_obj, addone=addone)
+  
+  perts <- apply(pert, 2, function(i) sqrt(sum((i-1/(ncol(exposures_cancertype_obj$Y)))**2)))
+  weights <- as.vector(apply(exposures_cancertype_obj$z, 2, function(i){
+    ## if there are two individuals
+    if(sum(i) == 2){
+    log(sum(rowSums(exposures_cancertype_obj$Y[which(i == 1),])))
+    }
+  }))
+  if(length(perts) != length(weights)){
+    stop('Weights and perturbations do not have the same length')
+  }
+  weights <- weights/sum(weights) # normalise
+  sum(perts * weights)/nrow(exposures_cancertype_obj$Y)
+  
+}
+
