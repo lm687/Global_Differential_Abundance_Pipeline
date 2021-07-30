@@ -3,6 +3,9 @@
 // Simple multinomial fitting.
 #include <TMB.hpp>
 template<class Type>
+
+Note!!! logs_sd_RE is not used anywhere!!
+
 Type objective_function<Type>::operator() ()
 {
 

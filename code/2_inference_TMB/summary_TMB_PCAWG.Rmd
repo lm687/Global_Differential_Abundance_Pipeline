@@ -572,6 +572,7 @@ Note that sortedDM did not convergence.
 Nevertheless, both versions of fullRE M -- both of which converged and use the same baseline -- give very different covariances matrices.
 
 ```{r, BoneOsteosarc_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7}
+
 ct <- "Bone-Osteosarc"
 # models_it_bone_osteosarc <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_bone_osteosarc <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedM', 'additional_sortedDM')
@@ -590,6 +591,7 @@ colnames(covmats_bone_osteosarc[['additional_sortedDM']]) <- rownames(covmats_bo
 colnames(covmats_bone_osteosarc[['fullRE_M_nonexo']]) <- rownames(covmats_bone_osteosarc[['fullRE_M_nonexo']]) <- vector_cats_to_logR(colnames(give_subset_sigs_TMBobj(obj_Bone_Osteosarc, nonexogenous$V1)$Y))
 
 for(i in 1:length(covmats_bone_osteosarc)){pheatmap(covmats_bone_osteosarc[[i]], cluster_rows = F, cluster_cols = F, main = models_it_bone_osteosarc[i])}
+
 ```
 
 \subsubsection{Simulation under inferred data}
@@ -610,6 +612,7 @@ sim_Bone_Osteosarc <- give_sim_from_estimates("Bone-Osteosarc", "signatures",
                                               tmb_object=diagRE_DMSL_nonexo[["Bone-Osteosarc"]])
 
 sim_Bone_Osteosarc[[2]]+ggtitle('Simulation of Bone osteosarcoma samples')
+
 ```
 
 \subsubsection{Ranked plot for coverage}
@@ -830,6 +833,7 @@ We use the results from the diagonal single lambda DM to test for differential a
 \subsubsection{Covariance matrices}
 
 ```{r, Breast_AdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7}
+
 ct <- "Breast-AdenoCA"
 models_it_Breast_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
 covmats_Breast_AdenoCA <- lapply(models_it_Breast_AdenoCA,
@@ -863,6 +867,7 @@ sim_Breast_AdenoCA <- give_sim_from_estimates("Breast-AdenoCA", "signatures",
                                               bool_nonexo=T,
                                               model="sparseRE_DM", nrow_pca_plot=1)
 sim_Breast_AdenoCA[[2]]+ggtitle('Simulation of Breast Adenocarcinoma samples')+theme_bw()
+
 ```
 
 \subsubsection{Ranked plot for coverage}
@@ -965,6 +970,7 @@ We use the results from the fullRE single lambda DM to test for differential abu
 
 
 ```{r, Cervix_SCC_cov, echo=FALSE, message=FALSE, fig.height=2.7, fig.width=2.7}
+
 ct <- "Cervix-SCC"
 
 models_it_bone_Cervix_SCC <- c('fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -1002,6 +1008,7 @@ sim_Cervix_SCC <- give_sim_from_estimates( "Cervix-SCC", "signatures",
                                           nrow_pca_plot=1)
 
 sim_Cervix_SCC[[2]]+ggtitle('Simulation of Cervix SCC samples')+theme_bw()
+
 ```
 
 Comparison of the estimated covariance matrix and the closest positive semidefinite matrix.
@@ -1034,6 +1041,7 @@ sim_Cervix_SCC <- give_sim_from_estimates( "Cervix-SCC", "signatures",
                                           nrow_pca_plot=1)
 
 sim_Cervix_SCC[[2]]+ggtitle('Simulation of Cervix SCC samples')+theme_bw()
+
 ```
 
 \subsubsection{Ranked plot for coverage}
@@ -1192,6 +1200,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 
 
 ```{r, CNSGBM_cov, echo=FALSE, message=FALSE, fig.height=2.4, fig.width=2.4, dependson=c('CNS_GBM_additional_runs')}
+
 ct <- "CNS-GBM"
 # models_it_CNS_GBM <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_CNS_GBM <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
@@ -1223,6 +1232,7 @@ sim_CNS_GBM <- give_sim_from_estimates("CNS-GBM", "signatures",
                                       tmb_object=sortedDM_CNSGBM)
 
 sim_CNS_GBM[[2]]+ggtitle('Simulation of CNS-GBM samples')
+
 ```
 
 With fullRE M, this time the covariance matrix is positive semi-definite:
@@ -1241,6 +1251,7 @@ sim_CNS_GBM_M <- give_sim_from_estimates("CNS-GBM", "signatures",
                                       tmb_object=fullRE_M_nonexo[["CNS-GBM"]], nrow=1)
 
 sim_CNS_GBM_M[[2]]+ggtitle('Simulation of CNS-GBM samples (M)')
+
 ```
 
 
@@ -1355,6 +1366,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, CNSMedullo_cov, echo=FALSE, message=FALSE, fig.height=2.3, fig.width=2.3, dependson=c('CNS_Medullo_additional_runs')}
+
 ct <- "CNS-Medullo"
 # models_it_CNS_Medullo <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_CNS_Medullo <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -1389,6 +1401,7 @@ sim_CNS_Medullo <- give_sim_from_estimates("CNS-Medullo", "signatures",
                                       obj_data=obj_CNS_Medullo_nonexo, nrow=1)
 
 sim_CNS_Medullo[[2]]+theme_bw()+ggtitle('Simulation of CNS-Medullo samples')
+
 ```
 
 
@@ -1510,6 +1523,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 
 
 ```{r, CNSOligo_cov, echo=FALSE, message=FALSE, fig.height=2.5, fig.width=2.5, dependson=c('CNS_Oligo_additional_runs')}
+
 ct <- "CNS-Oligo"
 models_it_CNS_Oligo <- c('fullRE_M', 'fullRE_DMSL', 'fullRE_DMSL_nonexo')
 covmats_CNS_Oligo <- lapply(models_it_CNS_Oligo,
@@ -1545,6 +1559,7 @@ sim_CNS_Oligo <- give_sim_from_estimates("CNS-Oligo", "signatures",
                                       obj_data=obj_CNS_Oligo_nonexo, nrow=1)
 
 sim_CNS_Oligo[[2]]+ggtitle('Simulation of CNS-Oligo samples')+theme_bw()
+
 
 ```
 
@@ -1723,6 +1738,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 
 
 ```{r, CNSPiloAstro_cov, echo=FALSE, message=FALSE, fig.height=2.4, fig.width=2.4, dependson=c('CNS_PiloAstro_additional_runs')}
+
 ct <- "CNS-PiloAstro"
 # models_it_CNS_PiloAstro <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_CNS_PiloAstro <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -1755,6 +1771,7 @@ sim_CNS_PiloAstro <- give_sim_from_estimates(ct = "CNS-PiloAstro", typedata = "s
                                       obj_data=obj_CNS_PiloAstro_nonexo, nrow_pca_plot=1)
 
 sim_CNS_PiloAstro[[2]]+ggtitle('Simulation of CNS-PiloAstro samples')+theme_bw()
+
 
 ```
 
@@ -1924,6 +1941,7 @@ We use the results from the diagonal RE single lambda DM nonexo to test for diff
 \subsubsection{Covariance matrices}
 
 ```{r, ColoRectAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=2.6, fig.width=2.6, dependson=c('ColoRect_AdenoCA_additional_runs')}
+
 ct <- "ColoRect-AdenoCA"
 models_it_ColoRect_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
 covmats_ColoRect_AdenoCA <- lapply(models_it_ColoRect_AdenoCA,
@@ -1959,6 +1977,7 @@ sim_ColoRect_AdenoCA <- give_sim_from_estimates("ColoRect-AdenoCA", "signatures"
                                       obj_data=obj_ColoRect_AdenoCA_nonexo, nrow_pca_plot=1)
 
 sim_ColoRect_AdenoCA[[2]]+ggtitle('Simulation of ColoRect-AdenoCA samples')+theme_bw()
+
 
 ```
 
@@ -2139,6 +2158,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, EsoAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=2.8, fig.width=2.8, dependson=c('Eso_AdenoCA_additional_runs')}
+
 ct <- "Eso-AdenoCA"
 # models_it_Eso_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Eso_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
@@ -2171,6 +2191,7 @@ sim_Eso_AdenoCA <- give_sim_from_estimates("Eso-AdenoCA", "signatures",
                                       obj_data=obj_Eso_AdenoCA_nonexo, nrow_pca_plot=1)
 
 sim_Eso_AdenoCA[[2]]+ggtitle('Simulation of Eso-AdenoCA samples')+theme_bw()
+
 ```
 
 \subsubsection{Ranked plot for coverage}
@@ -2281,6 +2302,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, HeadSCC_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Head_SCC_additional_runs')}
+
 ct <- "Head-SCC"
 # models_it_Head_SCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Head_SCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -2313,6 +2335,7 @@ sim_Head_SCC <- give_sim_from_estimates("Head-SCC", "signatures",
                                       obj_data=obj_Head_SCC_nonexo, nrow_pca_plot=1)
 
 sim_Head_SCC[[2]]+ggtitle('Simulation of Head-SCC samples')+theme_bw()
+
 
 ```
 
@@ -2419,6 +2442,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, KidneyChRCC_cov, echo=FALSE, message=FALSE, fig.height=2.7, fig.width=2.7, dependson=c('Kidney_ChRCC_additional_runs')}
+
 ct <- "Kidney-ChRCC"
 # models_it_Kidney_ChRCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Kidney_ChRCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -2452,6 +2476,7 @@ sim_Kidney_ChRCC <- give_sim_from_estimates("Kidney-ChRCC", "signatures",
                                       sig_of_interest='SBS17b', nrow=1)
 
 sim_Kidney_ChRCC[[2]]+ggtitle('Simulation of Kidney-ChRCC samples')+theme_bw()
+
 
 ```
 
@@ -2563,6 +2588,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, KidneyRCCclearcell_cov, echo=FALSE, message=FALSE, fig.height=2.7, fig.width=2.7, dependson=c('Kidney_RCCclearcell_additional_runs')}
+
 ct <- "Kidney-RCC.clearcell"
 # models_it_Kidney_RCCclearcell <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Kidney_RCCclearcell <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -2595,6 +2621,7 @@ sim_Kidney_RCCclearcell <- give_sim_from_estimates("Kidney-RCC.clearcell", "sign
                                       obj_data=obj_Kidney_RCCclearcell_nonexo, nrow=1)
 
 sim_Kidney_RCCclearcell[[2]]+ggtitle('Simulation of Kidney-RCC.clearcell samples')+theme_bw()
+
 
 ```
 
@@ -2755,6 +2782,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, KidneyRCCpapillary_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Kidney_RCCpapillary_additional_runs')}
+
 ct <- "Kidney-RCC.papillary"
 # models_it_Kidney_RCCpapillary <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Kidney_RCCpapillary <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
@@ -2789,6 +2817,7 @@ sim_Kidney_RCCpapillary <- give_sim_from_estimates("Kidney-RCC.papillary", "sign
                                       obj_data=obj_Kidney_RCCpapillary_nonexo_sorted, nrow=1)
 
 sim_Kidney_RCCpapillary[[2]]+ggtitle('Simulation of Kidney-RCC.papillary samples')
+
 
 ```
 
@@ -2902,6 +2931,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, LiverHCC_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Liver_HCC_additional_runs')}
+
 ct <- "Liver-HCC"
 # models_it_Liver_HCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Liver_HCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -2935,6 +2965,7 @@ sim_Liver_HCC <- give_sim_from_estimates("Liver-HCC", "signatures",
                                       obj_data=obj_Liver_HCC_nonexo, nrow=1)
 
 sim_Liver_HCC[[2]]+ggtitle('Simulation of Liver-HCC samples')
+
 
 ```
 
@@ -3089,6 +3120,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, LungAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Lung_AdenoCA_additional_runs')}
+
 ct <- "Lung-AdenoCA"
 # models_it_Lung_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Lung_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
@@ -3121,6 +3153,7 @@ sim_Lung_AdenoCA <- give_sim_from_estimates("Lung-AdenoCA", "signatures",
                                       obj_data=obj_Lung_AdenoCA_nonexo, nrow=1)
 
 sim_Lung_AdenoCA[[2]]+ggtitle('Simulation of Lung-AdenoCA samples')+theme_bw()
+
 
 ```
 
@@ -3231,6 +3264,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, LungSCC_cov, echo=FALSE, message=FALSE, fig.height=2.7, fig.width=2.7, dependson=c('Lung_SCC_additional_runs')}
+
 ct <- "Lung-SCC"
 # models_it_Lung_SCC <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Lung_SCC <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -3427,6 +3461,7 @@ We use the results from the full RE single lambda DM with the subset of signatur
 \subsubsection{Covariance matrices}
 
 ```{r, LymphBNHL_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Lymph_BNHL_additional_runs')}
+
 ct <- "Lymph-BNHL"
 models_it_Lymph_BNHL <- c('fullRE_M', 'additional_sortedMnonexo', 'additional_sortedDMSLnonexo')
 covmats_Lymph_BNHL <- lapply(models_it_Lymph_BNHL,
@@ -3463,6 +3498,7 @@ sim_Lymph_BNHL <- give_sim_from_estimates("Lymph-BNHL", "signatures",
                                       obj_data=obj_LymphBNHL, nrow=1)
 
 sim_Lymph_BNHL[[2]]+ggtitle('Simulation of Lymph-BNHL samples')+theme_bw()
+
 
 ```
 
@@ -3588,6 +3624,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 
 
 ```{r, LymphCLL_cov, echo=FALSE, message=FALSE, fig.height=2.7, fig.width=2.7, dependson=c('Lymph_CLL_additional_runs')}
+
 ct <- "Lymph-CLL"
 # models_it_Lymph_CLL <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Lymph_CLL <- c('fullRE_M', 'fullRE_M_nonexo', 'fullRE_DMSL_nonexo')
@@ -3622,6 +3659,7 @@ sim_Lymph_CLL <- give_sim_from_estimates("Lymph-CLL", "signatures",
                                       sig_of_interest='SBS9', nrow=1)
 
 sim_Lymph_CLL[[2]]+ggtitle('Simulation of Lymph-CLL samples')
+
 
 ```
 
@@ -3794,6 +3832,7 @@ plot_betas(diagRE_DMSL_nonexo[[ct]], names_cats= logR_nonexo_notsorted[[ct]])+gg
 \subsubsection{Covariance matrices}
 
 ```{r, MyeloidMPN_cov, echo=FALSE, message=FALSE, fig.height=2.5, fig.width=2.5, dependson=c('Myeloid_MPN_additional_runs')}
+
 ct <- "Myeloid-MPN"
 models_it_Myeloid_MPN <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
 covmats_Myeloid_MPN <- lapply(models_it_Myeloid_MPN,
@@ -3826,6 +3865,7 @@ sim_Myeloid_MPN <- give_sim_from_estimates("Myeloid-MPN", "signatures",
                                       obj_data=obj_Myeloid_MPN_nonexo_sorted, nrow=1)
 
 sim_Myeloid_MPN[[2]]+ggtitle('Simulation of Myeloid-MPN samples')+theme_bw()
+
 
 ```
 
@@ -3978,6 +4018,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 Keep in mind that fullRE DMSL nonexo has not converged.
 
 ```{r, OvaryAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Ovary_AdenoCA_additional_runs')}
+
 ct <- "Ovary-AdenoCA"
 # models_it_Ovary_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Ovary_AdenoCA <- c('fullRE_M_nonexo')
@@ -4012,6 +4053,7 @@ sim_Ovary_AdenoCA <- give_sim_from_estimates("Ovary-AdenoCA", "signatures",
                                       obj_data=obj_Ovary_AdenoCA_nonexo, nrow=1)
 
 sim_Ovary_AdenoCA[[2]]+ggtitle('Simulation of Ovary-AdenoCA samples')+theme_bw()
+
 
 ```
 
@@ -4141,6 +4183,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, PancAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Panc_AdenoCA_additional_runs')}
+
 ct <- "Panc-AdenoCA"
 # models_it_Panc_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Panc_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
@@ -4174,6 +4217,7 @@ sim_Panc_AdenoCA <- give_sim_from_estimates("Panc-AdenoCA", "signatures",
 
 sim_Panc_AdenoCA[[2]]+ggtitle('Simulation of Panc-AdenoCA samples')+theme_bw()
 
+
 ```
 
 Multinomial:
@@ -4187,6 +4231,7 @@ sim_Panc_AdenoCA <- give_sim_from_estimates("Panc-AdenoCA", "signatures",
                                       obj_data=obj_Panc_AdenoCA_nonexo, nrow=1)
 
 sim_Panc_AdenoCA[[2]]+ggtitle('Simulation of Panc-AdenoCA samples\nUsing multinomial')+theme_bw()
+
 
 ```
 
@@ -4341,6 +4386,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, PancEndocrine_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Panc_Endocrine_additional_runs')}
+
 ct <- "Panc-Endocrine"
 # models_it_Panc_Endocrine <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Panc_Endocrine <- c('fullRE_M', 'fullRE_M_nonexo')
@@ -4372,6 +4418,7 @@ sim_Panc_Endocrine <- give_sim_from_estimates("Panc-Endocrine", "signatures",
                                       obj_data=obj_Panc_Endocrine_nonexo, nrow=1)
 
 sim_Panc_Endocrine[[2]]+ggtitle('Simulation of Panc-Endocrine samples')+theme_bw()
+
 
 ```
 
@@ -4526,6 +4573,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, ProstAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Prost_AdenoCA_additional_runs')}
+
 ct <- "Prost-AdenoCA"
 # models_it_Prost_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Prost_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
@@ -4557,6 +4605,7 @@ sim_Prost_AdenoCA <- give_sim_from_estimates("Prost-AdenoCA", "signatures",
                                       obj_data=obj_Prost_AdenoCA_nonexo, nrow=1)
 
 sim_Prost_AdenoCA[[2]]+ggtitle('Simulation of Prost-AdenoCA samples')+theme_bw()
+
 
 ```
 
@@ -4748,6 +4797,7 @@ We use the results from the full RE single lambda DM to test for differential ab
 
 \subsubsection{Covariance matrices}
 ```{r, SkinMelanomacutaneous_cov, echo=FALSE, message=FALSE, fig.height=2.4, fig.width=2.4, dependson=c('Skin_Melanomacutaneous_additional_runs')}
+
 ct <- "Skin-Melanoma.cutaneous"
 # models_it_Skin_Melanomacutaneous <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Skin_Melanomacutaneous <- c('fullRE_M', 'fullRE_M_nonexo', 'additional_sortedDMSLnonexo')
@@ -4782,6 +4832,7 @@ sim_Skin_Melanomacutaneous <- give_sim_from_estimates("Skin-Melanoma.cutaneous",
                                       obj_data=obj_Skin_Melanomacutaneous_nonexo, nrow=1)
 
 sim_Skin_Melanomacutaneous[[2]]+ggtitle('Simulation of Skin-Melanoma.cutaneous samples')+theme_bw()
+
 
 ```
 
@@ -4950,6 +5001,7 @@ sim_Stomach_AdenoCA <- give_sim_from_estimates("Stomach-AdenoCA", "signatures",
                                       obj_data=obj_Stomach_AdenoCA_nonexo, nrow=1)
 
 sim_Stomach_AdenoCA[[2]]+ggtitle('Simulation of Stomach-AdenoCA samples')+theme_bw()
+
 
 ```
 \subsubsection{Ranked plot for coverage}
@@ -5130,6 +5182,7 @@ sim_Thy_AdenoCA <- give_sim_from_estimates("Thy-AdenoCA", "signatures",
 
 sim_Thy_AdenoCA[[2]]+ggtitle('Simulation of Thy-AdenoCA samples')+theme_bw()
 
+
 ```
 
 
@@ -5281,6 +5334,7 @@ We use the results from the diag RE single lambda DM to test for differential ab
 \subsubsection{Covariance matrices}
 
 ```{r, UterusAdenoCA_cov, echo=FALSE, message=FALSE, fig.height=3.7, fig.width=3.7, dependson=c('Uterus_AdenoCA_additional_runs')}
+
 ct <- "Uterus-AdenoCA"
 # models_it_Uterus_AdenoCA <- c('fullRE_M', 'sparseRE_DMSL', 'fullRE_M_nonexo')
 models_it_Uterus_AdenoCA <- c('fullRE_M', 'fullRE_M_nonexo')
@@ -5315,6 +5369,7 @@ sim_Uterus_AdenoCA <- give_sim_from_estimates("Uterus-AdenoCA", "signatures",
                                       obj_data=obj_Uterus_AdenoCA_nonexo, nrow=1)
 
 sim_Uterus_AdenoCA[[2]]+ggtitle('Simulation of Uterus-AdenoCA samples')+theme_bw()
+
 
 ```
 
@@ -5775,6 +5830,7 @@ covariances_psd <- do.call('rbind', lapply(list_models, function(i){
     )
 })
 }))
+
 ```
 
 ```{r, covariance_matrices_PSD_heatmap, echo=F, fig.height=7}
@@ -5793,6 +5849,7 @@ ggplot(covariances_psd_df, aes(x=Var1, y=Var2, fill=value))+
 
 \section{Comparison of the inferred covariance matrices and the matrices from the fitted intercepts}
 ```{r, covariance_matrices_comparison_fitted, echo=F, fig.height=3, fig.width=3}
+
 
 list_models_short <- c("fullRE_M_nonexo",  "fullRE_DMSL_nonexo")
 sapply(enough_samples, function(ct){
@@ -5857,12 +5914,414 @@ cor_intercept_slope <- do.call('rbind', lapply(1:length(final_list_runs), functi
 ggplot(cor_intercept_slope, aes(x=intercept, y=slope, col=ct, group=1))+geom_point()+
   geom_smooth(method = "lm")+
   theme_bw()+theme(legend.position = "bottom")+guides(col=guide_legend(ncol=3))
-```
-
-```{r, cor_intercept_slope_plot2, echo=F, fig.height=6, fig.width=4}
 ggplot(cor_intercept_slope, aes(x=intercept, y=slope, col=ct, group=ct))+geom_point()+
   geom_smooth(method = "lm", se=F)+
   theme_bw()+theme(legend.position = "bottom")+guides(col=guide_legend(ncol=3))
 ```
 
+```{r, libraries_2, echo=F, cache=F}
+library(latex2exp)
+library(cowplot)
 
+renaming_pcawg <- read.table("../../data/other/short_names_pcawg.txt", sep = "\t")
+
+```
+
+```{r, cor_intercept_slope_plot2, echo=F, fig.height=4, fig.width=4}
+ggplot(cor_intercept_slope, aes(x=intercept, y=slope, group=1))+geom_point()+
+  geom_smooth(method = "lm")+
+  theme_bw()+theme(legend.position = "bottom")+guides(col=guide_legend(ncol=3))
+ggplot(cor_intercept_slope, aes(x=intercept, y=slope, group=ct))+geom_point()+
+  geom_smooth(method = "lm", se=F)+
+  theme_bw()+theme(legend.position = "bottom")+guides(col=guide_legend(ncol=3))+
+  labs(x=TeX(r'($\beta$ intercept)'),
+       y = TeX(r'($\beta$ slope)'))
+```
+
+For the cancer types for which we have both fullRE and diagRE, see how the beta coefficients change in these two models, in a scatteplot where we show beta intercepts and slopes.
+
+Note that not all fullRE M or diagM have converged - I have removed those which haven't. In some cases I ran DMSL with a subset of signatures, so that diagRE DMSL (with more signatures) cannot be compared to fullRE DMSL.
+
+```{r, beta_coef_differences_in_models, echo=F}
+
+ct_subset_fullRE <- names(final_list_runs)[sapply(final_list_runs, function(i) i[1] == 'fullRE_DMSL')]
+
+
+comparison_betas_models <- function(model_fullRE_DMSL_list, model_diagRE_DMSL_list, model_fullRE_M_list ){
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_beta_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_diagRE_DMSL <- try(python_like_select_name(model_diagRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.fixed, "beta"))
+    if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMSL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_betas <- list(x_beta_fullRE_DMSL, x_beta_diagRE_DMSL, x_beta_fullRE_M)
+      typeofs_of_betas <- sapply(list_betas, typeof)
+      if( all(typeofs_of_betas == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_betas[1] == "character"){
+          x_beta_fullRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[2] == "character"){
+          x_beta_diagRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[3] == "character"){
+          x_beta_fullRE_M <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMSL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+      cbind.data.frame(rbind.data.frame(
+        cbind.data.frame(fullRE_DMSL=select_slope_2(x_beta_fullRE_DMSL),
+                         diagRE_DMSL=select_slope_2(x_beta_diagRE_DMSL),
+                         fullRE_M=select_slope_2(x_beta_fullRE_M),
+                         beta_type='Slope'),
+        cbind.data.frame(fullRE_DMSL=select_intercept(x_beta_fullRE_DMSL),
+                         diagRE_DMSL=select_intercept(x_beta_diagRE_DMSL),
+                         fullRE_M=select_intercept(x_beta_fullRE_M),
+                         beta_type='Intercept')),
+        ct=ct)
+    }
+  ))
+  
+  ## if something hasn't converged, remove the value
+  bad_ct_fullRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_fullRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples,
+                                                function(ct)  try(model_fullRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_diagRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_diagRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples, function(ct)  try(model_diagRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_fullRE_M <- c(enough_samples[sapply(enough_samples,
+                                             function(ct) (typeof(model_fullRE_M_list[[ct]])) == 'character')],
+                       enough_samples[sapply(enough_samples, function(ct)  try(model_fullRE_M_list[[ct]]$pdHess)) != "TRUE"])
+  
+  .x$fullRE_DMSL[(.x$ct %in% bad_ct_fullRE_DMSL)] = NA
+  .x$diagRE_DMSL[(.x$ct %in% bad_ct_diagRE_DMSL)] = NA
+  .x$fullRE_M[(.x$ct %in% bad_ct_fullRE_M)] = NA
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+
+comparison_betas_models_all <- comparison_betas_models(model_fullRE_DMSL_list = fullRE_DMSL,
+                                                       model_diagRE_DMSL_list = diagRE_DMSL,
+                                                       model_fullRE_M_list = fullRE_M)
+
+comparison_betas_models_nonexo <- comparison_betas_models(model_fullRE_DMSL_list = fullRE_DMSL_nonexo,
+                                                          model_diagRE_DMSL_list = diagRE_DMSL_nonexo,
+                                                          model_fullRE_M_list = fullRE_M_nonexo)
+
+```
+
+
+```{r, beta_coef_differences_in_models_plots, echo=F, dependson=c('beta_coef_differences_in_models')}
+
+comparison_betas_models_rbind <- rbind.data.frame(cbind.data.frame(comparison_betas_models_nonexo, sigs='nonexo'),
+                        cbind.data.frame(comparison_betas_models_all, sigs='all'))
+comparison_betas_models_rbind$fullRE_DMSL = as.numeric(comparison_betas_models_rbind$fullRE_DMSL)
+comparison_betas_models_rbind$diagRE_DMSL = as.numeric(comparison_betas_models_rbind$diagRE_DMSL)
+comparison_betas_models_rbind$fullRE_M = as.numeric(comparison_betas_models_rbind$fullRE_M)
+
+# saveRDS(fullRE_DMSL_nonexo, "~/Desktop/fullRE_DMSL_nonexoL.RDS")
+# saveRDS(diagRE_DMSL_nonexo, "~/Desktop/diagRE_DMSL_nonexo.RDS")
+# saveRDS(fullRE_M_nonexo, "~/Desktop/fullRE_M_nonexo.RDS")
+
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(diagRE_DMSL), col=beta_type))+
+  geom_point()+theme_bw()
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(diagRE_DMSL), group=ct, col=beta_type))+
+  geom_smooth(method = "lm")+
+  geom_point()+theme_bw()
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(fullRE_M), col=beta_type))+
+  geom_point()+theme_bw()
+
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(fullRE_M), col=ct2, shape=beta_type))+
+  geom_point()+theme_bw()
+
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(diagRE_DMSL), y=as.numeric(fullRE_M), col=ct2, shape=beta_type))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+geom_point()+geom_smooth(method = "lm", aes(group=ct2))+
+  theme_bw()+theme(legend.position = "bottom")
+```
+
+```{r, beta_coef_differences_in_models_plots_2, echo=F, dependson=c('beta_coef_differences_in_models', 'beta_coef_differences_in_models_plots'), fig.height=2.5, fig.width=3.8, dev='tikz'}
+
+comparison_betas_models_rbind_stats <- rbind.data.frame(
+  cbind.data.frame(rmse_diag_full_DMSL=comparison_betas_models_rbind %>% filter(beta_type == 'Slope') %>% summarise(rmse_diag_full_DMSL=sqrt(mean( (diagRE_DMSL-fullRE_DMSL)^2, na.rm = T ))),
+  rmse_fullDMSL_fullM=comparison_betas_models_rbind %>% filter(beta_type == 'Slope') %>% 
+    summarise(rmse_fullDMSL_fullM=sqrt(mean( (fullRE_M-fullRE_DMSL)^2, na.rm = T ))), beta_type='Slope'),
+  cbind.data.frame(rmse_diag_full_DMSL=comparison_betas_models_rbind %>% filter(beta_type == 'Intercept') %>% summarise(rmse_diag_full_DMSL=sqrt(mean( (diagRE_DMSL-fullRE_DMSL)^2, na.rm = T ))),
+  rmse_fullDMSL_fullM=comparison_betas_models_rbind %>% filter(beta_type == 'Intercept') %>% 
+    summarise(rmse_fullDMSL_fullM=sqrt(mean( (fullRE_M-fullRE_DMSL)^2, na.rm = T ))), beta_type='Intercept'))
+# comparison_betas_models_rbind_stats$ct2=renaming_pcawg[,2][match(comparison_betas_models_rbind_stats$ct, renaming_pcawg[,1])]
+
+comparison_betas_models_rbind_stats
+
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(diagRE_DMSL), col=beta_type))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+theme_bw()+
+  geom_point()+theme_bw()+
+  geom_text(data = comparison_betas_models_rbind_stats, aes(x=-Inf, y=-Inf,
+                                                            label=paste0('RMSE: ', signif(rmse_diag_full_DMSL, 3))),
+            vjust=-1.3, hjust=-0.55,
+            )+
+  facet_wrap(.~beta_type)+labs(x='Beta values for fullRE DMSL', y='Beta values for diagRE DMSL')+
+  theme(legend.title=element_blank(),
+        strip.text.x = element_text(size = 10),
+        legend.text=element_text(size=10), legend.position = "bottom")+guides(col=FALSE)
+
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(fullRE_M), col=beta_type))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+theme_bw()+
+  geom_point()+theme_bw()+
+  geom_text(data = comparison_betas_models_rbind_stats, aes(x=-Inf, y=-Inf,
+                                                            label=paste0('RMSE: ', signif(rmse_fullDMSL_fullM, 3))),
+            vjust=-1.3, hjust=-0.55,
+            )+
+  facet_wrap(.~beta_type)+labs(x='Beta values for fullRE DMSL', y='Beta values for fullRE M')+
+  theme(legend.title=element_blank(),
+        strip.text.x = element_text(size = 10),
+        legend.text=element_text(size=10), legend.position = "bottom")+guides(col=FALSE)
+
+```
+
+```{r, beta_coef_differences_in_models_plots_3, echo=F, dependson=c('beta_coef_differences_in_models', 'beta_coef_differences_in_models_plots', 'beta_coef_differences_in_models_plots_2'), warning=F, error=F, message=F}
+
+comparison_betas_models_rbind_stats_per_ct <- rbind.data.frame(
+  cbind.data.frame(comparison_betas_models_rbind %>% filter(beta_type == 'Slope') %>%
+                     group_by(ct) %>%
+                     summarise(rmse_diag_full_DMSL=sqrt(mean( (diagRE_DMSL-fullRE_DMSL)^2, na.rm = T )),
+                               slope_diag_full_DMSL=as.numeric(try(coefficients(lm(y~x, data = cbind.data.frame(x=diagRE_DMSL, y=fullRE_DMSL), na.action = na.omit))[2])),
+                               rmse_fullDMSL_fullM=sqrt(mean( (fullRE_M-fullRE_DMSL)^2, na.rm = T )),
+                               slope_fullDMSL_fullM=as.numeric(try(coefficients(lm(y~x, data = cbind.data.frame(x=fullRE_M, y=fullRE_DMSL), na.action = na.omit))[2]))),
+                   beta_type='Slope'),
+  cbind.data.frame(comparison_betas_models_rbind %>% filter(beta_type == 'Intercept') %>%
+                     group_by(ct) %>%
+                     summarise(rmse_diag_full_DMSL=sqrt(mean( (diagRE_DMSL-fullRE_DMSL)^2, na.rm = T )),
+                               slope_diag_full_DMSL=as.numeric(try(coefficients(lm(y~x, data = cbind.data.frame(x=diagRE_DMSL, y=fullRE_DMSL), na.action = na.omit))[2])),
+                               rmse_fullDMSL_fullM=sqrt(mean( (fullRE_M-fullRE_DMSL)^2, na.rm = T )),
+                               slope_fullDMSL_fullM=as.numeric(try(coefficients(lm(y~x, data = cbind.data.frame(x=fullRE_M, y=fullRE_DMSL), na.action = na.omit))[2]))),
+                   beta_type='Intercept'))
+comparison_betas_models_rbind_stats_per_ct$ct2=renaming_pcawg[,2][match(comparison_betas_models_rbind_stats_per_ct$ct, renaming_pcawg[,1])]
+
+comparison_betas_models_rbind_stats_per_ct_pool_beta <- cbind.data.frame(comparison_betas_models_rbind%>%
+                     group_by(ct) %>%
+                     summarise(rmse_diag_full_DMSL=sqrt(mean( (diagRE_DMSL-fullRE_DMSL)^2, na.rm = T )),
+                               slope_diag_full_DMSL=as.numeric(try(coefficients(lm(y~x, data = cbind.data.frame(x=diagRE_DMSL, y=fullRE_DMSL), na.action = na.omit))[2])),
+                               rmse_fullDMSL_fullM=sqrt(mean( (fullRE_M-fullRE_DMSL)^2, na.rm = T )),
+                               slope_fullDMSL_fullM=as.numeric(try(coefficients(lm(y~x, data = cbind.data.frame(x=fullRE_M, y=fullRE_DMSL), na.action = na.omit))[2]))))
+comparison_betas_models_rbind_stats_per_ct_pool_beta$ct2=renaming_pcawg[,2][match(comparison_betas_models_rbind_stats_per_ct_pool_beta$ct, renaming_pcawg[,1])]
+        
+comparison_betas_models_rbind_stats_per_ct
+ggplot(comparison_betas_models_rbind, aes(x=as.numeric(fullRE_DMSL), y=as.numeric(fullRE_M), col=ct2))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+theme_bw()+
+  geom_point()+theme_bw()+
+  facet_wrap(.~beta_type)+
+  labs(x='Beta values for fullRE DMSL', y='Beta values for fullRE M')+
+  geom_smooth(aes(group=ct2), method = "lm")+
+  theme(legend.title=element_blank(),
+        strip.text.x = element_text(size = 10),
+        legend.text=element_text(size=10), legend.position = "bottom")+guides(col=FALSE)
+```
+
+```{r, beta_coef_differences_in_models_plots_4, echo=F, dependson=c('beta_coef_differences_in_models', 'beta_coef_differences_in_models_plots', 'beta_coef_differences_in_models_plots_2', 'beta_coef_differences_in_models_plots_3'), warning=F, error=F, message=F, fig.height=3, fig.width=3, dev='tikz'}
+
+ggplot(comparison_betas_models_rbind_stats_per_ct_pool_beta, aes(x=rmse_fullDMSL_fullM,
+                                                       y=slope_fullDMSL_fullM, col=ct, label=ct2))+
+  geom_point()+geom_label_repel()+theme_bw()+labs(x='RMSE of betas between\nfullDMSL and fullM',
+                                                  y = 'Slope of linear model of betas\n(fullDMSL ~ fullM)')+guides(col=F)
+```
+
+```{r, beta_coef_differences_in_models_plots_5, echo=F, dependson=c('beta_coef_differences_in_models', 'beta_coef_differences_in_models_plots', 'beta_coef_differences_in_models_plots_2', 'beta_coef_differences_in_models_plots_3'), warning=F, error=F, message=F, fig.height=3, fig.width=3.8, dev='tikz'}
+
+ggplot(comparison_betas_models_rbind_stats_per_ct, aes(x=rmse_fullDMSL_fullM,
+                                                       y=slope_fullDMSL_fullM, col=ct, label=ct2))+
+  geom_point()+geom_label_repel()+theme_bw()+labs(x='RMSE of betas between\nfullRE DMSL and fullRE M',
+                                                  y = 'Slope of linear model of betas\n(fullRE DMSL ~ fullRE M)')+guides(col=F)+
+  facet_wrap(.~beta_type)+theme(strip.text.x = element_text(size = 10))
+```
+
+Compare the random effects intercepts. We cannot compare across cancer types because the number of observation is different. For each cancer type, compare the intercept fullRE DMSL of each patient to the intercept of fullRE M and diagRE DMSL. I.e. for each cancer type we have a boxplot. 
+
+```{r, random_intercepts_difference, echo=F}
+
+comparison_randomintercepts_models <- function(model_fullRE_DMSL_list, model_diagRE_DMSL_list, model_fullRE_M_list ){
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_RE_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.random, "u_large"))
+    x_RE_diagRE_DMSL <- try(python_like_select_name(model_diagRE_DMSL_list[[ct]]$par.random, "u_large"))
+    x_RE_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.random, "u_large"))
+    if( (length(x_RE_fullRE_DMSL) != length(x_RE_diagRE_DMSL)) | (length(x_RE_fullRE_DMSL) != length(x_RE_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_RE <- list(x_RE_fullRE_DMSL, x_RE_diagRE_DMSL, x_RE_fullRE_M)
+      typeofs_of_RE <- sapply(list_RE, typeof)
+      if( all(typeofs_of_RE == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_RE[1] == "character"){
+          x_RE_fullRE_DMSL <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if(typeofs_of_RE[2] == "character"){
+          x_RE_diagRE_DMSL <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if(typeofs_of_RE[3] == "character"){
+          x_RE_fullRE_M <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if( (length(x_RE_fullRE_DMSL) != length(x_RE_diagRE_DMSL)) | (length(x_RE_fullRE_DMSL) != length(x_RE_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    
+    ## put the coefficients in matrix form
+    ## get the number of log-ratios, d-1
+    dmin1 <- (names(table(sapply(list(model_fullRE_DMSL_list, model_diagRE_DMSL_list, model_fullRE_M_list), function(i)    as.numeric(try(length(python_like_select_name(i[[ct]]$par.fixed, 'beta'))/2))))))
+    if(length(dmin1) == 1){
+      ## there should only be one, shared, d-1
+      dmin1 <- as.numeric(dmin1)
+    }else{
+      stop(paste0('Models do not agree on number of log-ratios. CT: ', ct))
+    }
+    
+    x_RE_fullRE_DMSL <- matrix(x_RE_fullRE_DMSL, ncol=dmin1, byrow=F)
+    x_RE_diagRE_DMSL <- matrix(x_RE_diagRE_DMSL, ncol=dmin1, byrow=F)
+    x_RE_fullRE_M <- matrix(x_RE_fullRE_M, ncol=dmin1, byrow=F)
+    
+    bad_fullRE_DMSL=F
+    bad_diagRE_DMSL=F
+    bad_fullRE_M=F
+    ## if something hasn't converged, set all the random coefficients to NA
+    if((typeof(model_fullRE_DMSL_list[[ct]]) == "character") ){
+      bad_fullRE_DMSL=T
+    }else{
+      if(try(!(model_fullRE_DMSL_list[[ct]]$pdHess))){
+        bad_fullRE_DMSL=T
+      }
+    }
+    if(bad_fullRE_DMSL){
+      x_RE_fullRE_DMSL <- matrix(NA, nrow = nrow(x_RE_fullRE_DMSL), ncol=ncol(x_RE_fullRE_DMSL))
+    }
+    #----
+    if((typeof(model_diagRE_DMSL_list[[ct]]) == "character") ){
+      bad_diagRE_DMSL=T
+    }else{
+      if(try(!(model_diagRE_DMSL_list[[ct]]$pdHess))){
+        bad_diagRE_DMSL=T
+      }
+    }
+    if(bad_diagRE_DMSL){
+      x_RE_diagRE_DMSL <- matrix(NA, nrow = nrow(x_RE_diagRE_DMSL), ncol=ncol(x_RE_diagRE_DMSL))
+    }
+    #-----
+    if((typeof(model_fullRE_M_list[[ct]]) == "character") ){
+      bad_fullRE_M=T
+    }else{
+      if(try(!(model_fullRE_M_list[[ct]]$pdHess))){
+        bad_fullRE_M=T
+      }
+    }
+    if(bad_fullRE_M){
+      x_RE_fullRE_M <- matrix(NA, nrow = nrow(x_RE_fullRE_M), ncol=ncol(x_RE_fullRE_M))
+    }
+
+    ## for each patient using the x_RE_fullRE_DMSL intercepts, get the distance to the intercepts of the other two models
+    dist_DMSLs <- sapply(1:nrow(x_RE_fullRE_DMSL), function(i){
+      if(all(is.na(x_RE_fullRE_DMSL[i,])) | all(is.na(x_RE_diagRE_DMSL[i,]))){
+        NA
+      }else{
+        dist(rbind(x_RE_fullRE_DMSL[i,], x_RE_diagRE_DMSL[i,]))
+      }
+    })
+    dist_fullREs <- sapply(1:nrow(x_RE_fullRE_DMSL), function(i){
+      if(all(is.na(x_RE_fullRE_DMSL[i,])) | all(is.na(x_RE_fullRE_M[i,]))){
+        NA
+      }else{
+        dist(rbind(x_RE_fullRE_DMSL[i,], x_RE_fullRE_M[i,]))
+      }
+    })
+    
+    cbind.data.frame(melt(list(dist_DMSLs=dist_DMSLs, dist_fullREs=dist_fullREs)),
+                     ct=ct)
+  }
+  ))
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+```
+
+
+```{r, random_intercepts_difference_run, echo=F}
+comparison_randomintercepts_models_all <- comparison_randomintercepts_models(model_fullRE_DMSL_list = fullRE_DMSL,
+                                                       model_diagRE_DMSL_list = diagRE_DMSL,
+                                                       model_fullRE_M_list = fullRE_M)
+comparison_randomintercepts_models_nonexo <- comparison_randomintercepts_models(model_fullRE_DMSL_list = fullRE_DMSL_nonexo,
+                                                       model_diagRE_DMSL_list = diagRE_DMSL_nonexo,
+                                                       model_fullRE_M_list = fullRE_M_nonexo)
+
+```
+
+Would like to have the picture below in computer modern, but I cannot make boxplot work with tikz
+```{r, random_intercepts_difference_analyse1, echo=F, eval=T, fig.height=2}
+## remove cancer types for which we only have one comparison, or no comparison
+comparison_randomintercepts_models_nonexo <- comparison_randomintercepts_models_nonexo[comparison_randomintercepts_models_nonexo$ct %in% (comparison_randomintercepts_models_nonexo %>% group_by(ct, L1) %>% summarise(good_dist=any(!is.na(value))) %>% group_by(ct) %>% summarise(good_dist2=sum(good_dist)) %>% filter(good_dist2 == 2) %>% select(ct) %>% unlist()),]
+comparison_randomintercepts_models_all <- comparison_randomintercepts_models_all[comparison_randomintercepts_models_all$ct %in% (comparison_randomintercepts_models_all %>% group_by(ct, L1) %>% summarise(good_dist=any(!is.na(value))) %>% group_by(ct) %>% summarise(good_dist2=sum(good_dist)) %>% filter(good_dist2 == 2) %>% select(ct) %>% unlist()),]
+
+comparison_randomintercepts_models_rbind <- rbind.data.frame(cbind.data.frame(comparison_randomintercepts_models_nonexo, sigs='nonexo'),
+                        cbind.data.frame(comparison_randomintercepts_models_all, sigs='all'))
+comparison_randomintercepts_models_rbind <- comparison_randomintercepts_models_rbind[!(is.na(comparison_randomintercepts_models_rbind$value)),]
+
+
+comparison_randomintercepts_models_rbind$sigs <- recode_factor(comparison_randomintercepts_models_rbind$sigs ,
+              all = "All signatures",
+              nonexo = "Non-exogenous signatures")
+comparison_randomintercepts_models_rbind$L1 <- recode_factor(comparison_randomintercepts_models_rbind$L1 ,
+              dist_DMSLs = "Distance between fullRE DMSL/ diagRE DMSL",
+              dist_fullREs = "Distance between fullRE DMSL/ fullRE M")
+ggplot(comparison_randomintercepts_models_rbind,
+       aes(x=as.character(ct2),
+           y=value, col=L1))+
+  facet_grid(.~sigs, scales='free_x', space="free_x")+
+  geom_boxplot()+
+  theme_bw()+theme(legend.position = "bottom", legend.title=element_blank())+labs(x='', y='Distance')
+
+```
+
+
+```{r, beta_coef_differences_in_models_pcors, echo=F, dependson=c('beta_coef_differences_in_models'), fig.height=3.2, dev='tikz'}
+# comparison_betas_models_DMSL = comparison_betas_models %>% group_by(beta_type, ct) %>%
+#   summarise(cor_fullRE_DMSL_diagRE_DMSL = cor(fullRE_DMSL, diagRE_DMSL), .groups = 'drop') %>% dcast(ct~beta_type, measure.vars='cor_fullRE_DMSL_diagRE_DMSL')
+# 
+# 
+# comparison_betas_models_fullRE = comparison_betas_models %>% group_by(beta_type, ct) %>%
+#   summarise(cor_fullRE_DMSL_fullRE_M = cor(fullRE_DMSL, fullRE_M), .groups = 'drop') %>% dcast(ct~beta_type, measure.vars='cor_fullRE_DMSL_fullRE_M')
+# comparison_betas_models_DMSL
+# comparison_betas_models_fullRE
+# 
+# cowplot::plot_grid(
+#   ggplot(comparison_betas_models_DMSL, aes(x=intercept, y=slope, col=ct, label=ct2))+geom_point()+geom_label_repel()+theme_bw()+guides(col=F)+labs(x='Pearson correlation (intercept)', y = 'Pearson correlation (slope)'),
+#   ggplot(comparison_betas_models_fullRE, aes(x=intercept, y=slope, col=ct, label=ct2))+geom_point()+
+#     geom_label_repel(max.overlaps = 2)+theme_bw()+labs(x='Pearson correlation (intercept)', y = 'Pearson correlation (slope)'),
+#   rel_widths=c(1, 2))
+
+```
