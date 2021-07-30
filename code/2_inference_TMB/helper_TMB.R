@@ -854,11 +854,13 @@ summarise_DA_detection = function(true, predicted){
   return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity, Sensitivity=Sensitivity))
 }
 
-fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov){
-  .sigma = matrix(NA, arg_d, arg_d)
+fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbose=T){
+  if(verbose) warning('This function had been incorrect until now (30 july 2021)')
+  .sigma <- give_UNSTRUCTURED_CORR_t_matrix(vec = arg_entries_cov, dim_mat = arg_d)
+  # .sigma = matrix(NA, arg_d, arg_d)
   diag(.sigma) = arg_entries_var
-  .sigma[unlist(sapply(1:(arg_d-1), function(i) (i-1)*arg_d + (i+1):arg_d ))] = arg_entries_cov
-  .sigma[unlist(sapply(1:(arg_d-1), function(i) (i) + ((i):(arg_d-1))*arg_d))] = arg_entries_cov
+  # .sigma[unlist(sapply(1:(arg_d-1), function(i) (i-1)*arg_d + (i+1):arg_d ))] = arg_entries_cov
+  # .sigma[unlist(sapply(1:(arg_d-1), function(i) (i) + ((i):(arg_d-1))*arg_d))] = arg_entries_cov
   return(.sigma)
 }
 
