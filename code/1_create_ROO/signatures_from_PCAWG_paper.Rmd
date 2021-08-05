@@ -1,0 +1,89 @@
+---
+title: "Untitled"
+author: "Lena Morill"
+date: "02/08/2021"
+output: html_document
+---
+
+```{r setup, include=TRUE, cache=T}
+source("~/Documents/PhD/GlobalDA/code/2_inference_TMB/helper_TMB.R")
+source("~/Documents/PhD/CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
+library(gtools)
+
+sigs_pcawg_paper <- read.table("../../data/restricted/pcawg/SigProfilier_PCAWG_WGS_probabilities_SBS.csv", sep = ",", h=T)
+# rownames(sigs_pcawg_paper) <- sigs_pcawg_paper[,1]
+sigs_pcawg_paper[,c(1,3,4)] <- NULL
+
+# pheatmap::pheatmap(sigs_pcawg_paper)
+rownames(sigs_pcawg_paper) <- make.unique(sigs_pcawg_paper$Cancer.Type)
+sigs_pcawg_paper$Cancer.Type <- NULL
+sigs_pcawg_paper_bool <- apply(sigs_pcawg_paper > 0, 2, as.numeric)
+
+ct <- sub("\\..*", "", rownames(sigs_pcawg_paper))
+table(ct)
+pheatmap::pheatmap(sigs_pcawg_paper_bool[grepl("Biliary.AdenoCA", ct),])
+
+## get active signatures in each cancer type
+active_per_ct <- sapply(unique(ct), function(ct_it){
+  names(which(colSums(sigs_pcawg_paper_bool[grepl(ct_it, ct),]) > 0))
+})
+active_per_ct$Eso_AdenoCA
+
+
+```
+
+```{r, plots, cache=T}
+sigs_pcawg_paper_2 <- read.table("../../data/restricted/pcawg/PCAWG_sigProfiler_SBS_signatures_in_samples.csv", sep = ",", h=T)
+ct2 <- sigs_pcawg_paper_2$Cancer.Types
+rownames(sigs_pcawg_paper_2) = paste0(sigs_pcawg_paper_2$Cancer.Types, '-',
+                                      sigs_pcawg_paper_2$Sample.Names)
+sigs_pcawg_paper_2 <- sigs_pcawg_paper_2[,-c(1:3)]
+lapply(sort(unique(ct2)), function(ct_it){
+createBarplot(normalise_rw(as(sigs_pcawg_paper_2[grepl(ct_it, ct2),
+                                                 active_per_ct[[ct_it]]], 'matrix')))+
+    ggtitle(ct_it)
+})
+```
+
+
+```{r write_active_sigs}
+# active_sigs <- sapply(unique(ct), function(ct_it){
+#    gsub("_.*", "", (names(which(colSums(sigs_pcawg_paper_bool[grepl(ct_it, ct),]) > 0))))
+# })
+uniq_sigs <- gtools::mixedsort(unique(unlist(active_per_ct)))
+active_sigs_tab <- t(sapply(active_per_ct, function(i) as.numeric(uniq_sigs %in% i)))
+colnames(active_sigs_tab) <- uniq_sigs
+rownames(active_sigs_tab) <- toupper(gsub("_", "-", rownames(active_sigs_tab)))
+active_sigs_tab = cbind(rownames(active_sigs_tab), active_sigs_tab)
+colnames(active_sigs_tab)[1] = 'id2'
+write.table(active_sigs_tab, "../../data/cosmic/active_signatures_PCAWGpaper.txt", quote = F, sep = "\t", col.names = NA)
+```
+
+<!-- ```{r sigs_2, include=TRUE, cache=T} -->
+
+<!-- sigs_pcawg_paper2 <- read.table("/Users/morril01/Desktop/SignatureAnalyzer_SNV.activity.FULL_SET.031918.txt", sep = "\t", h=T) -->
+<!-- rownames(sigs_pcawg_paper2) <- sigs_pcawg_paper2[,1] -->
+<!-- rownames(sigs_pcawg_paper2) <- gsub("BI_SNV_", "", rownames(sigs_pcawg_paper2)) -->
+<!-- sigs_pcawg_paper2 <- sigs_pcawg_paper2[,-1] -->
+<!-- dim(sigs_pcawg_paper2) -->
+
+
+<!-- sigs_pcawg_paper2_bool <- apply(sigs_pcawg_paper2 > 0, 2, as.numeric) -->
+<!-- rownames(sigs_pcawg_paper2_bool) <- rownames(sigs_pcawg_paper2) -->
+
+<!-- ct2 <- gsub("__.*", "", colnames(sigs_pcawg_paper2)) -->
+<!-- table(ct2) -->
+<!-- pheatmap::pheatmap(sigs_pcawg_paper2_bool[,grepl("Biliary_AdenoCA", ct2)]) -->
+
+<!-- ## get active signatures in each cancer type -->
+<!-- active_per_ct2 <- sapply(unique(ct2), function(ct2_it){ -->
+<!--   names(which(rowSums(sigs_pcawg_paper2_bool[,grepl(ct2_it, ct2)]) > 0)) -->
+<!-- }) -->
+
+<!-- lapply(sort(unique(ct)), function(ct_it){ -->
+<!-- createBarplot(normalise_rw(as(t(sigs_pcawg_paper2[active_per_ct2[[ct_it]], -->
+<!--                                                  grepl(ct_it, ct2)]), 'matrix')))+ -->
+<!--     ggtitle(paste0(ct_it, '\nSNV sigs 2')) -->
+<!-- }) -->
+
+<!-- ``` -->

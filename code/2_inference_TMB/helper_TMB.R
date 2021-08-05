@@ -26,8 +26,8 @@ give_x_matrix = function(n_times_2){
 
 rsq = function (x, y) cor(x, y) ^ 2
 
-load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"){
-  if(simulation){
+load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/", read_directly=FALSE, old_version_creating_X_Z=F){
+  if(simulation | read_directly){
     fle = ct
     print(ct)
     cat('Reading file', fle, '\n')
@@ -37,6 +37,8 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
   objects_sigs_per_CT_features <- readRDS(fle)
   
   if(simulation){
+    ##' get the first element of the list, because the second is the
+    ##' set of the parameters used in the creation of the dataset
     objects_sigs_per_CT_features = objects_sigs_per_CT_features[[1]]
   }
   
@@ -65,23 +67,36 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
       rownames(.x) = rwn
       round(.x)
     })
+  }else{
+    stop('Check <typedata> argument')
   }
   
   d = ncol(objects_sigs_per_CT_features[[1]]) ## number of signatures or features
   n = nrow(objects_sigs_per_CT_features[[1]]) ## number of samples
   
-  # covariate matrix
-  X = matrix(NA, nrow=2, ncol=2*n)
-  X[1,] = 1
-  X[2,] = rep(c(0,1), each=n)
+  if(all(rownames(objects_sigs_per_CT_features[[1]]) == rownames(objects_sigs_per_CT_features[[2]]))){
+    old_version_creating_X_Z = T
+  }else{
+    stop('Patients in input data are rearranged. Could not create matrices X and Z')
+  }
   
-  Z0 = matrix(0, nrow=n, ncol=n)
-  diag(Z0) = 1
-  Z = t(rbind(Z0, Z0))
-  
-  ## The counts
-  W = rbind(objects_sigs_per_CT_features[[1]], objects_sigs_per_CT_features[[2]])
-  
+  if(old_version_creating_X_Z){
+    ## used directly up until 2 August 2021
+    
+    # matrix of fixed effects
+    X = matrix(NA, nrow=2, ncol=2*n)
+    X[1,] = 1
+    X[2,] = rep(c(0,1), each=n)
+    
+    # covariate matrix
+    Z0 = matrix(0, nrow=n, ncol=n)
+    diag(Z0) = 1
+    Z = t(rbind(Z0, Z0))
+    
+    ## The counts
+    W = rbind(objects_sigs_per_CT_features[[1]], objects_sigs_per_CT_features[[2]])
+  }
+
   return(list(x=t(X), z=t(Z), Y=W))
 }
 
@@ -424,8 +439,15 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
+    parameters <- c(parameters, log_lambda = 1.1)
     parameters$cov_par_RE = NULL
-    parameters <- list(parameters, log_lambda = 1.1)
+
+    # Error below indicates   <parameters> list not being created correcty
+    # Error in MakeADFun(data = Data, parameters = Parameters, random = Random)
+    # :
+    #   Only numeric matrices, vectors, arrays or factors can be interfaced
+    # 
+    # 
     
     # parameters <- list(
     #   beta = beta_init,
@@ -1079,7 +1101,7 @@ is_slope = function(v){
   bool_isbetaslope
 }
 
-give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, ...){
+give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, ...){
   a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')
   b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')
   c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')
@@ -1091,12 +1113,16 @@ give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2
     d <- d+guides(fill=F)
   }
   if(legend_bottom){
-    a <- a+theme(legend.position='bottom')
-    b <- b+theme(legend.position='bottom')
-    c <- c+theme(legend.position='bottom')
-    d <- d+theme(legend.position='bottom')
+    a <- a+theme(legend.position='bottom', legend.text = element_text(size = 6))
+    b <- b+theme(legend.position='bottom', legend.text = element_text(size = 6))
+    c <- c+theme(legend.position='bottom', legend.text = element_text(size = 6))
+    d <- d+theme(legend.position='bottom', legend.text = element_text(size = 6))
   }
-  grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+  if(only_normalised){
+    grid.arrange(c, d, top=title, nrow=nrow_plot)
+  }else{
+    grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+  }
 }
 
 give_ranked_plot_simulation = function(tmb_fit_object, data_object, print_plot = T, nreps = 1, model, integer_overdispersion_param){
@@ -1245,7 +1271,7 @@ give_betas <- function(TMB_obj){
   matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
 }
 
-plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T){
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F){
   if(typeof(TMB_obj) == 'character'){
     if(theme_bw){
       ggplot()+theme_bw()
@@ -1257,6 +1283,10 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     .summary_betas <- cbind.data.frame(python_like_select_rownames(.summary_betas, 'beta'),
                                        type_beta=rep(c('Intercept', 'Slope')),
                                        LogR=rep(1:(nrow(python_like_select_rownames(.summary_betas, 'beta'))/2), each=2))
+    if(only_slope){
+      .summary_betas <- .summary_betas[.summary_betas$type_beta == 'Slope',]
+    }
+    
     if(!is.null(names_cats)){
       if(remove_SBS){
         names_cats <- gsub("SBS", "", names_cats) 

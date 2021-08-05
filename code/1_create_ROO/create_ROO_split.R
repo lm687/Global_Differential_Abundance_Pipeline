@@ -19,10 +19,10 @@ source("1_create_ROO/helper_1_create_ROO.R")
 if(debug_bool){
   opt=list();
   opt$input_files='../data/restricted/pcawg/pcawg_restricted_snv_counts/00b9d0e6-69dc-4345-bffd-ce32880c8eef ../data/restricted/pcawg/pcawg_restricted_snv_counts/02917220-6a7a-46a1-8656-907e96bef88e ../data/restricted/pcawg/pcawg_restricted_snv_counts/03ad38a6-0902-4aaa-84a3-91ea88fa9883 ../data/restricted/pcawg/pcawg_restricted_snv_counts/05616329-e7ba-4efd-87b1-d79cd0f7af3d ../data/restricted/pcawg/pcawg_restricted_snv_counts/068f4f69-d2fe-4f25-912e-ca7d4623efb6 ../data/restricted/pcawg/pcawg_restricted_snv_counts/0e7f46ca-6f5c-4538-b6d6-00af65d57fcf ebe0ed67-2d3f-45cd-8f9b-4912595b16a0 ../data/restricted/pcawg/pcawg_restricted_snv_counts/fa676301-902f-473f-8313-5bff34ae549a ../data/restricted/pcawg/pcawg_restricted_snv_counts/fce8d8c6-f2a0-43a8-9a7a-b9c519a6686c'
-  opt$cancer_type=" Lymph-BNHL";
-  opt$feature_type="signaturesmutSigExtractor";
+  opt$cancer_type="Lymph-BNHL";
+  opt$feature_type="signaturesPCAWG";
   # opt$output="../data/roo/Lymph-BNHL_nucleotidesubstitution1_ROO.RDS"
-  opt$output="../data/roo/Lymph-BNHL_signaturesmutSigExtractor_ROO.RDS"
+  opt$output="../data/roo/Lymph-BNHL_signaturesPCAWG_ROO.RDS"
 }else{
   option_list = list(
     make_option(c("--cancer_type"), type="character", default=NA, 
@@ -39,8 +39,13 @@ if(debug_bool){
   opt = parse_args(opt_parser);
 }
 
-type_features_vec = c('nucleotidesubstitution1', 'nucleotidesubstitution3', 'signatures', 'signaturesmutSigExtractor')
+type_features_vec = c('nucleotidesubstitution1', 'nucleotidesubstitution3', 'signatures', 'signaturesmutSigExtractor', 'signaturesPCAWG')
+##' signaturesPCAWG: with subset of active signatures from PCAWG
 
+active_sig_file_name <- "active_signatures_transposed_clonesig2" ## default
+if(opt$feature_type == 'signaturesPCAWG'){
+  active_sig_file_name <-  "active_signatures_PCAWGpaper.txt"
+}
 
 if(! (opt$feature_type %in% type_features_vec)){stop('Incorrect value for <feature_type>')}
 
@@ -125,7 +130,7 @@ objects_file = lapply(fles_cancer_type, function(name_file){
                     ccf_threshold=NA,
                     type_features=opt$feature_type,
                     outfolder=basename(opt$output),
-                    active_sigs_version="active_signatures_transposed_clonesig2",
+                    active_sigs_version=active_sig_file_name,
                     cancer_type=opt$cancer_type,
                     in_dataframe=.in_dataframe,
                     type_signatures=type_signatures,
@@ -135,7 +140,7 @@ objects_file = lapply(fles_cancer_type, function(name_file){
   #   .tmp_roo_obj = list(list(list(), list()), list(list(), list()))
   # }
   
-  if(opt$feature_type %in%c("signatures", "signaturesmutSigExtractor")){
+  if(opt$feature_type %in%c("signatures", "signaturesmutSigExtractor", "signaturesPCAWG")){
   #   if(any(sapply(.tmp_roo_obj[[1]], length) == 0)){
   #     return(list(NA,NA, "Empty group #2"))
   #   }
@@ -175,7 +180,7 @@ rds_object_active_sigs = rds_object_active_sigs[successful_bool]
 ## Now we want to put together all the objects of the relevant cancer type
 if(!(length(rds_object) == 0)){
   all_objs_activesigs = rds_object_active_sigs
-  if(opt$feature_type %in% c("signatures", "signaturesmutSigExtractor")){
+  if(opt$feature_type %in% c("signatures", "signaturesmutSigExtractor", "signaturesPCAWG")){
     all_objs_activesigs = rds_object_active_sigs
 
     ## if the cancer type does not has active signatures, change the name of the files

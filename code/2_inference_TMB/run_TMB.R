@@ -15,13 +15,24 @@ option_list = list(
               help="Which model to use for inference", metavar="character"),
   make_option(c("--input"), type="character", default=NA,
               help="Input file with dataset (RDS)", metavar="character"),
+  make_option(c("--simulation_bool"), type="logical", default=T,
+              help="Is ct the name of the file to read?", metavar="logical"),
+  make_option(c("--read_directly"), type="logical", default=T,
+              help="Should the opt$input file be read directly with load_PCAWG?", metavar="logical"),
+  make_option(c("--feature_type"), type="character", default="signatures",
+              help="Type of feature: signatures, signaturesPCAWG, etc", metavar="character"),
   make_option(c("--output"), type="character", default=NA,
               help="Output file in which to write the results of the inference (RDS file)", metavar="character"),
   make_option(c("--optimiser"), type="character", default="optim",
-              help="Which optimiser to use", metavar="character")
+              help="Which optimiser to use", metavar="character"),
+  make_option(c("--nonexo_bool"), type="logical", default=F,
+              help="Should only nonexogenous signatures be selected?", metavar="logical")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
+
+## by default
+simulation_bool = opt$simulation_bool
 
 if(opt$optimiser == "optim"){
   use_nlminb = F
@@ -29,7 +40,14 @@ if(opt$optimiser == "optim"){
   use_nlminb = T
 }
 
+cat('Model:', opt$model, '\n')
+cat('Feature type:', opt$feature_type, '\n')
 cat('Using nlminb:', use_nlminb, '\n')
+cat('Simulation boolean:', simulation_bool, '\n')
+
+if(opt$nonexo_bool | grepl('nonexo', opt$output)){
+  opt$model <- gsub("nonexo", "", opt$model)
+}
 
 if(opt$model == "fullREM"){
   TMB::compile("2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp",  "-std=gnu++17")
@@ -65,8 +83,18 @@ if(opt$model == "fullREM"){
   stop('Specifiy a valid <model>')
 }
 
+
 cat(opt$input)
-dataset = load_PCAWG(ct = opt$input, typedata = "signatures", simulation = T, path_to_data = NA)
+dataset = load_PCAWG(ct = opt$input, typedata = opt$feature_type, simulation = F,
+                     path_to_data = NA, read_directly=opt$read_directly)
+
+if(opt$nonexo_bool | grepl('nonexo', opt$output)){
+  ## select only nonexogenous signatures
+  nonexogenous = read.table("../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t",
+                            comment.char = "#", fill = F)
+  dataset <- give_subset_sigs_TMBobj(dataset, sigs_to_remove = nonexogenous$V1)
+}
+
 # dataset = sort_columns_TMB(dataset)
 # results_inference = try(wrapper_run_TMB(opt$input, model = mod_model_name, typedata = "simulation", simulation = TRUE))
 results_inference = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb))
