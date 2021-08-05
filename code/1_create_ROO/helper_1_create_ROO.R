@@ -84,7 +84,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
   ## 1. name of file
   ## 2. cancer type it belongs to for active signatures
   
-  if((type_features == 'signatures') & (type_signatures=="QP_COSMIC") ){
+  if((type_features %in% c('signatures', 'signaturesPCAWG')) & (type_signatures=="QP_COSMIC") ){
     sigs_cosmic <- read.table(paste0("../data/cosmic/sigProfiler_SBS_signatures_2019_05_22.csv"),
                               stringsAsFactors = FALSE, sep = ',', header = TRUE)
     # sigs_cosmic <- read.table(paste0(pre_path, "../../data/cosmic/signatures_probabilities.txt"),
@@ -100,6 +100,9 @@ createRDS_ROOSigs_object <- function(pre_path="",
                          stringsAsFactors = FALSE, sep = '\t', header = TRUE)
     subset_active <- active[,-c(1, 2, ncol(active))]
     
+    if(! ("id2" %in% colnames(active))){
+      stop('The dataframe of active signatures should have a column called <id2> with the cancer type identifier')
+    }
     # present_active <- sapply(active$acronym, function(i) if(grepl(',', i)){strsplit(i, ', ')}else{i}); present_active[present_active == ""] <- NULL; present_active <- as.character(unlist(present_active))
     present_active <- sapply(active$id2, function(i) if(grepl(',', i)){strsplit(i, ', ')}else{i})
     present_active[present_active == ""] <- NULL; present_active <- as.character(unlist(present_active))
@@ -133,7 +136,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
     Subclonal <- x %>% filter(!x$bool_group_1)
     
     ## infer signatures
-    if(type_features == 'signatures'){
+    if(type_features %in% c('signatures', 'signaturesPCAWG')){
       sigsClonal_QP <- length(Clonal$mutation)*QPsig(tumour.ref = Clonal$mutation, signatures.ref = sigs_cosmic)
       sigsSubclonal_QP <- length(Subclonal$mutation)*QPsig(Subclonal$mutation, signatures.ref = sigs_cosmic)
     }else if(type_features == 'signaturesmutSigExtractor'){
@@ -178,7 +181,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
     }
     
     ## are there any active signatures?
-    if(type_features == 'signatures'){
+    if(type_features %in% c('signatures', 'signaturesPCAWG')){
       ## that depends on whether we are reading from the file or not
 
       cancer_type_abbrev = toupper(strsplit(cancer_type, '[.]')[[1]][1])
@@ -188,6 +191,7 @@ createRDS_ROOSigs_object <- function(pre_path="",
         sigsSubclonal_QP_active <- length(Subclonal$mutation)*QPsig(Subclonal$mutation, signatures.ref = sigs_cosmic[,active_j])
         return_object <- list(return_object, list(sigsClonal_QP_active, sigsSubclonal_QP_active))
       }else{
+        cat(paste0('Cancer type', cancer_type_abbrev, ' does not have active signatures in file <', active_sigs_version, '>'))
         return_object <- list(return_object, list(list(), list()))
       }
     }else if(type_features == "signaturesmutSigExtractor"){

@@ -222,6 +222,8 @@ Name model & Extension & Sorted & File in which they were created\\\hline\hline
 \verb|diagREDMsinglelambda|	& \verb|diagRE_nonexo_DMSL_| &	Not sorted &	\verb|find_subset_signatures.R| \\\hline
 \verb|fullRE_DM| &	\verb|fulLRE_nonexo_DM_| &	Not sorted &	\verb|find_subset_signatures.R| \\\hline
 \verb|diagREDMsinglelambda| &	\verb|diagRE_DMSL_| &	Not sorted &	\verb|find_subset_signatures.R|\\\hline
+\verb|fullREDMsinglelambda| for SP &	\verb|fullREDMsinglelambda_..._signaturesPCAWG| &	Not sorted (it was commented out) &	\verb|run_TMB_PCAWG.R on 2 August|\\\hline
+\verb|fullREM| for SP &	\verb|fullREM_..._signaturesPCAWG| &	Not sorted (it was commented out) &	\verb|run_TMB_PCAWG.R on 2 August|\\\hline
 \end{tabular}
 
 ```{r, initialise_betas, echo=FALSE}
@@ -6325,3 +6327,118 @@ ggplot(comparison_randomintercepts_models_rbind,
 #   rel_widths=c(1, 2))
 
 ```
+
+
+\section{Using subset of active signatures from the PCAWG paper}
+```{r, sigs_from_paper, warning=F, echo=F}
+cts_for_PCAWG <- gsub("_signaturesPCAWG_ROO.RDS", "",
+                                basename(fles_roo[grepl('_signaturesPCAWG_',
+                                                        fles_roo)]))
+signatures_PCAWG <- sapply(cts_for_PCAWG,
+       load_PCAWG, typedata = "signaturesPCAWG",
+       path_to_data = "../../data/")
+names(signatures_PCAWG) <- cts_for_PCAWG
+```
+
+```{r, sigs_from_paper2, warning=F, echo=F, fig.height=2.4}
+# give_barplot_from_obj(obj = signatures_PCAWG[[1]], legend_on = FALSE, nrow=1, verbose=F, only_normalised=T)
+sapply(cts_for_PCAWG, function(i){
+  try(print(give_barplot_from_obj(obj = signatures_PCAWG[[i]], legend_on = T,
+                        nrow=1, verbose=F,
+                        only_normalised=T, title=i)))})
+
+```
+
+```{r, load_runs_signaturesPCAWG,echo=F}
+fullRE_M_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREM_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullRE_M_SP) <- enough_samples
+fullRE_DMSL_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMsinglelambda_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullRE_DMSL_SP) <- enough_samples
+
+fullRE_M_nonexo_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREMnonexo_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullRE_M_nonexo_SP) <- enough_samples
+fullRE_DMSL_nonexo_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMsinglelambdanonexo_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullRE_DMSL_nonexo_SP) <- enough_samples
+```
+
+## differences between signatures from sigprofiler from the paper, and the ones I get
+
+- biliary adenoca similar, though not exact
+- bladder tcc: very similar
+- bone benign: similar
+- bone epith: extremely similar
+- bone osteosarc: I have a lot of SBS8, which they don't. Other than that, similar
+- breast adenicaL I have a lot of SBS9, which  they don't. Other than that, similar
+- breast DCIS: I have more SBS40 than they do
+- breast lobularca: very similar
+- cervix adenoca: very similar
+- cervix SCC: very similar, although I have more SBS40
+- CNS GBM: very similar, mine seem to be more homogeneous
+- CNS medullo: very similar, mine seem to be more homogeneous
+- CNS oligo: very similar, mine seem to be more homogeneous
+- CNS piloastro: very similar, mine seem to be more homogeneous
+- Colorect adenoca: quite similar
+- eso adenoca: very similar
+- head scc: very similar, mine seem to be more homogeneous
+- kidney chrcc: very similar
+- kidney rcc.clearcell: very similar, although I have more SBS29
+- kidney papillary: only I have it
+- liver hcc: different. I have a lot of SBS40 and SBS12, they have mostly SBS5 ***
+- lung adenoca: very similar
+- lung SCC: very similar, though I have more SBS8
+- lymph BNHL: very similar
+- Lymph CLL: very similar, althpugh theirs are much more sparse
+- myeloid AML: very similar, although I don't have any SBS60 and they seem to have
+- myeloid MDS: I don't have it
+- myeloid MPN: similar, although mine is much more sparse
+- ovary adenoca: different. I have a lot of SBS40, which in their case is rare, and they have much more of SBS3 than I do ***
+- panc-adenoca: different. I have a lot of SBS8 that they don't have. ***
+- panc-endocrine: sort of similar. I have more SBS8 than they and they have more SBS5
+- Prost-adenoca: sort of similar, I have more SBS8
+- skin-melanoma.acral: they don't have this category. They have "skin-melanoma", which might be both together? (!!!) Similar exposures...
+- softtissue-leiomyo: very similar exposures
+- softtissue-liposarc: very similar exposures
+- stomach adenoca: very similar, mine seem to be more homogeneous
+- thy-adenoca: very similar
+- uterus-adenoca: very similar
+
+```{r, signaturesPCAWG_names_sigs,echo=F}
+colnames_notsorted_SP <- list()
+logR_notsorted_SP <- list()
+colnames_nonexo_notsorted_SP <- list()
+logR_nonexo_notsorted_SP <- list()
+
+for(ct in enough_samples){
+    colnames_notsorted_SP[[ct]] <- try(colnames(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
+                                                 path_to_data = "../../data/")$Y))
+  logR_notsorted_SP[[ct]] <- try(vector_cats_to_logR(colnames_notsorted_SP[[ct]]))
+  
+  colnames_nonexo_notsorted_SP[[ct]] <- try(colnames(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
+                                                 path_to_data = "../../data/")$Y))
+  logR_nonexo_notsorted_SP[[ct]] <- try(vector_cats_to_logR(colnames_nonexo_notsorted_SP[[ct]]))
+}
+
+```
+
+```{r, plot_betas_signaturesPCAWG, echo=F, fig.height=2, warning=FALSE}
+logR_notsorted_SP
+
+
+for(ct in enough_samples){
+  grid.arrange(plot_betas(fullRE_M_SP[[ct]], only_slope=T,
+                          names_cats=logR_notsorted_SP[[ct]])+ggtitle('fullRE M'),
+               plot_betas(fullRE_DMSL_SP[[ct]], only_slope=T,
+                          names_cats=logR_notsorted_SP[[ct]])+ggtitle('fullRE DMSL'),
+               plot_betas(fullRE_M_nonexo_SP[[ct]], only_slope=T,
+                          names_cats=logR_nonexo_notsorted_SP[[ct]])+ggtitle('fullRE M\nnonexo'),
+               plot_betas(fullRE_DMSL_nonexo_SP[[ct]], only_slope=T,
+                          names_cats=logR_nonexo_notsorted_SP[[ct]])+ggtitle('fullRE DMSL\nnonexo'),
+               top=ct, nrow=1)
+}
+```
+
+
