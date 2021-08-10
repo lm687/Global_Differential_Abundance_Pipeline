@@ -51,13 +51,15 @@ X_sim = matrix(NA, nrow=2, ncol=2*n)
 X_sim[1,] = 1
 X_sim[2,] = rep(c(0,1), each=n)
 beta = matrix(0, nrow=2, ncol=d-1)
-if(is.null(opt$beta_intercept_input)){
+if(is.null(opt$beta_intercept_input) |  opt$beta_intercept_input == 'NA'){
+  cat('Simulating beta intercept\n')
   beta[1,] = runif(n = d-1, min = -1, max = 1)
 }else{
   beta[1,] = readRDS(opt$beta_intercept_input)
 }
 
-if(is.null(opt$beta_slope_input)){
+if(is.null(opt$beta_slope_input) | opt$beta_slope_input == 'NA'){
+  cat('Simulating beta slope\n')
   if(beta_gamma_shape == 0){
     ## if non-differentially abundant, make it truly non-differentially abundant, i.e. exactly zero
     beta[2,] = 0

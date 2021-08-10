@@ -107,7 +107,7 @@ first_entries_runs = sapply(unique(df_beta_recovery$idx), function(i) which(df_b
 table(Sim=df_beta_recovery$DA_bool[first_entries_runs], est_M=df_beta_recovery$pvals_adj[first_entries_runs] <= 0.05)
 
 saveRDS(df_beta_recovery,
-        paste0("../data/assessing_models_simulation/inference_results/TMB/summaries/", opt$output_string, ".RDS"))
+        paste0("../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", opt$output_string, ".RDS"))
 
 #' Remove non-converged
 df_beta_recovery = df_beta_recovery[df_beta_recovery$converged,]

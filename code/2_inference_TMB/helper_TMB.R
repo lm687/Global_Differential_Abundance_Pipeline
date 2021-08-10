@@ -385,8 +385,8 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
+    parameters$log_lambda = matrix(c(2,2))
     parameters$cov_par_RE = NULL
-    parameters <- list(parameters,log_lambda = matrix(c(2,2)))
     # parameters <- list(
     #   beta = beta_init,
     #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
@@ -418,7 +418,7 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
   parameters <- list(parameters, log_lambda = 1.1)
   rdm_vec <- "u_large"
   dll_name <- "CHANGETHIS"
-}else if(model == "fullREDMsinglelambda2"){
+  }else if(model == "fullREDMsinglelambda2"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
@@ -871,8 +871,12 @@ summarise_DA_detection = function(true, predicted){
   Power = TPs/total_pos
   Sensitivity = TPs / (TPs + FNs)
   Specificity = TNs / (TNs + FPs)
-  pred <- ROCR::prediction(as.numeric(true), as.numeric(predicted))
-  AUC = try(ROCR::performance(pred, "auc")@y.values[[1]])
+  pred <- (try(ROCR::prediction(as.numeric(true), as.numeric(predicted))))
+  if(typeof(pred) == 'S4'){
+    AUC = as.numeric(try(ROCR::performance(pred, "auc")@y.values[[1]]))
+  }else{
+    AUC = NA
+  }
   return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity, Sensitivity=Sensitivity))
 }
 
@@ -992,107 +996,107 @@ give_barplot = function(ct, typedata, simulation=F, title='', legend_on=F, ...){
   grid.arrange(a, b, c, d, top=title)
 }
 
-wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, iter.max=150, init_log_lambda = 2, idx_cov_to_fill){
-  dim(object$Y)
-  # sort_columns=T
-  smart_init_vals=T
-  
-  data = object
-  
-  # if(sort_columns){
-  #   data$Y = data$Y[,order(colSums(data$Y), decreasing = F)]
-  # }
-  
-  data$Y = matrix(data$Y, nrow=nrow(data$Y))
-  data$x = (matrix(data$x, ncol=2))
-  
-  d <- ncol(data$Y)
-  n <- ncol(data$z) ## number of INDIVIDUALS, not samples
-  
-  data$num_individuals = n
-  data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
-  
-  if(smart_init_vals){
-    require(nnet)
-    .x_multinom = multinom(data$Y ~ data$x[,2])
-    beta_init = t(coef(.x_multinom))
-  }else{
-    beta_init = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
-                        nrow = 2, byrow=TRUE))
-  }
-  
-  parameters <- list(
-    beta = beta_init,
-    u_large = matrix(runif(min = -0.3, max = 0.3, n = (d-1)*n), nrow=n),
-    logs_sd_RE=rep(1, d-1),
-    # cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
-    cov_par_RE = runif(min = -1, max = 1, n = ((d-1)*(d-1)-(d-1))/2),
-    log_lambda = matrix(c(init_log_lambda,init_log_lambda))
-  )
-  if(model == "fullRE_DM"){
-    obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
-  }else if(model == "diagRE_DM"){
-    parameters$cov_par_RE = NULL
-    obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
-  }else if(model == "fullREDMsinglelambda"){
-    parameters$log_lambda = 2
-    obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
-  }else if(model == "diagREDMsinglelambda"){
-    parameters$cov_par_RE = NULL
-    parameters$log_lambda = 2
-    obj <- MakeADFun(data, parameters, DLL="diagRE_dirichletmultinomial_single_lambda", random = "u_large")
-  }else if(model == "sparseRE_DM"){
-    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
-    parameters$cov_par_RE = NULL
-    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
-    data$idx_params_to_infer = (idx_cov_to_fill)
-    if(length(idx_cov_to_fill) > 1){
-      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomial", random = "u_large")
-    }else{
-      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomial_single", random = "u_large")
-    }
-  }else if(model == "sparseRE_DMSL"){
-    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
-    parameters$log_lambda = 2
-    parameters$cov_par_RE = NULL
-    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
-    data$idx_params_to_infer = (idx_cov_to_fill)
-    if(length(idx_cov_to_fill) > 1){
-      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda", random = "u_large")
-    }else{
-      stop()
-    }
-  }else if(model == "sparseRE_DMSL2"){
-    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
-    parameters$log_lambda = 2
-    parameters$cov_par_RE = NULL
-    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
-    data$idx_params_to_infer = (idx_cov_to_fill)
-    if(length(idx_cov_to_fill) > 1){
-      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
-    }else{
-      stop()
-    }
-  }else if(model == "sparseRE_DMSL2"){
-    if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
-    parameters$log_lambda = 2
-    parameters$cov_par_RE = NULL
-    parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
-    data$idx_params_to_infer = (idx_cov_to_fill)
-    if(length(idx_cov_to_fill) > 1){
-      obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
-    }else{
-      stop()
-    }
-  } else{
-    stop("Incorrect <model>")
-  }
-
-  opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max, trace=T)
-  
-  if(return_report)  return(sdreport(obj))
-  return(opt)
-}
+# wrapper_run_TMB_debug = function(object, model = "fullRE_DM", return_report=F, iter.max=150, init_log_lambda = 2, idx_cov_to_fill){
+#   dim(object$Y)
+#   # sort_columns=T
+#   smart_init_vals=T
+#   
+#   data = object
+#   
+#   # if(sort_columns){
+#   #   data$Y = data$Y[,order(colSums(data$Y), decreasing = F)]
+#   # }
+#   
+#   data$Y = matrix(data$Y, nrow=nrow(data$Y))
+#   data$x = (matrix(data$x, ncol=2))
+#   
+#   d <- ncol(data$Y)
+#   n <- ncol(data$z) ## number of INDIVIDUALS, not samples
+#   
+#   data$num_individuals = n
+#   data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+#   
+#   if(smart_init_vals){
+#     require(nnet)
+#     .x_multinom = multinom(data$Y ~ data$x[,2])
+#     beta_init = t(coef(.x_multinom))
+#   }else{
+#     beta_init = (matrix(rep(runif(1, min = -4, max = 4), 2*(d-1)),
+#                         nrow = 2, byrow=TRUE))
+#   }
+#   
+#   parameters <- list(
+#     beta = beta_init,
+#     u_large = matrix(runif(min = -0.3, max = 0.3, n = (d-1)*n), nrow=n),
+#     logs_sd_RE=rep(1, d-1),
+#     # cov_par_RE = rep(1, ((d-1)*(d-1)-(d-1))/2),
+#     cov_par_RE = runif(min = -1, max = 1, n = ((d-1)*(d-1)-(d-1))/2),
+#     log_lambda = matrix(c(init_log_lambda,init_log_lambda))
+#   )
+#   if(model == "fullRE_DM"){
+#     obj <- MakeADFun(data, parameters, DLL="fullRE_ME_dirichletmultinomial", random = "u_large")
+#   }else if(model == "diagRE_DM"){
+#     parameters$cov_par_RE = NULL
+#     obj <- MakeADFun(data, parameters, DLL="diagRE_ME_dirichletmultinomial", random = "u_large")
+#   }else if(model == "fullREDMsinglelambda"){
+#     parameters$log_lambda = 2
+#     obj <- MakeADFun(data, parameters, DLL="fullRE_dirichletmultinomial_single_lambda", random = "u_large")
+#   }else if(model == "diagREDMsinglelambda"){
+#     parameters$cov_par_RE = NULL
+#     parameters$log_lambda = 2
+#     obj <- MakeADFun(data, parameters, DLL="diagRE_dirichletmultinomial_single_lambda", random = "u_large")
+#   }else if(model == "sparseRE_DM"){
+#     if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+#     parameters$cov_par_RE = NULL
+#     parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+#     data$idx_params_to_infer = (idx_cov_to_fill)
+#     if(length(idx_cov_to_fill) > 1){
+#       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomial", random = "u_large")
+#     }else{
+#       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomial_single", random = "u_large")
+#     }
+#   }else if(model == "sparseRE_DMSL"){
+#     if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+#     parameters$log_lambda = 2
+#     parameters$cov_par_RE = NULL
+#     parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+#     data$idx_params_to_infer = (idx_cov_to_fill)
+#     if(length(idx_cov_to_fill) > 1){
+#       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda", random = "u_large")
+#     }else{
+#       stop()
+#     }
+#   }else if(model == "sparseRE_DMSL2"){
+#     if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+#     parameters$log_lambda = 2
+#     parameters$cov_par_RE = NULL
+#     parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+#     data$idx_params_to_infer = (idx_cov_to_fill)
+#     if(length(idx_cov_to_fill) > 1){
+#       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
+#     }else{
+#       stop()
+#     }
+#   }else if(model == "sparseRE_DMSL2"){
+#     if(is.null(idx_cov_to_fill)){stop("Add <idx_cov_to_fill>")}
+#     parameters$log_lambda = 2
+#     parameters$cov_par_RE = NULL
+#     parameters$cov_RE_part = (rep(1, length(idx_cov_to_fill)))
+#     data$idx_params_to_infer = (idx_cov_to_fill)
+#     if(length(idx_cov_to_fill) > 1){
+#       obj <- MakeADFun(data, parameters, DLL="sparseRE_ME_dirichletmultinomialsinglelambda2", random = "u_large")
+#     }else{
+#       stop()
+#     }
+#   } else{
+#     stop("Incorrect <model>")
+#   }
+# 
+#   opt = nlminb(start = obj$par, obj = obj$fn, gr = obj$gr, iter.max=iter.max, trace=T)
+#   
+#   if(return_report)  return(sdreport(obj))
+#   return(opt)
+# }
 
 is_slope = function(v){
   bool_isbetaslope = rep(F, length(v))
@@ -1485,3 +1489,17 @@ give_weightedtotalperturbation_TMBobj = function(exposures_cancertype_obj, addon
   
 }
 
+wrapper_run_HMP_Xdc.sevsample <- function(i){
+  x = readRDS(i)
+  x = x[[1]]@count_matrices_all
+  props = sapply(x, normalise_rw, simplify = FALSE)
+  return(HMP::Xdc.sevsample(list(t((props[[1]])),t(props[[2]])))$`p value`)
+}
+
+
+wrapper_run_HMP_Xmcupo.sevsample <- function(i){
+  x = readRDS(i)
+  x = x[[1]]@count_matrices_all
+  props = sapply(x, normalise_rw, simplify = FALSE)
+  return(HMP::Xmcupo.sevsample(list(t((props[[1]])),t(props[[2]])))$`p value`)
+}
