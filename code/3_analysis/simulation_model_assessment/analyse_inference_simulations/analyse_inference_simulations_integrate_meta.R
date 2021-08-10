@@ -11,8 +11,9 @@ require(dplyr)
 generation = c("GenerationCnorm",  "generationFnorm", "generationGnorm", "generationMGnorm")
 
 all_runs = lapply(generation, function(i){
-  runs_fullREM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/summaries/", i, "_fullREM.RDS"))
-  runs_fullREDM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/summaries/", i, "_fullREDM.RDS"))
+  ## these files are not there anymore
+  # runs_fullREM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/summaries/", i, "_fullREM.RDS"))
+  # runs_fullREDM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/summaries/", i, "_fullREDM.RDS"))
   return(list(fullREM=runs_fullREM, fullREDM=runs_fullREDM))
 })
 names(all_runs) = generation

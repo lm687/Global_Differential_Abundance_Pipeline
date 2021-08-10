@@ -85,7 +85,7 @@ if(opt$model == "fullREM"){
 
 
 cat(opt$input)
-dataset = load_PCAWG(ct = opt$input, typedata = opt$feature_type, simulation = F,
+dataset = load_PCAWG(ct = opt$input, typedata = opt$feature_type, simulation = simulation_bool,
                      path_to_data = NA, read_directly=opt$read_directly)
 
 if(opt$nonexo_bool | grepl('nonexo', opt$output)){

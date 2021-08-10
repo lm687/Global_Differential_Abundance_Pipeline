@@ -6442,3 +6442,21 @@ for(ct in enough_samples){
 ```
 
 
+```{r, HMP_pcawg, echo=F}
+# source("../1_create_ROO/roo_functions.R")
+# signature_roo[[1]]
+require(HMP)
+HMP_res_sigs <- lapply(signature_roo, function(signature_roo_it){
+  HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
+                      t(signature_roo_it[[2]])))
+})
+names(HMP_res_sigs) <- names(signature_roo)
+# test_HMP_ROOSigs(signature_roo[[1]],  slot='count_matrices_active')
+```
+
+```{r, HMP_pcawg_2}
+HMP_res_sigs
+pvals_diagRE_DM
+```
+
+See script `PCAWG_HMP_and_alternative_methods.R` for the analyses of PCAWG data using alternative models.
