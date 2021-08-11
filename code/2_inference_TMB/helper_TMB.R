@@ -867,6 +867,7 @@ summarise_DA_detection = function(true, predicted){
   TPs = sum(true & predicted)/sum(predicted)
   TNs = sum(!true & !predicted)/sum(!predicted)
   FNs = sum(true & !predicted)/sum(!predicted)
+  fraction_accurate=(sum(true & predicted) + sum(!true & !predicted))/length(true)
   total_pos = sum(true | predicted)
   Power = TPs/total_pos
   Sensitivity = TPs / (TPs + FNs)
@@ -877,7 +878,8 @@ summarise_DA_detection = function(true, predicted){
   }else{
     AUC = NA
   }
-  return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity, Sensitivity=Sensitivity))
+  return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity, Sensitivity=Sensitivity,
+           Fraction_accurate=fraction_accurate))
 }
 
 fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbose=T){

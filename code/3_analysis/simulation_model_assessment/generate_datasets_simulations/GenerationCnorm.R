@@ -51,23 +51,47 @@ X_sim = matrix(NA, nrow=2, ncol=2*n)
 X_sim[1,] = 1
 X_sim[2,] = rep(c(0,1), each=n)
 beta = matrix(0, nrow=2, ncol=d-1)
-if(is.null(opt$beta_intercept_input) |  opt$beta_intercept_input == 'NA'){
+sim_beta_1 = F
+if(is.null(opt$beta_intercept_input)){
   cat('Simulating beta intercept\n')
-  beta[1,] = runif(n = d-1, min = -1, max = 1)
+  sim_beta_1 = T
 }else{
-  beta[1,] = readRDS(opt$beta_intercept_input)
+  if(is.na(opt$beta_intercept_input)){
+    cat('Simulating beta intercept\n')
+    sim_beta_1 = T
+  }else{
+    cat('Reading input beta intercept file')
+    beta[1,] = readRDS(opt$beta_intercept_input)
+    sim_beta_1 = F
+  }
 }
 
-if(is.null(opt$beta_slope_input) | opt$beta_slope_input == 'NA'){
+if(sim_beta_1) beta[1,] = runif(n = d-1, min = -1, max = 1)
+
+
+### Simulating the beta slope
+sim_beta_2 = F
+if(is.null(opt$beta_slope_input)){
   cat('Simulating beta slope\n')
+  sim_beta_2 = T
+  }else{
+    if(is.na(opt$beta_slope_input)){
+      sim_beta_2 = T
+    }else{
+      sim_beta_2 = F
+      cat('Reading input beta slope file')
+      beta[2,] = readRDS(opt$beta_slope_input)
+    }
+  }
+
+if(sim_beta_2){
   if(beta_gamma_shape == 0){
+    cat('Simulating beta slope\n')
     ## if non-differentially abundant, make it truly non-differentially abundant, i.e. exactly zero
     beta[2,] = 0
-    }else{
-      beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
-    }
   }else{
-  beta[2,] = readRDS(opt$beta_slope_input)
+    beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
+  }
 }
 
 ## Random effects

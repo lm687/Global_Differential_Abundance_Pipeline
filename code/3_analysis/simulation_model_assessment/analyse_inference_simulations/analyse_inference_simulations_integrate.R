@@ -125,6 +125,7 @@ if(length(pvals_fullREDMSL) != length(datasets)){
   stop('The number of runs is not the number of datasets')
 }
 
+## p-values from my models are not adjusted for MT
 pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   pvals_fullREM=pvals_fullREM,
                                   pvals_diagREDMSL=pvals_diagREDMSL,
@@ -203,7 +204,11 @@ ggplot(varying_d, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_l
 ggplot(varying_n, aes(x=n, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 ggplot(varying_betashape, aes(x=beta_gamma_shape, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
+ggplot(varying_d, aes(x=d, y = Fraction_accurate, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggplot(varying_n, aes(x=n, y = Fraction_accurate, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggplot(varying_betashape, aes(x=beta_gamma_shape, y = Fraction_accurate, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
+## add fraction of correcxt classification, which are values I should have for all combinations
 
 table(DA_bool, M_est=pvals_fullREDMSL <= 0.05)
 table(DA_bool, DM_est=pvals_adj <= 0.05)
