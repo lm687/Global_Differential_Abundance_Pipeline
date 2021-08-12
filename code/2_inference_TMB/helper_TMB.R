@@ -768,9 +768,10 @@ give_stderr = function(i, only_slopes=T, only_betas=T){
   }
 }
 
-createbarplot_object = function(fle, slotname='count_matrices_all'){
+createbarplot_object = function(fle, slotname='count_matrices_all', pre_path_funs=NULL){
   .x = readRDS(fle)
-  lapply(.x, createbarplot_ROOSigs, slot=slotname, pre_path = "../../../CDA_in_Cancer/code/")
+  if(is.null(pre_path_funs)) pre_path_funs <- "../../../CDA_in_Cancer/code/"
+  lapply(.x, createbarplot_ROOSigs, slot=slotname, pre_path = pre_path_funs)
 }
 
 
@@ -855,6 +856,7 @@ wrapper_run_ttest_props = function(i){
 
 
 summarise_DA_detection = function(true, predicted){
+  warning('11 August 2021: there was a problem in how FP, TP, etc. were calculated')
   require(ROCR)
   ## remove NAs
   which_na = which(is.na(predicted))
@@ -863,23 +865,30 @@ summarise_DA_detection = function(true, predicted){
     predicted = predicted[-which_na]
   }
   
-  FPs = sum(!true & predicted)/sum(predicted)
-  TPs = sum(true & predicted)/sum(predicted)
-  TNs = sum(!true & !predicted)/sum(!predicted)
-  FNs = sum(true & !predicted)/sum(!predicted)
-  fraction_accurate=(sum(true & predicted) + sum(!true & !predicted))/length(true)
+  FPs = sum(!true & predicted)
+  FPR = FPs/sum(!true)
+  TPs = sum(true & predicted)
+  TPR = TPs/sum(true)
+  TNs = sum(!true & !predicted)
+  TNR = TNs/sum(!true)
+  FNs = sum(true & !predicted)
+  FNR = FNs/sum(!true)
+  Accuracy=(TPs + TNs)/length(true)
   total_pos = sum(true | predicted)
   Power = TPs/total_pos
   Sensitivity = TPs / (TPs + FNs)
   Specificity = TNs / (TNs + FPs)
+  Recall=Sensitivity
+  Precision=TPs/(TPs + FPs)
   pred <- (try(ROCR::prediction(as.numeric(true), as.numeric(predicted))))
   if(typeof(pred) == 'S4'){
     AUC = as.numeric(try(ROCR::performance(pred, "auc")@y.values[[1]]))
   }else{
     AUC = NA
   }
-  return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity, Sensitivity=Sensitivity,
-           Fraction_accurate=fraction_accurate))
+  return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity,
+           Sensitivity=Sensitivity, Recall=Recall, Precision=Precision,
+           Accuracy=Accuracy))
 }
 
 fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbose=T){
@@ -1494,14 +1503,12 @@ give_weightedtotalperturbation_TMBobj = function(exposures_cancertype_obj, addon
 wrapper_run_HMP_Xdc.sevsample <- function(i){
   x = readRDS(i)
   x = x[[1]]@count_matrices_all
-  props = sapply(x, normalise_rw, simplify = FALSE)
-  return(HMP::Xdc.sevsample(list(t((props[[1]])),t(props[[2]])))$`p value`)
+  return(HMP::Xdc.sevsample(x)$`p value`)
 }
 
 
 wrapper_run_HMP_Xmcupo.sevsample <- function(i){
   x = readRDS(i)
   x = x[[1]]@count_matrices_all
-  props = sapply(x, normalise_rw, simplify = FALSE)
-  return(HMP::Xmcupo.sevsample(list(t((props[[1]])),t(props[[2]])))$`p value`)
+  return(HMP::Xmcupo.sevsample(x)$`p value`)
 }
