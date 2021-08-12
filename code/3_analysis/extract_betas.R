@@ -12,7 +12,7 @@ library(uuid)
 library(bayesplot)
 library(ggplot2)
 library(dplyr)
-library(ggrepel)
+library(optparse)
 
 option_list = list(
   make_option(c("--model_and_feature"), type="character", default=NA, 

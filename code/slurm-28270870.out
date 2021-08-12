@@ -1,0 +1,199 @@
+Loading required package: StanHeaders
+Loading required package: ggplot2
+rstan (Version 2.19.3, GitRev: 2e1f913d3ca3)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+options(mc.cores = parallel::detectCores()).
+To avoid recompilation of unchanged Stan programs, we recommend calling
+rstan_options(auto_write = TRUE)
+This is bayesplot version 1.7.2
+- Online documentation and vignettes at mc-stan.org/bayesplot
+- bayesplot theme set to bayesplot::theme_default()
+   * Does _not_ affect other ggplot2 plots
+   * See ?bayesplot_theme_set for details on theme setting
+
+Attaching package: ‘dplyr’
+
+The following object is masked from ‘package:gridExtra’:
+
+    combine
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+[1] "../data/inference//Biliary-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Bladder-TCC_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Bone-Benign_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Bone-Epith_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Bone-Osteosarc_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Breast-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Breast-LobularCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Cervix-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Cervix-SCC_signatures_15000_LNMROO.RData"
+[1] "../data/inference//CNS-GBM_signatures_15000_LNMROO.RData"
+[1] "../data/inference//CNS-Oligo_signatures_15000_LNMROO.RData"
+[1] "../data/inference//CNS-PiloAstro_signatures_15000_LNMROO.RData"
+[1] "../data/inference//ColoRect-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Head-SCC_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Kidney-ChRCC_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Kidney-RCC.clearcell_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Kidney-RCC.papillary_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Lung-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Lung-SCC_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Lymph-BNHL_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Lymph-CLL_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Myeloid-AML_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Myeloid-MPN_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Ovary-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Panc-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Panc-Endocrine_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Skin-Melanoma.acral_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Skin-Melanoma.cutaneous_signatures_15000_LNMROO.RData"
+[1] "../data/inference//SoftTissue-Leiomyo_signatures_15000_LNMROO.RData"
+[1] "../data/inference//SoftTissue-Liposarc_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Stomach-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Thy-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "../data/inference//Uterus-AdenoCA_signatures_15000_LNMROO.RData"
+[1] "Biliary-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    36
+[1] "Bladder-TCC_signatures_15000_LNMROO"
+[1] 30000    14
+[1] "Bone-Benign_signatures_15000_LNMROO"
+[1] 30000    10
+[1] "Bone-Epith_signatures_15000_LNMROO"
+[1] 30000    14
+[1] "Bone-Osteosarc_signatures_15000_LNMROO"
+[1] 30000    18
+[1] "Breast-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    26
+[1] "Breast-LobularCA_signatures_15000_LNMROO"
+[1] 30000    10
+[1] "Cervix-AdenoCA_signatures_15000_LNMROO"
+[1] 30000     6
+[1] "Cervix-SCC_signatures_15000_LNMROO"
+[1] 30000    12
+[1] "CNS-GBM_signatures_15000_LNMROO"
+[1] 30000    16
+[1] "CNS-Oligo_signatures_15000_LNMROO"
+[1] 30000    10
+[1] "CNS-PiloAstro_signatures_15000_LNMROO"
+[1] 30000    12
+[1] "ColoRect-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    16
+[1] "Head-SCC_signatures_15000_LNMROO"
+[1] 30000    22
+[1] "Kidney-ChRCC_signatures_15000_LNMROO"
+[1] 30000    14
+[1] "Kidney-RCC.clearcell_signatures_15000_LNMROO"
+[1] 30000    18
+[1] "Kidney-RCC.papillary_signatures_15000_LNMROO"
+[1] 30000    18
+[1] "Lung-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    22
+[1] "Lung-SCC_signatures_15000_LNMROO"
+[1] 30000    12
+[1] "Lymph-BNHL_signatures_15000_LNMROO"
+[1] 30000    30
+[1] "Lymph-CLL_signatures_15000_LNMROO"
+[1] 30000     8
+[1] "Myeloid-AML_signatures_15000_LNMROO"
+[1] 30000     6
+[1] "Myeloid-MPN_signatures_15000_LNMROO"
+[1] 30000    10
+[1] "Ovary-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    24
+[1] "Panc-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    28
+[1] "Panc-Endocrine_signatures_15000_LNMROO"
+[1] 30000    26
+[1] "Skin-Melanoma.acral_signatures_15000_LNMROO"
+[1] 30000    16
+[1] "Skin-Melanoma.cutaneous_signatures_15000_LNMROO"
+[1] 30000    16
+[1] "SoftTissue-Leiomyo_signatures_15000_LNMROO"
+[1] 30000    12
+[1] "SoftTissue-Liposarc_signatures_15000_LNMROO"
+[1] 30000    14
+[1] "Stomach-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    32
+[1] "Thy-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    12
+[1] "Uterus-AdenoCA_signatures_15000_LNMROO"
+[1] 30000    20
+        Biliary-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+            Bladder-TCC_signatures_15000_LNMROO.null device 
+                                                          1 
+            Bone-Benign_signatures_15000_LNMROO.null device 
+                                                          1 
+             Bone-Epith_signatures_15000_LNMROO.null device 
+                                                          1 
+         Bone-Osteosarc_signatures_15000_LNMROO.null device 
+                                                          1 
+         Breast-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+       Breast-LobularCA_signatures_15000_LNMROO.null device 
+                                                          1 
+         Cervix-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+             Cervix-SCC_signatures_15000_LNMROO.null device 
+                                                          1 
+                CNS-GBM_signatures_15000_LNMROO.null device 
+                                                          1 
+              CNS-Oligo_signatures_15000_LNMROO.null device 
+                                                          1 
+          CNS-PiloAstro_signatures_15000_LNMROO.null device 
+                                                          1 
+       ColoRect-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+               Head-SCC_signatures_15000_LNMROO.null device 
+                                                          1 
+           Kidney-ChRCC_signatures_15000_LNMROO.null device 
+                                                          1 
+   Kidney-RCC.clearcell_signatures_15000_LNMROO.null device 
+                                                          1 
+   Kidney-RCC.papillary_signatures_15000_LNMROO.null device 
+                                                          1 
+           Lung-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+               Lung-SCC_signatures_15000_LNMROO.null device 
+                                                          1 
+             Lymph-BNHL_signatures_15000_LNMROO.null device 
+                                                          1 
+              Lymph-CLL_signatures_15000_LNMROO.null device 
+                                                          1 
+            Myeloid-AML_signatures_15000_LNMROO.null device 
+                                                          1 
+            Myeloid-MPN_signatures_15000_LNMROO.null device 
+                                                          1 
+          Ovary-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+           Panc-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+         Panc-Endocrine_signatures_15000_LNMROO.null device 
+                                                          1 
+    Skin-Melanoma.acral_signatures_15000_LNMROO.null device 
+                                                          1 
+Skin-Melanoma.cutaneous_signatures_15000_LNMROO.null device 
+                                                          1 
+     SoftTissue-Leiomyo_signatures_15000_LNMROO.null device 
+                                                          1 
+    SoftTissue-Liposarc_signatures_15000_LNMROO.null device 
+                                                          1 
+        Stomach-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+            Thy-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+         Uterus-AdenoCA_signatures_15000_LNMROO.null device 
+                                                          1 
+Using ct as id variables
+Error: Unknown graphics device '.png'
+Backtrace:
+    █
+ 1. └─ggplot2::ggsave(...)
+ 2.   └─ggplot2:::plot_dev(device, filename, dpi = dpi)
+Execution halted
