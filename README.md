@@ -16,6 +16,22 @@ source activate snakemake-globalDA
 conda deactivate
 ```
 
+## Running in clusters
+
+CRUK 
+```
+source activate snakemake-globalDA
+snakemake --cluster "sbatch -p general -t 12:00:00 --cores 1" --jobs 40 --printshellcmds
+conda deactivate
+```
+
+HPC
+```
+module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
+source activate snakemake-globalDA
+snakemake --cluster "sbatch -A MARKOWETZ-SL3-CPU -t 12:00:00 -p skylake --cores 1" --jobs 40 --printshellcmds
+```
+
 ## Creating Snakemake's config file
 The file `config_PCAWG.yaml` is created by running
 ```
