@@ -25,6 +25,8 @@ option_list = list(
               help="Overdispersion parameter", metavar="numeric"),
   make_option(c("--beta_intercept_input"), type="character", default=NA,
               help="Fixed intercept for the betas", metavar="character"),
+  make_option(c("--sdRE_input"), type="character", default=NA,
+              help="Fixed slope for the betas", metavar="character"), ## not used
   make_option(c("--beta_slope_input"), type="character", default=NA,
               help="Fixed slope for the betas", metavar="character"),
   make_option(c("--outfile"), type="character", default=NA,
@@ -60,9 +62,13 @@ if(is.null(opt$beta_intercept_input)){
     cat('Simulating beta intercept\n')
     sim_beta_1 = T
   }else{
+    if(opt$beta_intercept_input == "NA"){
+sim_beta_1 = T
+}else{
     cat('Reading input beta intercept file')
     beta[1,] = readRDS(opt$beta_intercept_input)
     sim_beta_1 = F
+}
   }
 }
 
@@ -74,15 +80,19 @@ sim_beta_2 = F
 if(is.null(opt$beta_slope_input)){
   cat('Simulating beta slope\n')
   sim_beta_2 = T
-  }else{
+ }else{
     if(is.na(opt$beta_slope_input)){
       sim_beta_2 = T
     }else{
-      sim_beta_2 = F
-      cat('Reading input beta slope file')
-      beta[2,] = readRDS(opt$beta_slope_input)
+        if(opt$beta_slope_input == "NA"){
+            sim_beta_2 = T
+        }else{ 
+            sim_beta_2 = F
+            cat('Reading input beta slope file')
+            beta[2,] = readRDS(opt$beta_slope_input)
+        }
     }
-  }
+}
 
 if(sim_beta_2){
   if(beta_gamma_shape == 0){

@@ -1,6 +1,7 @@
-rm(list = ls())
-setwd("~/Documents/PhD/GlobalDA/code/")
-Sys.setenv(LANG='en')
+#rm(list = ls())
+#setwd("~/Documents/PhD/GlobalDA/code/")
+#Sys.setenv(LANG='en')
+setwd("../code/")
 
 library(rstan)
 library(uuid)
