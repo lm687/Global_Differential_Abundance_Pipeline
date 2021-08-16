@@ -24,6 +24,12 @@ option_list = list(
               help="Shape parameter for gamma distribution for beta (i.e. slope coefficient for changes in exposure between groups)", metavar="numeric"),
   make_option(c("--lambda"), type="numeric", default=0,
               help="Overdispersion parameter", metavar="numeric"),
+  make_option(c("--beta_intercept_input"), type="character", default=NA,
+              help="Fixed intercept for the betas", metavar="character"),
+  make_option(c("--beta_slope_input"), type="character", default=NA,
+              help="Fixed slope for the betas", metavar="character"),
+  make_option(c("--sdRE_input"), type="character", default=NA, ## not used
+              help="Fixed slope for the betas", metavar="character"), ## not used
   make_option(c("--outfile"), type="character", default=NA,
               help="Output file in which to write the dataset (RDS file)", metavar="character")
 );
