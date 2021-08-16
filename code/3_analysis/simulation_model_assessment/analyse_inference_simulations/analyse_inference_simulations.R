@@ -44,7 +44,11 @@ opt = parse_args(opt_parser);
 if(debugging){
   ## debugging
   opt = list()
+<<<<<<< HEAD
   opt$dataset_generation = 'GenerationCnorm'
+=======
+  opt$dataset_generation = 'generationFnorm'
+>>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
   opt$model = 'fullREDMsinglelambda'
   opt$input_list = list.files("../data/assessing_models_simulation/inference_results/TMB/nlminb/", full.names = T)
   opt$input_list = opt$input_list[grep(opt$dataset_generation , opt$input_list)]
@@ -89,10 +93,14 @@ if(opt$multiple_runs){
 }
 
 if(opt$dataset_generation == 'GenerationCnorm'){
+<<<<<<< HEAD
   if(length(grep(pattern = 'GenerationCnormsimpler', datasets_files)) > 0){
     ## if there are any files from GenerationCnormsimpler (if there are none the line below gives an empty list)
     datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
   }
+=======
+  datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
+>>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
 }
 
 # match
