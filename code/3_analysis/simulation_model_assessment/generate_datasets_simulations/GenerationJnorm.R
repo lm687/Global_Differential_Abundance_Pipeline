@@ -126,14 +126,19 @@ else{  cat('Reading covariance matrix\n')
 }
 
 if(sim_sd_RE){
+  ## independent random effect
+  ## simulate data to get covariances
   aaa <- sapply(1:(d-2), function(i) runif(n = 50))
   aaa <- cbind(aaa, aaa[,1]+runif(n = 50, min = -0.1, 0.1))
   cov <- cov(aaa)
   scale_RE <- 2
   cov <- diag(rep(scale_RE, d-1)) %*% cov ## scale
   u <- mvtnorm::rmvnorm(n, mean = rep(0, d-1), sigma = cov)
+}else{
+  cat('Reading covariance matrix\n')
+  cov <-  readRDS(opt$sdRE_input)
+  u <- mvtnorm::rmvnorm(n, mean = rep(0, d-1), sigma = cov)
 }
-
 
 ## lambdas: overdispersion
 lambdas = c(rep(lambda[1], n), rep(lambda[2], n))
