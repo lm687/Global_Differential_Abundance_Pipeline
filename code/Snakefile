@@ -12,7 +12,8 @@ num_iterations = 2000
 ## which parameters n, d, etc. do we use for each dataset?
 datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'generationC',\
  'GenerationCnormsimpler': 'generationC', 'generationFnorm': 'generationF', 'generationGnorm': 'generationG',\
- 'generationMGnorm': 'generationG', 'GenerationHnorm': 'generationHnorm', 'GenerationInoRE': 'generationC'}
+ 'generationMGnorm': 'generationG', 'GenerationHnorm': 'generationHnorm', 'GenerationInoRE': 'generationC',
+ 'GenerationInoREscaledbeta': 'generationC'}
  ## just added the GenerationHnorm, I don't really know if it's correct
 
 rule all:
@@ -62,13 +63,14 @@ rule all:
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       ## now use the multiple function instead, so we can have multiple runs from the same set of parameteres
-      #
-      #expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-      #  datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
         datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
-	# expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-      #   datasetgeneration='generationFnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+       #  datasetgeneration='GenerationInoREscaledbeta', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      #expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #  datasetgeneration='generationFnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationHnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
@@ -206,7 +208,7 @@ rule simulate_for_comparison_multiple:
     output:
        "../data/assessing_models_simulation/datasets/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS"
     shell:
-       #"Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output} --beta_intercept_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_intercept}.RDS --beta_slope_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_slope}.RDS --sdRE_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.sdRE_input}.RDS"
+       # "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output} --beta_intercept_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_intercept}.RDS --beta_slope_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.fixed_beta_slope}.RDS --sdRE_input ../data/assessing_models_simulation/additional_files/multiple_fixed_{params.sdRE_input}.RDS"
        "Rscript --vanilla 3_analysis/simulation_model_assessment/generate_datasets_simulations/{params.datasetgeneration}.R --input {input} --d {params.d} --n {params.n} --nlambda {params.nlambda} --lambda {params.lmbda} --beta_gamma_shape {params.beta_intensity} --outfile {output} --beta_intercept_input {params.fixed_beta_intercept} --beta_slope_input {params.fixed_beta_slope} --sdRE_input {params.sdRE_input}"
 
 
@@ -291,10 +293,10 @@ rule analyse_simulation_TMB_multiple:
         fixed_beta_slope = 'NA',
         sdRE_input = 'NA',
         model = "{model}",
-        itnum= range(2))
+        itnum= 1)
     output:
         "../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"
     shell:
         "Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input '{input}'\
-        --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
-        --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration}"
+        --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
+        --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T"

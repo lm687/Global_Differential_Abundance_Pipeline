@@ -118,7 +118,6 @@ write.table(paste0("3_analysis/helper/table_simulation_params_", uuid, ".txt"), 
 
 saveRDS(list(objects_counts=objects_counts, d=d, n= n, beta_gamma_shape=beta_gamma_shape, sd_RE=sd_RE, lambda=lambda, Nm_lambda=Nm_lambda,
              X_sim = X_sim, beta = beta, Z_sim = Z_sim, u = u, lambdas = lambdas, alphabar = alphabar, alpha = alpha, Nm = Nm, W = W),
-        # file = paste0("../data/assessing_models_simulation/datasets/ ", uuid, ".RDS"))
         file = opt$outfile)
 
 

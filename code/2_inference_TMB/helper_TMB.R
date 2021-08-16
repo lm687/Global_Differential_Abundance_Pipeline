@@ -886,7 +886,7 @@ summarise_DA_detection = function(true, predicted){
   }else{
     AUC = NA
   }
-  return(c(FP=FPs, TP=TPs, Power=Power, AUC=AUC, Specificity=Specificity,
+  return(c(FPR=FPR, TPR=TPR, Power=Power, AUC=AUC, Specificity=Specificity,
            Sensitivity=Sensitivity, Recall=Recall, Precision=Precision,
            Accuracy=Accuracy))
 }

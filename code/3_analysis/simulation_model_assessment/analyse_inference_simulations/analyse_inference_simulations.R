@@ -1,5 +1,16 @@
 rm(list = ls())
 
+debugging = F
+if(debugging){
+  ## debugging
+  # setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
+  setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+  getwd()
+  setwd("../../../")
+  getwd()
+  library(TMB, lib.loc = "/mnt/scratcha/fmlab/morril01/software/miniconda3/lib/R/library/")
+}
+
 library(optparse)
 # library(ROCR)
 library(ggplot2)
@@ -23,26 +34,27 @@ option_list = list(
   make_option(c("--model"), type="character", default=NA,
               help="Name of model", metavar="character"),
   make_option(c("--dataset_generation"), type="character", default=NA,
-              help="Generation name", metavar="character")
+              help="Generation name", metavar="character"),
+  make_option(c("--multiple_runs"), type="logical", default=F,
+              help="Boolean: are we analysing mutiple runs?", metavar="logical")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-debugging = F
 if(debugging){
   ## debugging
-  setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list()
-  opt$dataset_generation = 'generationGnorm'
-  opt$model = 'fullREDM'
-  opt$input_list = list.files("../data/assessing_models_simulation/inference_results/TMB", full.names = T)
+  opt$dataset_generation = 'GenerationCnorm'
+  opt$model = 'fullREDMsinglelambda'
+  opt$input_list = list.files("../data/assessing_models_simulation/inference_results/TMB/nlminb/", full.names = T)
   opt$input_list = opt$input_list[grep(opt$dataset_generation , opt$input_list)]
   opt$input_list = opt$input_list[grep(opt$model , opt$input_list)]
+  opt$input_list = opt$input_list[grepl("multiple_", opt$input_list)]
   opt$output_string = paste0(opt$dataset_generation , '_', opt$model, '_manual')
-  opt$output_folder_name = paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/",
+  opt$output_folder_name = paste0("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/",
                                   opt$dataset_generation , "/", opt$dataset_generation , "_", opt$model, "_manual/")
   
-  
+  opt$multiple_runs = T
   # opt$input_list = python_like_select(python_like_select(list.files("../data/assessing_models_simulation/inference_results/TMB/", full.names = T),
   #                                                        "GenerationCnorm_"), "fullREDM")
   # opt$output_folder_name= 'GenerationCnorm_fullREDM'
@@ -53,6 +65,12 @@ if(debugging){
   opt$input_list = strsplit(opt$input_list, " ")[[1]]
 }
 
+if(opt$multiple_runs){
+  flder_save= "../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/"
+}else{
+  flder_save= "../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/"
+}
+
 opt$input_list = sort(opt$input_list)
 print(opt$input_list)
 
@@ -61,13 +79,31 @@ system(paste0("mkdir -p ", folder_output))
 
 datasets_files = list.files("../data/assessing_models_simulation/datasets/", full.names = TRUE)
 datasets_files = datasets_files[grep(pattern = opt$dataset_generation, datasets_files)]
+
+if(opt$multiple_runs){
+  ## if using multiple, only select multiple
+  datasets_files = datasets_files[grep('multiple_', datasets_files)]
+}else{
+  ## if using single dataset+run, remove all multiple datasets
+  datasets_files = datasets_files[-grep('multiple_', datasets_files)]
+}
+
 if(opt$dataset_generation == 'GenerationCnorm'){
-  datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
+  if(length(grep(pattern = 'GenerationCnormsimpler', datasets_files)) > 0){
+    ## if there are any files from GenerationCnormsimpler (if there are none the line below gives an empty list)
+    datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
+  }
 }
 
 # match
-datasets_files = datasets_files[match(gsub(paste0("_", opt$model, ".RDS"), "", basename(opt$input_list)),
-      gsub("_dataset.RDS", "", basename(datasets_files)))]
+if(opt$multiple_runs){
+  datasets_files = datasets_files[match(gsub(paste0("_", opt$model), "", basename(opt$input_list)),
+                                        basename(datasets_files))]
+}else{
+  datasets_files = datasets_files[match(gsub(paste0("_", opt$model, ".RDS"), "", basename(opt$input_list)),
+        gsub("_dataset.RDS", "", basename(datasets_files)))]
+}
+
 
 datasets = lapply(datasets_files, readRDS)
 names(datasets) = gsub(".RDS", "", basename(datasets_files))
@@ -76,7 +112,7 @@ DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 runs = lapply(opt$input_list, readRDS)
 
 #' ## assess if there was good convergence
-sapply(runs, typeof)
+# sapply(runs, typeof)
 
 #' Convert betas to NA whenever the convergence was not successful
 runs[sapply(runs, function(i) try(give_summary_per_sample(i))) != "Good"] = NA
@@ -107,7 +143,7 @@ first_entries_runs = sapply(unique(df_beta_recovery$idx), function(i) which(df_b
 table(Sim=df_beta_recovery$DA_bool[first_entries_runs], est_M=df_beta_recovery$pvals_adj[first_entries_runs] <= 0.05)
 
 saveRDS(df_beta_recovery,
-        paste0("../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", opt$output_string, ".RDS"))
+        paste0(flder_save, opt$output_string, ".RDS"))
 
 #' Remove non-converged
 df_beta_recovery = df_beta_recovery[df_beta_recovery$converged,]
@@ -175,7 +211,6 @@ filename_betarecovery4 = paste0(folder_output, "betaslopes_stderr_DA.pdf")
 ggsave(filename_betarecovery4, height = 8, width = 8)
 
 print(paste0('Saved files:', c(filename_betarecovery1, filename_betarecovery2, filename_betarecovery3, filename_betarecovery4)))
-write(Sys.time(), file = paste0(opt$output_folder_name, "/", opt$output_string, "_results_info.txt"))
 
 
 ## How does the FP rate change as several parameters vary?
@@ -251,4 +286,7 @@ ggplot(df_beta_recovery_accuracy2, aes(x=factor(beta_gamma_shape), fill=acc))+
 ggsave(paste0(opt$output_folder_name, "/", opt$output_string, "_specificity_sensitivity_2.pdf"), height = 3, width = 8)
 
 
+outfile_text <- paste0(opt$output_folder_name, "/", opt$output_string, "_results_info.txt")
+cat('Creating output file for snakemake: ', outfile_text, '\n')
+write(Sys.time(), file = outfile_text)
 
