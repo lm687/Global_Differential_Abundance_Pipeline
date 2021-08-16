@@ -73,5 +73,171 @@ echo "beta_gamma_shape:
 - 2.5
 " >> $name_config
 
+## Generation C of simulations
+echo "\nsimulation_n_generationC:
+- 20
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_generationC:
+- 0
+- 0.2
+- 0.4
+- 0.6
+- 0.8
+- 2
+- 4
+" >> $name_config
+
+echo "simulation_d_generationC:
+- 3
+- 4
+- 5
+- 6
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_generationC:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationC:
+- 10
+- 80
+" >> $name_config
+
+
+## Generation D of simulations
+echo "\nsimulation_n_generationD:
+- 20
+- 25
+- 30
+- 35
+- 40
+- 45
+" >> $name_config
+
+echo "beta_gamma_shape_generationD:
+- 0
+- 1
+" >> $name_config
+
+echo "simulation_d_generationD:
+- 3
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_generationD:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationD:
+- 10
+- 80
+" >> $name_config
+
+
+## Generation E of simulations
+echo "\nsimulation_n_generationE:
+- 10
+- 20
+- 40
+- 80
+" >> $name_config
+
+echo "beta_gamma_shape_generationE:
+- 0
+- 1
+- 2
+" >> $name_config
+
+echo "simulation_d_generationE:
+- 4
+- 6
+- 10
+" >> $name_config
+
+echo "simulation_nlambda_generationE:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_generationE:
+- NA
+" >> $name_config
+
 echo "... Config file $name_config created."
 echo "\`\`\`" >> $name_failed_samples
+
+
+## Generation F of simulations
+echo "\nsimulation_n_generationF:
+- 20
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_generationF:
+- 0
+- 0.01
+- 0.05
+- 0.1
+- 0.2
+- 0.4
+- 0.6
+- 0.8
+- 2
+- 4
+" >> $name_config
+
+echo "simulation_d_generationF:
+- 3
+- 4
+- 5
+- 6
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_generationF:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationF:
+- 10
+- 80
+" >> $name_config
+
+
+## Generation G of simulations
+echo "\nsimulation_n_generationG:
+- 20
+- 30
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_generationG:
+- 0
+- 0.01
+- 0.1
+- 0.6
+- 4
+" >> $name_config
+
+echo "simulation_d_generationG:
+- 3
+- 4
+- 5
+- 6
+" >> $name_config
+
+echo "simulation_nlambda_generationG:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationG:
+- 80
+" >> $name_config
+
+
+

@@ -1,0 +1,612 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	inference_simulation_TMB_multiple
+	1
+
+[Mon Aug 16 08:10:21 2021]
+rule inference_simulation_TMB_multiple:
+    input: ../data/assessing_models_simulation/datasets/multiple_GenerationJnorm2_10_100_10_6_0.8_NA_NA_NA_dataset1.RDS
+    output: ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationJnorm2_10_100_10_6_0.8_fullREM_NA_NA_NA_dataset1.RDS
+    log: logs/inference/nlminb/simulation_GenerationJnorm2_10_100_10_6_0.8_ModelfullREM_NA_NA_NA_dataset1.log
+    jobid: 0
+    wildcards: optimiser=nlminb, datasetgeneration=GenerationJnorm2, n=10, nlambda=100, lmbda=10, d=6, beta_intensity=0.8, model=fullREM, fixed_beta_intercept=NA, fixed_beta_slope=NA, sdRE_input=NA, itnum=1
+
+Rscript 2_inference_TMB/run_TMB.R --input ../data/assessing_models_simulation/datasets/multiple_GenerationJnorm2_10_100_10_6_0.8_NA_NA_NA_dataset1.RDS --output ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationJnorm2_10_100_10_6_0.8_fullREM_NA_NA_NA_dataset1.RDS --model fullREM --optimiser nlminb
+Model: fullREM 
+Feature type: signatures 
+Using nlminb: TRUE 
+Simulation boolean: TRUE 
+make: Nothing to be done for 'all'.
+../data/assessing_models_simulation/datasets/multiple_GenerationJnorm2_10_100_10_6_0.8_NA_NA_NA_dataset1.RDS[1] "../data/assessing_models_simulation/datasets/multiple_GenerationJnorm2_10_100_10_6_0.8_NA_NA_NA_dataset1.RDS"
+Reading file ../data/assessing_models_simulation/datasets/multiple_GenerationJnorm2_10_100_10_6_0.8_NA_NA_NA_dataset1.RDS 
+Loading required package: nnet
+# weights:  18 (10 variable)
+initial  value 3515.432079 
+iter  10 value 2855.499027
+final  value 2829.065155 
+converged
+Order of parameters:
+[1] "beta"       "u_large"    "logs_sd_RE" "cov_par_RE"
+Not matching template order:
+[1] "beta"       "u_large"    "cov_par_RE" "logs_sd_RE"
+Your parameter list has been re-ordered.
+(Disable this warning with checkParameterOrder=FALSE)
+Constructing atomic invpd
+Constructing atomic D_lgamma
+Constructing atomic invpd
+Constructing atomic D_lgamma
+Constructing atomic matmul
+Constructing atomic invpd
+Constructing atomic D_lgamma
+Constructing atomic matmul
+Optimizing tape... Done
+iter: 1  value: 2436.571 mgc: 130.3939 ustep: 0.2494656 
+iter: 2  value: 1576.35 mgc: 106.8972 ustep: 0.08285847 
+iter: 3  value: 1181.677 mgc: 105.5749 ustep: 0.08137205 
+iter: 4  value: 1085.034 mgc: 98.14253 ustep: 0.08053699 
+iter: 5  value: 969.3012 mgc: 101.2261 ustep: 0.08006551 
+iter: 6  value: 928.2222 mgc: 84.83516 ustep: 0.153244 
+iter: 7  value: 861.8209 mgc: 76.38356 ustep: 0.3915247 
+iter: 8  value: 844.8061 mgc: 39.12821 ustep: 0.6257568 
+iter: 9  value: 844.2959 mgc: 4.44452 ustep: 0.7910688 
+iter: 10  value: 844.2211 mgc: 0.09377604 ustep: 0.8894316 
+iter: 11  value: 844.2096 mgc: 0.03954635 ustep: 0.9431025 
+iter: 12  value: 844.2088 mgc: 0.01027186 ustep: 0.9711375 
+iter: 13  value: 844.2088 mgc: 0.001384693 ustep: 0.9854646 
+iter: 14  value: 844.2088 mgc: 9.406352e-05 ustep: 0.9927064 
+iter: 15  value: 844.2088 mgc: 3.814079e-06 ustep: 0.9963469 
+iter: 16  value: 844.2088 mgc: 7.675013e-08 ustep: 0.998172 
+iter: 17  mgc: 7.744252e-10 
+iter: 1  mgc: 7.744252e-10 
+Matching hessian patterns... Done
+outer mgc:  167.6447 
+iter: 1  value: 647.2065 mgc: 20.74608 ustep: 1 
+iter: 2  value: 645.43 mgc: 4.675591 ustep: 1 
+iter: 3  value: 645.4267 mgc: 0.2200133 ustep: 1 
+iter: 4  value: 645.4267 mgc: 0.000915027 ustep: 1 
+iter: 5  value: 645.4267 mgc: 1.604459e-08 ustep: 1 
+mgc: 3.042011e-14 
+iter: 1  mgc: 3.042011e-14 
+outer mgc:  110.6651 
+iter: 1  value: 520.1953 mgc: 20.63973 ustep: 1 
+iter: 2  value: 519.6888 mgc: 2.471453 ustep: 1 
+iter: 3  value: 519.6886 mgc: 0.05278277 ustep: 1 
+iter: 4  value: 519.6886 mgc: 5.30335e-05 ustep: 1 
+iter: 5  mgc: 5.367559e-11 
+iter: 1  value: 451.4788 mgc: 21.21904 ustep: 1 
+iter: 2  value: 451.1215 mgc: 2.975312 ustep: 1 
+iter: 3  value: 451.1214 mgc: 0.05239571 ustep: 1 
+iter: 4  value: 451.1214 mgc: 4.680167e-05 ustep: 1 
+iter: 5  mgc: 3.745129e-11 
+iter: 1  mgc: 3.745129e-11 
+outer mgc:  26.26369 
+iter: 1  value: 409.2401 mgc: 22.63286 ustep: 1 
+iter: 2  value: 407.4283 mgc: 2.94422 ustep: 1 
+iter: 3  value: 407.4231 mgc: 0.1570797 ustep: 1 
+iter: 4  value: 407.4231 mgc: 0.0005481657 ustep: 1 
+iter: 5  value: 407.4231 mgc: 4.583413e-08 ustep: 1 
+iter: 6  mgc: 1.759703e-14 
+iter: 1  mgc: 1.759703e-14 
+outer mgc:  24.77382 
+iter: 1  value: 506.5429 mgc: 43.67264 ustep: 1 
+iter: 2  value: 490.631 mgc: 27.24084 ustep: 1 
+iter: 3  value: 489.7883 mgc: 5.564378 ustep: 1 
+iter: 4  value: 489.7799 mgc: 0.5258501 ustep: 1 
+iter: 5  value: 489.7799 mgc: 0.006391028 ustep: 1 
+iter: 6  value: 489.7799 mgc: 9.79627e-07 ustep: 1 
+iter: 7  mgc: 6.128431e-14 
+iter: 1  value: 395.5013 mgc: 12.14642 ustep: 1 
+iter: 2  value: 395.4197 mgc: 1.024761 ustep: 1 
+iter: 3  value: 395.4196 mgc: 0.02139146 ustep: 1 
+iter: 4  value: 395.4196 mgc: 1.001001e-05 ustep: 1 
+iter: 5  mgc: 2.201128e-12 
+iter: 1  mgc: 2.201128e-12 
+outer mgc:  17.67997 
+iter: 1  value: 388.1242 mgc: 17.4797 ustep: 1 
+iter: 2  value: 387.8798 mgc: 1.762977 ustep: 1 
+iter: 3  value: 387.8797 mgc: 0.0261815 ustep: 1 
+iter: 4  value: 387.8797 mgc: 3.599159e-05 ustep: 1 
+iter: 5  mgc: 1.572434e-10 
+iter: 1  mgc: 1.572434e-10 
+outer mgc:  19.12348 
+iter: 1  value: 371.5325 mgc: 11.65448 ustep: 1 
+iter: 2  value: 371.3216 mgc: 1.562234 ustep: 1 
+iter: 3  value: 371.3215 mgc: 0.04039747 ustep: 1 
+iter: 4  value: 371.3215 mgc: 7.28202e-05 ustep: 1 
+iter: 5  mgc: 2.376114e-10 
+iter: 1  mgc: 2.376114e-10 
+outer mgc:  10.99165 
+iter: 1  value: 362.8021 mgc: 23.73518 ustep: 1 
+iter: 2  value: 362.0712 mgc: 3.868931 ustep: 1 
+iter: 3  value: 362.0706 mgc: 0.1081806 ustep: 1 
+iter: 4  value: 362.0706 mgc: 0.0001318381 ustep: 1 
+iter: 5  mgc: 1.536314e-09 
+iter: 1  mgc: 1.536314e-09 
+outer mgc:  9.44736 
+iter: 1  value: 355.3246 mgc: 28.3107 ustep: 1 
+iter: 2  value: 354.5728 mgc: 4.773293 ustep: 1 
+iter: 3  value: 354.5721 mgc: 0.1139039 ustep: 1 
+iter: 4  value: 354.5721 mgc: 0.0002645214 ustep: 1 
+iter: 5  mgc: 2.741944e-09 
+iter: 1  mgc: 2.741944e-09 
+outer mgc:  6.057877 
+iter: 1  value: 353.9116 mgc: 35.47057 ustep: 1 
+iter: 2  value: 352.5501 mgc: 6.166457 ustep: 1 
+iter: 3  value: 352.5489 mgc: 0.1702406 ustep: 1 
+iter: 4  value: 352.5489 mgc: 0.0001770303 ustep: 1 
+iter: 5  mgc: 3.463467e-10 
+iter: 1  mgc: 3.463467e-10 
+outer mgc:  14.26171 
+iter: 1  value: 347.0743 mgc: 7.005487 ustep: 1 
+iter: 2  value: 347.0123 mgc: 0.4170391 ustep: 1 
+iter: 3  value: 347.0122 mgc: 0.01934294 ustep: 1 
+iter: 4  value: 347.0122 mgc: 5.237841e-05 ustep: 1 
+iter: 5  mgc: 3.754531e-10 
+iter: 1  mgc: 3.754531e-10 
+outer mgc:  4.017394 
+iter: 1  value: 346.6644 mgc: 15.07848 ustep: 1 
+iter: 2  value: 346.6317 mgc: 0.640313 ustep: 1 
+iter: 3  value: 346.6317 mgc: 0.002487741 ustep: 1 
+iter: 4  value: 346.6317 mgc: 1.910206e-07 ustep: 1 
+iter: 5  mgc: 3.191891e-14 
+iter: 1  value: 346.1017 mgc: 5.510576 ustep: 1 
+iter: 2  value: 346.1 mgc: 0.1009737 ustep: 1 
+iter: 3  value: 346.1 mgc: 0.000142311 ustep: 1 
+iter: 4  mgc: 2.336398e-09 
+iter: 1  mgc: 2.336398e-09 
+outer mgc:  4.752141 
+iter: 1  value: 345.2437 mgc: 8.585632 ustep: 1 
+iter: 2  value: 345.2295 mgc: 0.4007812 ustep: 1 
+iter: 3  value: 345.2295 mgc: 0.00145749 ustep: 1 
+iter: 4  value: 345.2295 mgc: 1.136052e-07 ustep: 1 
+iter: 5  mgc: 2.037259e-14 
+iter: 1  mgc: 2.037259e-14 
+outer mgc:  6.805312 
+iter: 1  value: 344.3816 mgc: 3.268619 ustep: 1 
+iter: 2  value: 344.3814 mgc: 0.04302432 ustep: 1 
+iter: 3  value: 344.3814 mgc: 2.197623e-05 ustep: 1 
+iter: 4  mgc: 2.224354e-11 
+iter: 1  mgc: 2.224354e-11 
+outer mgc:  4.151928 
+iter: 1  value: 344.094 mgc: 3.044485 ustep: 1 
+iter: 2  value: 344.0938 mgc: 0.03954936 ustep: 1 
+iter: 3  value: 344.0938 mgc: 2.111882e-05 ustep: 1 
+iter: 4  mgc: 7.507772e-12 
+iter: 1  mgc: 7.507772e-12 
+outer mgc:  1.43237 
+iter: 1  value: 343.8964 mgc: 2.574378 ustep: 1 
+iter: 2  value: 343.8963 mgc: 0.02504666 ustep: 1 
+iter: 3  value: 343.8963 mgc: 1.620368e-05 ustep: 1 
+iter: 4  mgc: 1.143485e-11 
+iter: 1  mgc: 1.143485e-11 
+outer mgc:  3.656164 
+iter: 1  value: 343.2047 mgc: 4.986412 ustep: 1 
+iter: 2  value: 343.2043 mgc: 0.06114678 ustep: 1 
+iter: 3  value: 343.2043 mgc: 0.0001526742 ustep: 1 
+iter: 4  mgc: 9.417043e-10 
+iter: 1  mgc: 9.417043e-10 
+outer mgc:  2.937799 
+iter: 1  value: 343.3751 mgc: 4.150454 ustep: 1 
+iter: 2  value: 343.3737 mgc: 0.1318251 ustep: 1 
+iter: 3  value: 343.3737 mgc: 0.0002475836 ustep: 1 
+iter: 4  mgc: 2.383772e-09 
+iter: 1  value: 343.1351 mgc: 2.208177 ustep: 1 
+iter: 2  value: 343.135 mgc: 0.03957633 ustep: 1 
+iter: 3  value: 343.135 mgc: 2.190685e-05 ustep: 1 
+iter: 4  mgc: 1.899864e-11 
+iter: 1  mgc: 1.899864e-11 
+outer mgc:  1.314282 
+iter: 1  value: 343.3388 mgc: 3.198169 ustep: 1 
+iter: 2  value: 343.3387 mgc: 0.03854737 ustep: 1 
+iter: 3  value: 343.3387 mgc: 1.186613e-05 ustep: 1 
+iter: 4  mgc: 6.098599e-12 
+iter: 1  value: 343.1176 mgc: 1.708174 ustep: 1 
+iter: 2  value: 343.1176 mgc: 0.01534963 ustep: 1 
+iter: 3  value: 343.1176 mgc: 1.75705e-06 ustep: 1 
+iter: 4  mgc: 6.594031e-14 
+iter: 1  mgc: 6.594031e-14 
+outer mgc:  2.302792 
+iter: 1  value: 343.0845 mgc: 0.9642538 ustep: 1 
+iter: 2  value: 343.0845 mgc: 0.004786636 ustep: 1 
+iter: 3  value: 343.0845 mgc: 2.061367e-07 ustep: 1 
+iter: 4  mgc: 2.309264e-14 
+iter: 1  mgc: 2.309264e-14 
+outer mgc:  0.236021 
+iter: 1  value: 343.11 mgc: 0.3004225 ustep: 1 
+iter: 2  value: 343.11 mgc: 0.0007997916 ustep: 1 
+iter: 3  value: 343.11 mgc: 2.486647e-08 ustep: 1 
+mgc: 2.220446e-14 
+iter: 1  value: 343.1539 mgc: 0.3940505 ustep: 1 
+iter: 2  value: 343.1539 mgc: 0.001385078 ustep: 1 
+iter: 3  value: 343.1539 mgc: 7.436432e-08 ustep: 1 
+iter: 4  mgc: 4.32987e-14 
+iter: 1  mgc: 4.32987e-14 
+outer mgc:  0.659491 
+iter: 1  value: 343.1212 mgc: 0.9141028 ustep: 1 
+iter: 2  value: 343.1212 mgc: 0.003365067 ustep: 1 
+iter: 3  value: 343.1212 mgc: 5.006062e-07 ustep: 1 
+iter: 4  mgc: 4.707346e-14 
+iter: 1  mgc: 4.707346e-14 
+outer mgc:  0.6812875 
+iter: 1  value: 342.9896 mgc: 0.9967254 ustep: 1 
+iter: 2  value: 342.9896 mgc: 0.002544875 ustep: 1 
+iter: 3  value: 342.9896 mgc: 7.218486e-08 ustep: 1 
+iter: 4  mgc: 2.792211e-14 
+iter: 1  mgc: 2.792211e-14 
+outer mgc:  0.3226418 
+iter: 1  value: 343.1298 mgc: 1.394333 ustep: 1 
+iter: 2  value: 343.1298 mgc: 0.004077396 ustep: 1 
+iter: 3  value: 343.1298 mgc: 6.687277e-07 ustep: 1 
+iter: 4  mgc: 5.928591e-14 
+iter: 1  value: 343.0183 mgc: 0.3885532 ustep: 1 
+iter: 2  value: 343.0183 mgc: 0.0003171938 ustep: 1 
+iter: 3  mgc: 4.071271e-09 
+iter: 1  mgc: 4.071271e-09 
+outer mgc:  0.223127 
+iter: 1  value: 343.0019 mgc: 0.1550946 ustep: 1 
+iter: 2  value: 343.0019 mgc: 0.0001582405 ustep: 1 
+iter: 3  mgc: 7.359465e-10 
+iter: 1  mgc: 7.359465e-10 
+outer mgc:  0.1370287 
+iter: 1  value: 343.0022 mgc: 0.04210854 ustep: 1 
+iter: 2  value: 343.0022 mgc: 8.135572e-05 ustep: 1 
+iter: 3  mgc: 3.230768e-10 
+iter: 1  mgc: 3.230768e-10 
+outer mgc:  0.1179067 
+iter: 1  value: 342.9976 mgc: 0.1717912 ustep: 1 
+iter: 2  value: 342.9976 mgc: 0.0003832092 ustep: 1 
+iter: 3  mgc: 1.611761e-09 
+iter: 1  mgc: 1.611761e-09 
+outer mgc:  0.1458277 
+iter: 1  value: 342.9541 mgc: 0.3583804 ustep: 1 
+iter: 2  value: 342.9541 mgc: 0.0007416129 ustep: 1 
+iter: 3  mgc: 5.129633e-09 
+iter: 1  mgc: 5.129633e-09 
+outer mgc:  0.3305862 
+iter: 1  value: 342.8999 mgc: 0.2221067 ustep: 1 
+iter: 2  value: 342.8999 mgc: 0.0003340548 ustep: 1 
+iter: 3  mgc: 4.149899e-09 
+iter: 1  mgc: 4.149899e-09 
+outer mgc:  0.1018953 
+iter: 1  value: 342.9394 mgc: 0.2045445 ustep: 1 
+iter: 2  value: 342.9394 mgc: 0.0002677105 ustep: 1 
+iter: 3  mgc: 3.703825e-09 
+iter: 1  value: 342.9353 mgc: 0.1679767 ustep: 1 
+iter: 2  value: 342.9353 mgc: 0.0001249779 ustep: 1 
+iter: 3  mgc: 6.890564e-10 
+iter: 1  value: 342.9154 mgc: 0.07716091 ustep: 1 
+iter: 2  value: 342.9154 mgc: 2.646014e-05 ustep: 1 
+iter: 3  mgc: 3.07967e-11 
+iter: 1  mgc: 3.07967e-11 
+outer mgc:  0.1883816 
+iter: 1  value: 342.917 mgc: 0.09925368 ustep: 1 
+iter: 2  value: 342.917 mgc: 5.186501e-05 ustep: 1 
+iter: 3  mgc: 2.06955e-11 
+iter: 1  mgc: 2.06955e-11 
+outer mgc:  0.04404829 
+iter: 1  value: 342.9196 mgc: 0.02789237 ustep: 1 
+iter: 2  value: 342.9196 mgc: 1.243417e-05 ustep: 1 
+iter: 3  mgc: 6.83853e-12 
+iter: 1  mgc: 6.83853e-12 
+outer mgc:  0.07243041 
+iter: 1  value: 342.918 mgc: 0.0466479 ustep: 1 
+iter: 2  value: 342.918 mgc: 1.87452e-05 ustep: 1 
+iter: 3  mgc: 5.180967e-12 
+iter: 1  mgc: 5.180967e-12 
+outer mgc:  0.03529332 
+iter: 1  value: 342.9161 mgc: 0.0325852 ustep: 1 
+iter: 2  value: 342.9161 mgc: 6.985684e-06 ustep: 1 
+iter: 3  mgc: 1.290523e-12 
+iter: 1  mgc: 1.290523e-12 
+outer mgc:  0.07824537 
+iter: 1  value: 342.9116 mgc: 0.02365223 ustep: 1 
+iter: 2  value: 342.9116 mgc: 2.146011e-06 ustep: 1 
+iter: 3  mgc: 2.58904e-13 
+iter: 1  mgc: 2.58904e-13 
+outer mgc:  0.01828525 
+iter: 1  value: 342.9138 mgc: 0.09448788 ustep: 1 
+iter: 2  value: 342.9138 mgc: 4.072017e-05 ustep: 1 
+iter: 3  mgc: 1.719067e-11 
+iter: 1  value: 342.9146 mgc: 0.06132151 ustep: 1 
+iter: 2  value: 342.9146 mgc: 1.67791e-05 ustep: 1 
+iter: 3  mgc: 3.86835e-12 
+iter: 1  value: 342.9128 mgc: 0.02422412 ustep: 1 
+iter: 2  value: 342.9128 mgc: 2.619748e-06 ustep: 1 
+iter: 3  mgc: 9.847678e-14 
+iter: 1  mgc: 9.847678e-14 
+outer mgc:  0.02468995 
+iter: 1  value: 342.9121 mgc: 0.01410256 ustep: 1 
+iter: 2  value: 342.9121 mgc: 1.105966e-06 ustep: 1 
+iter: 3  mgc: 5.617729e-14 
+iter: 1  mgc: 5.617729e-14 
+outer mgc:  0.007725373 
+iter: 1  value: 342.9119 mgc: 0.01393927 ustep: 1 
+iter: 2  value: 342.9119 mgc: 6.532831e-07 ustep: 1 
+iter: 3  mgc: 2.797762e-14 
+iter: 1  mgc: 2.797762e-14 
+outer mgc:  0.01417844 
+iter: 1  value: 342.9107 mgc: 0.01582554 ustep: 1 
+iter: 2  value: 342.9107 mgc: 1.140975e-06 ustep: 1 
+iter: 3  mgc: 2.842171e-14 
+iter: 1  mgc: 2.842171e-14 
+outer mgc:  0.004422376 
+iter: 1  value: 342.9115 mgc: 0.01578168 ustep: 1 
+iter: 2  value: 342.9115 mgc: 3.699034e-07 ustep: 1 
+iter: 3  mgc: 2.237099e-14 
+iter: 1  value: 342.9113 mgc: 0.01156398 ustep: 1 
+iter: 2  value: 342.9113 mgc: 2.430415e-07 ustep: 1 
+iter: 3  mgc: 1.554312e-14 
+iter: 1  mgc: 1.554312e-14 
+outer mgc:  0.01967276 
+iter: 1  value: 342.9113 mgc: 0.008560874 ustep: 1 
+iter: 2  value: 342.9113 mgc: 3.736683e-07 ustep: 1 
+iter: 3  mgc: 2.531308e-14 
+iter: 1  mgc: 2.531308e-14 
+outer mgc:  0.003381007 
+iter: 1  value: 342.9112 mgc: 0.004763515 ustep: 1 
+iter: 2  value: 342.9112 mgc: 1.286858e-07 ustep: 1 
+iter: 3  mgc: 3.28626e-14 
+iter: 1  mgc: 3.28626e-14 
+outer mgc:  0.006186515 
+iter: 1  value: 342.9107 mgc: 0.0073543 ustep: 1 
+iter: 2  value: 342.9107 mgc: 1.646142e-07 ustep: 1 
+iter: 3  mgc: 3.697043e-14 
+iter: 1  value: 342.9103 mgc: 0.005680328 ustep: 1 
+iter: 2  value: 342.9103 mgc: 1.236568e-07 ustep: 1 
+iter: 3  mgc: 2.087219e-14 
+iter: 1  mgc: 2.087219e-14 
+outer mgc:  0.005927893 
+iter: 1  value: 342.909 mgc: 0.02398259 ustep: 1 
+iter: 2  value: 342.909 mgc: 1.328454e-06 ustep: 1 
+iter: 3  mgc: 4.485301e-14 
+iter: 1  mgc: 4.485301e-14 
+outer mgc:  0.002708015 
+iter: 1  value: 342.9062 mgc: 0.03623341 ustep: 1 
+iter: 2  value: 342.9062 mgc: 3.898014e-06 ustep: 1 
+iter: 3  mgc: 2.644551e-13 
+iter: 1  value: 342.9083 mgc: 0.01674674 ustep: 1 
+iter: 2  value: 342.9083 mgc: 8.662641e-07 ustep: 1 
+iter: 3  mgc: 2.04281e-14 
+iter: 1  mgc: 2.04281e-14 
+outer mgc:  0.007733836 
+iter: 1  value: 342.9078 mgc: 0.01325054 ustep: 1 
+iter: 2  value: 342.9078 mgc: 7.800145e-07 ustep: 1 
+iter: 3  mgc: 3.091971e-14 
+iter: 1  value: 342.9081 mgc: 0.008298755 ustep: 1 
+iter: 2  value: 342.9081 mgc: 3.184364e-07 ustep: 1 
+iter: 3  mgc: 3.241851e-14 
+iter: 1  mgc: 3.241851e-14 
+outer mgc:  0.001227126 
+iter: 1  value: 342.9085 mgc: 0.005590053 ustep: 1 
+iter: 2  value: 342.9085 mgc: 8.479479e-08 ustep: 1 
+iter: 3  mgc: 3.458345e-14 
+iter: 1  mgc: 3.458345e-14 
+outer mgc:  0.001533467 
+iter: 1  value: 342.9087 mgc: 0.005321974 ustep: 1 
+iter: 2  value: 342.9087 mgc: 1.062256e-07 ustep: 1 
+iter: 3  mgc: 2.725598e-14 
+iter: 1  value: 342.9086 mgc: 0.002480161 ustep: 1 
+iter: 2  value: 342.9086 mgc: 2.300968e-08 ustep: 1 
+mgc: 1.665335e-14 
+iter: 1  mgc: 1.665335e-14 
+outer mgc:  0.0006634395 
+iter: 1  value: 342.9085 mgc: 0.0004310891 ustep: 1 
+iter: 2  mgc: 2.47192e-09 
+iter: 1  value: 342.9086 mgc: 0.0003004541 ustep: 1 
+iter: 2  mgc: 5.557768e-10 
+iter: 1  mgc: 5.557768e-10 
+outer mgc:  0.0004171236 
+iter: 1  value: 342.9085 mgc: 0.0006556602 ustep: 1 
+iter: 2  mgc: 1.630369e-09 
+iter: 1  mgc: 1.630369e-09 
+outer mgc:  9.928068e-05 
+iter: 1  mgc: 1.630369e-09 
+iter: 1  mgc: 1.630369e-09 
+outer mgc:  9.928068e-05 
+iter: 1  value: 342.909 mgc: 0.04385469 ustep: 1 
+iter: 2  value: 342.909 mgc: 7.952807e-06 ustep: 1 
+iter: 3  mgc: 4.706513e-13 
+outer mgc:  0.01878938 
+iter: 1  value: 342.908 mgc: 0.04384257 ustep: 1 
+iter: 2  value: 342.908 mgc: 7.960922e-06 ustep: 1 
+iter: 3  mgc: 4.631295e-13 
+outer mgc:  0.01874462 
+iter: 1  value: 342.9092 mgc: 0.02470698 ustep: 1 
+iter: 2  value: 342.9092 mgc: 3.335004e-06 ustep: 1 
+iter: 3  mgc: 1.787459e-13 
+outer mgc:  0.06546808 
+iter: 1  value: 342.9079 mgc: 0.024702 ustep: 1 
+iter: 2  value: 342.9079 mgc: 3.337499e-06 ustep: 1 
+iter: 3  mgc: 1.89404e-13 
+outer mgc:  0.06567532 
+iter: 1  value: 342.9082 mgc: 0.049928 ustep: 1 
+iter: 2  value: 342.9082 mgc: 7.122489e-06 ustep: 1 
+iter: 3  mgc: 6.705747e-13 
+outer mgc:  0.003780641 
+iter: 1  value: 342.9088 mgc: 0.04992002 ustep: 1 
+iter: 2  value: 342.9088 mgc: 7.129668e-06 ustep: 1 
+iter: 3  mgc: 6.653011e-13 
+outer mgc:  0.00374682 
+iter: 1  value: 342.9083 mgc: 0.02062542 ustep: 1 
+iter: 2  value: 342.9083 mgc: 1.173573e-06 ustep: 1 
+iter: 3  mgc: 2.457756e-14 
+outer mgc:  0.02587276 
+iter: 1  value: 342.9087 mgc: 0.02061984 ustep: 1 
+iter: 2  value: 342.9087 mgc: 1.1733e-06 ustep: 1 
+iter: 3  mgc: 2.753353e-14 
+outer mgc:  0.0258403 
+iter: 1  value: 342.9088 mgc: 0.04458637 ustep: 1 
+iter: 2  value: 342.9088 mgc: 5.597946e-06 ustep: 1 
+iter: 3  mgc: 4.676814e-13 
+outer mgc:  0.01097995 
+iter: 1  value: 342.9082 mgc: 0.04457643 ustep: 1 
+iter: 2  value: 342.9082 mgc: 5.603627e-06 ustep: 1 
+iter: 3  mgc: 4.639067e-13 
+outer mgc:  0.01101373 
+iter: 1  value: 342.9083 mgc: 0.01515088 ustep: 1 
+iter: 2  value: 342.9083 mgc: 6.842437e-07 ustep: 1 
+iter: 3  mgc: 3.441691e-14 
+outer mgc:  0.029144 
+iter: 1  value: 342.9088 mgc: 0.01514232 ustep: 1 
+iter: 2  value: 342.9088 mgc: 6.836181e-07 ustep: 1 
+iter: 3  mgc: 2.231548e-14 
+outer mgc:  0.02910727 
+iter: 1  value: 342.9087 mgc: 0.04933093 ustep: 1 
+iter: 2  value: 342.9087 mgc: 8.064561e-06 ustep: 1 
+iter: 3  mgc: 6.752376e-13 
+outer mgc:  0.01091358 
+iter: 1  value: 342.9083 mgc: 0.04933423 ustep: 1 
+iter: 2  value: 342.9083 mgc: 8.051837e-06 ustep: 1 
+iter: 3  mgc: 6.812328e-13 
+outer mgc:  0.01092936 
+iter: 1  value: 342.909 mgc: 0.02574306 ustep: 1 
+iter: 2  value: 342.909 mgc: 3.262001e-06 ustep: 1 
+iter: 3  mgc: 2.018385e-13 
+outer mgc:  0.08462321 
+iter: 1  value: 342.9081 mgc: 0.02574263 ustep: 1 
+iter: 2  value: 342.9081 mgc: 3.263921e-06 ustep: 1 
+iter: 3  mgc: 1.971756e-13 
+outer mgc:  0.08464743 
+iter: 1  value: 342.9078 mgc: 0.02836161 ustep: 1 
+iter: 2  value: 342.9078 mgc: 7.848551e-06 ustep: 1 
+iter: 3  mgc: 7.045475e-13 
+outer mgc:  0.01193183 
+iter: 1  value: 342.9092 mgc: 0.02834378 ustep: 1 
+iter: 2  value: 342.9092 mgc: 7.85557e-06 ustep: 1 
+iter: 3  mgc: 6.954437e-13 
+outer mgc:  0.01196201 
+iter: 1  value: 342.9081 mgc: 0.01302209 ustep: 1 
+iter: 2  value: 342.9081 mgc: 1.613144e-06 ustep: 1 
+iter: 3  mgc: 4.352074e-14 
+outer mgc:  0.02320447 
+iter: 1  value: 342.9089 mgc: 0.0130144 ustep: 1 
+iter: 2  value: 342.9089 mgc: 1.612436e-06 ustep: 1 
+iter: 3  mgc: 4.352074e-14 
+outer mgc:  0.02312872 
+iter: 1  value: 342.9091 mgc: 0.001879467 ustep: 1 
+iter: 2  value: 342.9091 mgc: 3.271848e-07 ustep: 1 
+iter: 3  mgc: 7.283063e-14 
+outer mgc:  0.01197535 
+iter: 1  value: 342.9079 mgc: 0.001879996 ustep: 1 
+iter: 2  value: 342.9079 mgc: 3.260873e-07 ustep: 1 
+iter: 3  mgc: 4.396483e-14 
+outer mgc:  0.01186117 
+iter: 1  value: 342.9084 mgc: 0.002187125 ustep: 1 
+iter: 2  value: 342.9084 mgc: 1.558183e-07 ustep: 1 
+iter: 3  mgc: 5.57332e-14 
+outer mgc:  0.00805209 
+iter: 1  value: 342.9086 mgc: 0.002186447 ustep: 1 
+iter: 2  value: 342.9086 mgc: 1.55846e-07 ustep: 1 
+iter: 3  mgc: 3.053113e-14 
+outer mgc:  0.007946335 
+iter: 1  value: 342.9073 mgc: 0.002603982 ustep: 1 
+iter: 2  value: 342.9073 mgc: 2.968805e-07 ustep: 1 
+iter: 3  mgc: 2.779027e-14 
+outer mgc:  0.006403261 
+iter: 1  value: 342.9097 mgc: 0.002600882 ustep: 1 
+iter: 2  value: 342.9097 mgc: 2.962878e-07 ustep: 1 
+iter: 3  mgc: 2.498002e-14 
+outer mgc:  0.00651305 
+iter: 1  value: 342.9081 mgc: 0.002362907 ustep: 1 
+iter: 2  value: 342.9081 mgc: 2.13999e-07 ustep: 1 
+iter: 3  mgc: 2.708944e-14 
+outer mgc:  0.006624836 
+iter: 1  value: 342.9089 mgc: 0.00236053 ustep: 1 
+iter: 2  value: 342.9089 mgc: 2.136541e-07 ustep: 1 
+iter: 3  mgc: 2.753353e-14 
+outer mgc:  0.006757847 
+iter: 1  value: 342.9091 mgc: 0.002105107 ustep: 1 
+iter: 2  value: 342.9091 mgc: 1.567793e-07 ustep: 1 
+iter: 3  mgc: 2.942091e-14 
+outer mgc:  0.007658194 
+iter: 1  value: 342.9079 mgc: 0.002104131 ustep: 1 
+iter: 2  value: 342.9079 mgc: 1.571826e-07 ustep: 1 
+iter: 3  mgc: 2.494532e-14 
+outer mgc:  0.007563992 
+iter: 1  value: 342.9084 mgc: 0.002542479 ustep: 1 
+iter: 2  value: 342.9084 mgc: 1.224442e-07 ustep: 1 
+iter: 3  mgc: 2.364775e-14 
+outer mgc:  0.007717747 
+iter: 1  value: 342.9086 mgc: 0.002542014 ustep: 1 
+iter: 2  value: 342.9086 mgc: 1.224491e-07 ustep: 1 
+iter: 3  mgc: 1.776357e-14 
+outer mgc:  0.007889249 
+iter: 1  value: 342.9071 mgc: 0.001708576 ustep: 1 
+iter: 2  value: 342.9071 mgc: 4.10281e-08 ustep: 1 
+iter: 3  mgc: 3.441691e-14 
+outer mgc:  0.002875605 
+iter: 1  value: 342.9099 mgc: 0.001707782 ustep: 1 
+iter: 2  value: 342.9099 mgc: 4.102366e-08 ustep: 1 
+iter: 3  mgc: 2.88658e-14 
+outer mgc:  0.002911432 
+iter: 1  value: 342.9091 mgc: 0.002721112 ustep: 1 
+iter: 2  value: 342.9091 mgc: 3.922558e-07 ustep: 1 
+iter: 3  mgc: 3.796963e-14 
+outer mgc:  0.004768827 
+iter: 1  value: 342.9079 mgc: 0.002720617 ustep: 1 
+iter: 2  value: 342.9079 mgc: 3.919534e-07 ustep: 1 
+iter: 3  mgc: 3.4861e-14 
+outer mgc:  0.00474946 
+iter: 1  value: 342.9087 mgc: 0.003717875 ustep: 1 
+iter: 2  value: 342.9087 mgc: 5.078803e-07 ustep: 1 
+iter: 3  mgc: 3.125625e-14 
+outer mgc:  0.005880404 
+iter: 1  value: 342.9083 mgc: 0.003719834 ustep: 1 
+iter: 2  value: 342.9083 mgc: 5.079708e-07 ustep: 1 
+iter: 3  mgc: 3.235606e-14 
+outer mgc:  0.006009046 
+iter: 1  value: 342.909 mgc: 0.002656731 ustep: 1 
+iter: 2  value: 342.909 mgc: 2.172709e-07 ustep: 1 
+iter: 3  mgc: 2.975398e-14 
+outer mgc:  0.004644637 
+iter: 1  value: 342.908 mgc: 0.0026579 ustep: 1 
+iter: 2  value: 342.908 mgc: 2.169985e-07 ustep: 1 
+iter: 3  mgc: 2.398082e-14 
+outer mgc:  0.004650465 
+iter: 1  value: 342.9095 mgc: 0.01080363 ustep: 1 
+iter: 2  value: 342.9095 mgc: 2.313764e-06 ustep: 1 
+iter: 3  mgc: 5.884182e-13 
+outer mgc:  0.04332815 
+iter: 1  value: 342.9076 mgc: 0.01083281 ustep: 1 
+iter: 2  value: 342.9076 mgc: 2.322413e-06 ustep: 1 
+iter: 3  mgc: 5.906386e-13 
+outer mgc:  0.04344126 
+iter: 1  value: 342.911 mgc: 0.002092678 ustep: 1 
+iter: 2  value: 342.911 mgc: 5.569469e-07 ustep: 1 
+iter: 3  mgc: 5.273559e-14 
+outer mgc:  0.01807277 
+iter: 1  value: 342.906 mgc: 0.002098212 ustep: 1 
+iter: 2  value: 342.906 mgc: 5.585428e-07 ustep: 1 
+iter: 3  mgc: 5.251355e-14 
+outer mgc:  0.01817545 
+iter: 1  value: 342.9098 mgc: 0.004969262 ustep: 1 
+iter: 2  value: 342.9098 mgc: 1.085584e-06 ustep: 1 
+iter: 3  mgc: 5.728751e-14 
+outer mgc:  0.02360421 
+iter: 1  value: 342.9072 mgc: 0.004978911 ustep: 1 
+iter: 2  value: 342.9072 mgc: 1.088689e-06 ustep: 1 
+iter: 3  mgc: 5.329071e-14 
+outer mgc:  0.02380741 
+iter: 1  value: 342.9098 mgc: 0.004903108 ustep: 1 
+iter: 2  value: 342.9098 mgc: 7.73974e-07 ustep: 1 
+iter: 3  mgc: 1.341149e-13 
+outer mgc:  0.02091968 
+iter: 1  value: 342.9072 mgc: 0.00491464 ustep: 1 
+iter: 2  value: 342.9072 mgc: 7.779031e-07 ustep: 1 
+iter: 3  mgc: 9.547918e-14 
+outer mgc:  0.02074239 
+iter: 1  value: 342.9124 mgc: 0.006125084 ustep: 1 
+iter: 2  value: 342.9124 mgc: 1.498953e-06 ustep: 1 
+iter: 3  mgc: 2.023937e-13 
+outer mgc:  0.0341423 
+iter: 1  value: 342.9046 mgc: 0.006131212 ustep: 1 
+iter: 2  value: 342.9046 mgc: 1.502506e-06 ustep: 1 
+iter: 3  mgc: 1.989797e-13 
+outer mgc:  0.03413115 
+[Mon Aug 16 08:10:23 2021]
+Finished job 0.
+1 of 1 steps (100%) done
