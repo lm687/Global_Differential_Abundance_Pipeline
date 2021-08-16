@@ -1,0 +1,42 @@
+\documentclass{article}
+
+\usepackage{color}
+
+\begin{document}
+
+\section{Notes from the meeting}
+\begin{enumerate}
+\item make initial values from FE multinomial
+\item number of samples, number of categories, zeros, are all things that might explain lack of convergence
+\item if there is something that perfectly explains a category, you get error messages too. Make sure that there are no prefect spits
+\item it's very sensitive to starting point, so ignoring random effects and just fitting fixed effects is likely to give you a good estimate
+\item when it doesn't converge, it means that the problem is that the model is not fitting for the data
+\item simulate data. observed in x axis, simulated in y. simulate data under these parameters. rank the observations for lowest to highest, for each sample, and then compare the two. do this for each sample independently. 95\% coverage as area in the line. this is to show that the model is not unrealistic, not that the mpdel os realistic. check the tails
+\item the number of degrees of freedom is a function of n and N and are a function of the correlation of the within-patient. if the correlation is very high we have a problem. if the correlation is very low then we are in a better situation
+\item fitting something like 22 parameters and 35 samples might be a problem for convergence
+\item check with the standard error whether the true values fall in the confidence interval
+\item {\color{red} send data to Dom}
+\begin{itemize}
+	\item worst case scenario: small sample size, high cat
+	\item med
+	\item best: large number of samples
+	\end{itemize}
+	(ratio of N/p varying)
+\item he's got this method of using some particular initial estimator the estimate, esp. with tricky situations. Estimator found by indirect inference (takes forever, but they found a fast solution). could be applied here. it removes asymptotic bias \& small sample bias
+\item in correlated RE it can be very tricky to find a solution
+\item {\color{red} send him the algorithm with good/optimized initial parameters (multinom reg)}
+\item when you're integrating out the RE, TMB does estimate the random effects, to take them out
+\item I use optim, but he doesn't. Instead he uses nlminb instead \\ (\verb| nlminb(start = obj$par, obj = obj$fn, gr = obj$gr)|)
+\item when I do opt I already have the information, and sdreport extracts it
+\item {\color{red} Share a script in which he can load and run the TMB c function, and then a script which simulates data under the model, and then run code under simulated dataset, and additionally the raw data of the scenarios}
+\item simplification might come at a big cost
+\item check what they did in the article
+\item send him an email about what I thought about the likelihood
+\item empirically check unidentifiability due to lack of information: simulation under different number of samples
+\item {\color{red} send text about categorical}
+\end{enumerate}
+
+\section{Categorical distribution}
+
+
+\end{document}

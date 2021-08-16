@@ -1,0 +1,101 @@
+\documentclass{article}
+
+%\usepackage{color}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{multirow}
+
+\title{Meeting with Dom 20210322, and subsequent work}
+\author{Lena Morrill}
+
+\setlength{\textwidth}{6.7in}
+\setlength{\oddsidemargin}{-0.1in}
+\setlength{\textheight}{8.6in}
+\setlength{\topmargin}{-0.4in}
+
+\def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (1,.7) -- (.25,.15) -- cycle;} 
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+\newcommand{\hgh}{{\color{red} H}} % high: bad [bias]
+\newcommand{\lw}{{\color{red} L}} % low: bad [bias]
+\newcommand{\gd}{{\color{ForestGreen} G}} % good [bias]
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Convergence and optimisers}
+
+\paragraph{Fixed effects DM} When removing the coefficient of 100- for the DM likelihood, I get convergence. Otherwise the gradient goes to 0 and I get NA for every single standard error of the parameters.
+
+\paragraph{Diag RE effects DM} kidney renal clear cell RCC now converges (it didn't use to) when removing the 1000 coefficient, and using nlminb.
+
+\paragraph{Full RE effects DM} Removing the coefficient of 1000, still no convergence for kidney renal clear cell RCC, even if increasing number of iterations, and using nlminb, but I don't get the message about gradient too steep.
+
+When using a high value for the initial log lambda (so that it's closer to a multinomial), it doesn't converge either.
+
+When initialising the covariances around 0, and the u at 0, I get that the Hessian of fixed effects was not positive definite., but no NAs.
+
+\paragraph{Not including covariances for signatures with many zero exposures} That gives good convergences!
+
+\clearpage
+\section{Bias and coverage}
+
+The beta intercept estimates are biased (to high values) in detriment of the standard deviation of the random effects. The overdispersion parameters are also biased to higher values.
+\begin{enumerate}
+\item Using GenerationCnorm, set 2. \textbf{Note! The random effects where actually completely correlated in this generation, but the covariances to assess bias were said to be zero, so the results are incorrect!}
+	\begin{enumerate}
+		\item diagREDM: high beta intercept, good beta slope, low lambda, low standard deviation RE
+		\item fullREM: high beta intercept, good beta slope, high standard deviation RE, high covariances RE
+		\item fullREDM single lambda: high beta intercept, good beta slope, good covariances RE, high lambda, high standard deviation RE
+		\item diagREDM single lambda: high beta intercept, good beta slope, high lambda, low standard deviation RE
+		\item diagREM: high beta intercept, good beta slope, high standard deviation RE
+		\item fullREDM: high beta intercept, good beta slope, good covariances RE, high lambda, low standard deviation RE
+	\end{enumerate}
+\item Using GenerationCnorm, set 1
+	\begin{enumerate}
+		\item fullREDM: high beta intercept, good beta slope, good covariances RE, high lambda, low standard deviation RE
+\end{enumerate}
+\item Using GenerationDMFE1, set 1 and 2, and varying lambda (overdispersion): even in the case where there are no random effects there is a bias in the beta intercept (which is over-estimated). Lambda is too over-estimated. In the second beta set (set 2) not even all the slope betas are unbiased. Set 3 is as bad as set 2
+\begin{itemize}
+\item With fewer categories ($d=3$): 
+\end{itemize}
+\end{enumerate}
+
+
+\newcolumntype{R}[2]{%
+    >{\adjustbox{angle=#1,lap=\width-(#2)}\bgroup}%
+    l%
+    <{\egroup}%
+}
+\newcommand*\rot{\multicolumn{1}{R{45}{1em}}}% no optional argument here, please!
+%\renewcommand*\rot{\multicolumn{1}{R{60}{1em}}}% no optional argument here, please!
+
+%\hspace{-.5in}%\begin{table}[h]
+\begin{tabular}{ll|l|cccccccc}
+\rot{Dataset} & \rot{Set idx} & \rot{Model (full)} &  \rot{RE structure} &  \rot{Model} &  \rot{Overdispersion structure\footnotemark} & \rot{Beta intercept} & \rot{Beta slope} & \rot{Lambda (overdisp.)} & \rot{Std RE} & \rot{Cov RE}\\\hline
+\multirow{7}{*}{GenerationCnorm\footnotemark}&1& fullREDM & fullRE & DM & DL& \hgh & \gd & \hgh & \lw & \gd\\
+&2& fullREDM & fullRE & DM & DL &  \hgh & \gd & \hgh & \lw & \gd\\
+ & 2 & diagREDM & diagRE & DM & DL& \hgh & \gd & \lw & \lw & -\\
+&2& fullREDM SL & fullRE & DM & SL&  \hgh & \gd & \hgh & \hgh & \gd\\
+&2& diagREDM SL & diagRE & DM & SL& \hgh & \gd & \hgh & \lw & -\\
+&2& fullREM & fullRE & M & - &  \hgh & \gd & - & \hgh & \hgh\\
+&2& diagREM & diagRE & M & - & \hgh & \gd & - & \hgh & -\\\hline
+\multirow{1}{*}{GenerationCnormdiagRE}&2& fullREDM SL & fullRE & DM & SL& \hgh & \gd & \lw & \hgh & \hgh\\\hline
+\multirow{1}{*}{GenerationMGnorm} & 1 & fullREM\\\hline
+\multirow{1}{*}{GenerationMGnorm} & 1 & diagREM\\
+\end{tabular}
+%\end{table}
+
+\textbf{In singlelambda, the biases are the same in both datasets???}
+
+
+\footnotetext{DL: Double overdispersion parameter (one for each group). SL: Single overdispersion parameter (shared).}
+\footnotetext{Incorrect model! The intercepts are all the same, so there is a perfect correlation! This is not what I said in the assessment of the bias}
+
+\end{document}

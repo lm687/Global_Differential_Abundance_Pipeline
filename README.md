@@ -16,6 +16,14 @@ source activate snakemake-globalDA
 conda deactivate
 ```
 
+## Creating Snakemake's config file
+The file `config_PCAWG.yaml` is created by running
+```
+sh make_config.sh
+```
+
+`make_config` contains the arguments (i.e. parameters, for the most part) for the different Simulation Generations. Note using `bash make_config.sh` will throw an error - use sh instead.
+
 ## Synthetic datasets
 - Generation A: 20200625. There is a beta intercept of zero
 
@@ -29,7 +37,8 @@ The folder `code/2_inference/` contains all the files for inference.
 ### Simulation under the parameters
 
 To simulate data under the parameters see file `code/3_analysis/posterior_predictive_checks.R`, section `Lower-dimensional representation of posteriors and of observed values [2]`. The corresponding results are in the folder `results/simulation_from_params/`
-## Results
+
+## Results for the PCAWG cohort
 
 Multinomial             |  Dirichlet-Multinomial
 :-------------------------:|:-------------------------:
@@ -39,11 +48,11 @@ Multinomial             |  Dirichlet-Multinomial
 :-------------------------:|:-------------------------:
 ![betas tracksig comparison M](results/betas/betas_tracksig_comparison_M.png "")  | ![betas tracksig comparison DM](results/betas/betas_tracksig_comparison_DM.png "")
 
- 
-Samples for which there is no VCF file
+## Other considerations
+### PCAWG samples for which there is no VCF file
 These files appear in the metadata and may have them in the mutccf file, but I don't have their VCF, which is the only file that contains what mutation it is (in mutccf you can have the position and CCF, but not mutation type).
 
-  
+```
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/f8467ec8-2d61-ba21-e040-11ac0c483584
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/f856fa85-fdb8-c0b0-e040-11ac0d480b4e
 ../data/restricted/pcawg/pcawg_restricted_snv_counts/f8696c79-b165-92a6-e040-11ac0c4804bf
