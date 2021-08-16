@@ -1,6 +1,6 @@
 #!/bin/bash
 
-name_config="config_PCAWG.yaml"
+name_config="config_PCAWG_do_not_modify.yaml"
 name_failed_samples="../text/readme/1_faulty_samples"
 echo "Creating config file $name_config ... "
 
@@ -75,6 +75,7 @@ echo "beta_gamma_shape:
 
 ## Generation C of simulations
 echo "\nsimulation_n_generationC:
+- 10
 - 20
 - 50
 - 100
@@ -82,6 +83,11 @@ echo "\nsimulation_n_generationC:
 
 echo "beta_gamma_shape_generationC:
 - 0
+- 0.005
+- 0.01
+- 0.02
+- 0.05
+- 0.1
 - 0.2
 - 0.4
 - 0.6
@@ -204,6 +210,8 @@ echo "simulation_nlambda_generationF:
 
 echo "simulation_lambda_generationF:
 - 10
+- 30
+- 50
 - 80
 " >> $name_config
 
