@@ -764,5 +764,187 @@ context_features_to_features <- function(exposures_cancertype_obj, slot_name){
   exposures_cancertype_obj
 }
 
+aitchison_perturbation_test = function(object, slot_name){
+  .x = (give_perturbation_ROOSigs(object, slot_name=slot_name))
+  ## is the centre of the group the identity perturbation? i.e. is this below the zero vector?
+  if(length(slot(.x, slot_name)) == 0){
+    return(NA)
+  }else{
+    .x = as(compositions::alr(slot(.x, slot_name)[[1]]), 'matrix')
+    .res = try(expr = {Hotelling::hotelling.test(.x, matrix(0, nrow=nrow(.x), ncol=ncol(.x)))})
+    if (class(.res) == "try-error") {
+      .res = NA
+    }
+    .res
+  }
+}
+
+aitchison_perturbation_test_alt = function(object, slot_name){
+  .x = give_perturbation_ROOSigs_alt(exposures_cancertype_obj = object, slot_name=slot_name)
+  ## is the centre of the group the identity perturbation? i.e. is this below the zero vector?
+  if(length(slot(.x, slot_name)) == 0){
+    return(NA) ## if there was a slot of active signatures or all signatures, but were removed in the <keep strictly positive> step
+  }
+  
+  nrow_obj = nrow(slot(.x, slot_name)[[1]])
+  ncol_obj = ncol(slot(.x, slot_name)[[1]])
+  ## Compute ALR
+  if(nrow_obj==1){
+    # .x = (log(slot(.x, slot_name)[[1]]) - log(slot(.x, slot_name)[[1]][,ncol_obj]))[-ncol_obj]
+    .res = NA
+  }else{
+    logged = log(t(apply(slot(.x, slot_name)[[1]], 1, as.numeric)))
+    .x = sweep(logged, 1, logged[,ncol_obj], '-')[,-ncol_obj]
+    .res = try(expr = {Hotelling::hotelling.test(.x, matrix(0, nrow=nrow(.x), ncol=ncol(.x)))})
+  }
+  if (class(.res) == "try-error") {
+    .res = NA
+  }
+  .res
+}
+
+give_perturbation_ROOSigs_alt = function(exposures_cancertype_obj, slot_name="count_matrices_active"){
+  prev_object <- exposures_cancertype_obj
+  if(exposures_cancertype_obj@number_categories != 2){
+    stop('Number of categories different from 2 has not been implemented yet')
+  }else{
+    ## two categories
+    ## we will return a matrix with as many columns as signatures, and as many rows as rows originally (e.g. one each sample)
+    ## but a single matrix, instead of two
+    ## this relies on zero having been removed from the same samples, i.e. if a sample has zeros in
+    ## the trunk but not in the branch, the sample will be removed in both cases
+    
+    if(is.null(slot(exposures_cancertype_obj, slot_name)[[1]])){
+      slot(prev_object, slot_name) = list()
+    }else{
+      if(length(slot(exposures_cancertype_obj, slot_name)[[1]]) == 1){
+        if(is.na(slot(exposures_cancertype_obj, slot_name)[[1]])){
+          slot(prev_object, slot_name) = list()
+        }
+      }else{
+        if(is.null(nrow(slot(exposures_cancertype_obj, slot_name)[[1]])) | (nrow(slot(exposures_cancertype_obj, slot_name)[[1]]) ==1) ){
+          ## only one row
+          perturbation = normalise_rw( normalise_rw(t(matrix(apply(slot(exposures_cancertype_obj, slot_name)[[2]], 1, as.numeric)))) /    normalise_rw(t(matrix(apply(slot(exposures_cancertype_obj, slot_name)[[1]], 1, as.numeric)))) )
+          colnames(perturbation) = names(slot(exposures_cancertype_obj, slot_name)[[1]])
+          rownames(perturbation) = exposures_cancertype_obj@sample_names
+        }else{
+          perturbation = normalise_rw( normalise_rw(t(apply(slot(exposures_cancertype_obj, slot_name)[[2]], 1, as.numeric))) /    normalise_rw(t(apply(slot(exposures_cancertype_obj, slot_name)[[1]], 1, as.numeric))) )
+        }
+        ## correct
+        # normalise_rw(slot(exposures_cancertype_obj, slot_name)[[2]])[1,]
+        # normalise_rw(t(as.matrix(normalise_rw(slot(exposures_cancertype_obj, slot_name)[[1]])[1,]*perturbation[1,])))
+        
+        slot(prev_object, slot_name) = list(perturbation)
+      }
+    }
+  }
+  prev_object@id_categories <- "perturbation 1->2"
+  prev_object
+}
+
+give_perturbation_ROOSigs_alt_v2 = function(exposures_cancertype_obj, slot_name="count_matrices_active"){
+  ## without normalising the perturbations, as otherwise the system is singular
+  prev_object <- exposures_cancertype_obj
+  if(exposures_cancertype_obj@number_categories != 2){
+    stop('Number of categories different from 2 has not been implemented yet')
+  }else{
+    ## two categories
+    ## we will return a matrix with as many columns as signatures, and as many rows as rows originally (e.g. one each sample)
+    ## but a single matrix, instead of two
+    ## this relies on zero having been removed from the same samples, i.e. if a sample has zeros in
+    ## the trunk but not in the branch, the sample will be removed in both cases
+    
+    if(is.null(slot(exposures_cancertype_obj, slot_name)[[1]])){
+      slot(prev_object, slot_name) = list()
+    }else{
+      if(length(slot(exposures_cancertype_obj, slot_name)[[1]]) == 1){
+        if(is.na(slot(exposures_cancertype_obj, slot_name)[[1]])){
+          slot(prev_object, slot_name) = list()
+        }
+      }else{
+        if(is.null(nrow(slot(exposures_cancertype_obj, slot_name)[[1]])) | (nrow(slot(exposures_cancertype_obj, slot_name)[[1]]) ==1) ){
+          ## only one row
+          perturbation = ( normalise_rw(t(matrix(apply(slot(exposures_cancertype_obj, slot_name)[[2]], 1, as.numeric)))) /    normalise_rw(t(matrix(apply(slot(exposures_cancertype_obj, slot_name)[[1]], 1, as.numeric)))) )
+          colnames(perturbation) = names(slot(exposures_cancertype_obj, slot_name)[[1]])
+          rownames(perturbation) = exposures_cancertype_obj@sample_names
+        }else{
+          perturbation = ( normalise_rw(t(apply(slot(exposures_cancertype_obj, slot_name)[[2]], 1, as.numeric))) /    normalise_rw(t(apply(slot(exposures_cancertype_obj, slot_name)[[1]], 1, as.numeric))) )
+        }
+        ## correct
+        # normalise_rw(slot(exposures_cancertype_obj, slot_name)[[2]])[1,]
+        # normalise_rw(t(as.matrix(normalise_rw(slot(exposures_cancertype_obj, slot_name)[[1]])[1,]*perturbation[1,])))
+        
+        slot(prev_object, slot_name) = list(perturbation)
+      }
+    }
+  }
+  prev_object@id_categories <- "perturbation 1->2"
+  prev_object
+}
 
 
+
+bootstrap_for_statistic = function(object_roo){
+  .object_roo_fun = object_roo
+  totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[1]] ## bootstrap
+  ## sample in two groups
+  .x_boot = lapply(1:nrow(totals), function(i){
+    multinom1 = t(rmultinom(n=1, size = sum(.object_roo_fun@count_matrices_all[[1]][i,]), prob = totals[i,]/sum(totals[i,])))
+    multinom2 = totals[i,]-multinom1
+    list(multinom1, multinom2)
+  })
+  
+  .object_roo_fun@count_matrices_all = list(do.call('rbind', lapply(.x_boot, function(i) i[[1]])),
+                                            do.call('rbind', lapply(.x_boot, function(i) i[[2]])))
+  rownames(.object_roo_fun@count_matrices_all[[1]]) = rownames(.object_roo_fun@count_matrices_all[[2]]) = rownames(object_roo@count_matrices_all[[1]])
+  
+  give_total_perturbation(.object_roo_fun, add_pseudocounts = TRUE)
+  
+}
+
+permutation_test_fun_wrapper =  function(objects_sigs_per_CT_features_arg, nbootstraps){
+  .x =  permutation_test_fun(objects_sigs_per_CT_features_arg, nbootstraps)
+  return(sum(abs(.x[[1]]) > abs(.x[[2]]))/nbootstraps)
+}
+
+permutation_test_fun = function(objects_sigs_per_CT_features_arg, nbootstraps){
+  null_statistics = replicate(n = nbootstraps, expr = bootstrap_for_statistic(objects_sigs_per_CT_features_arg))
+  null_statistics = null_statistics[!is.nan(null_statistics)]
+  observed_statistic = give_total_perturbation(objects_sigs_per_CT_features_arg)
+  list(null_statistics, observed_statistic)
+}
+
+give_total_perturbation = function(object_roo, add_pseudocounts=TRUE, slot_name="count_matrices_all"){
+  if(add_pseudocounts){
+    slot(object_roo, slot_name)[[1]] =     slot(object_roo, slot_name)[[1]] + 1
+    slot(object_roo, slot_name)[[2]] =     slot(object_roo, slot_name)[[2]] + 1
+  }
+  # sum(apply(slot(give_perturbation_ROOSigs(object_roo, slot_name = slot_name), name = slot_name)[[1]],
+  # 1, function(i) sqrt(sum((i-1/6)**2))))/nrow(slot(object_roo, slot_name)[[1]])
+  mean(apply(slot(give_perturbation_ROOSigs(object_roo, slot_name = slot_name), name = slot_name)[[1]],
+             1, function(i) sqrt(sum((i-1/6)**2))))
+}
+
+aitchison_perturbation_test_alt_v2 <- function(object, slot_name, addone=T){
+  if(addone)  slot(object, name = slot_name) <- lapply(slot(object, name = slot_name), function(i) i +1) ## to avoid Inf
+  .x = give_perturbation_ROOSigs_alt_v2(exposures_cancertype_obj = object, slot_name=slot_name)
+  ## is the centre of the group the identity perturbation? i.e. is this below the zero vector?
+  if(length(slot(.x, slot_name)) == 0){
+    return(NA) ## if there was a slot of active signatures or all signatures, but were removed in the <keep strictly positive> step
+  }
+  
+  nrow_obj = nrow(slot(.x, slot_name)[[1]])
+  ncol_obj = ncol(slot(.x, slot_name)[[1]])
+  ## Compute ALR
+  if(nrow_obj==1){
+    # .x = (log(slot(.x, slot_name)[[1]]) - log(slot(.x, slot_name)[[1]][,ncol_obj]))[-ncol_obj]
+    .res = NA
+  }else{
+    .res = try(expr = {Hotelling::hotelling.test(slot(.x, name = slot_name)[[1]],
+                                                 matrix(0, nrow=nrow_obj, ncol=ncol_obj))})
+  }
+  if (class(.res) == "try-error") {
+    .res = NA
+  }
+  .res
+}

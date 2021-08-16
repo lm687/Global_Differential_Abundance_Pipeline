@@ -8,9 +8,9 @@ library(ggpubr)
 
 generation = "generationGnorm"
 generation = "generationMGnorm"
-generation = "GenerationInoRE"
 generation = "generationFnorm"
 generation = "GenerationCnorm"
+generation = "GenerationInoRE"
 
 runs_fullREM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREM.RDS"))
 runs_fullREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREDMsinglelambda.RDS"))
@@ -22,6 +22,11 @@ table(is.na(runs_fullREM0$beta_est))
 table(is.na(runs_fullREDMSL0$beta_est))
 table(is.na(runs_diagREDMSL0$beta_est))
 table(is.na(runs_diagREDM0$beta_est))
+
+table((runs_fullREM0$converged))
+table((runs_fullREDMSL0$converged))
+table((runs_diagREDMSL0$converged))
+table((runs_diagREDM0$converged))
 
 runs_fullREM <- runs_fullREM0[runs_fullREM0$converged,]
 runs_fullREDMSL <- runs_fullREDMSL0[runs_fullREDMSL0$converged,]
@@ -85,7 +90,17 @@ pvals_runs_HMP = lapply(datasets_files, function(i)  try(wrapper_run_HMP_Xdc.sev
 pvals_runs_HMP2 = lapply(datasets_files, function(i)  try(wrapper_run_HMP_Xmcupo.sevsample(i)))
 pvals_ttest_ilr = as.numeric(unlist(runs_ttest_irl))
 pvals_ttest_ilr_adj = pvals_ttest_ilr
+# pvals_perturbation_adj1 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
+# aitchison_perturbation_test(.x$objects_counts, slot_name = "count_matrices_all")})
+# pvals_perturbation_adj2 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
+# aitchison_perturbation_test_alt(.x$objects_counts, slot_name = "count_matrices_all")})
+pvals_perturbation_adj =  unlist(sapply(lapply(datasets_files, function(i){.x <- readRDS(i);
+aitchison_perturbation_test_alt_v2(.x$objects_counts, slot_name = "count_matrices_all")}), `[`, 'pval'))
+pvals_permutation_adj = unlist(lapply(datasets_files,  function(i){.x <- readRDS(i);
+permutation_test_fun_wrapper(.x$objects_counts, nbootstraps=40)}))
 
+length(pvals_runs_HMP) == length(pvals_perturbation_adj)
+length(pvals_runs_HMP) == length(pvals_permutation_adj)
 
 # res_M = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREM.RDS"))
 # res_DM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREDM.RDS"))
@@ -124,6 +139,8 @@ pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   ttest_ilr_adj=pvals_ttest_ilr_adj,
                                   HMP=unlist(pvals_runs_HMP),
                                   HMP2=unlist(pvals_runs_HMP2),
+                                  perturbation_adj=pvals_perturbation_adj,
+                                  permutation_adj=pvals_permutation_adj,
                                   true=DA_bool)
 head(pvals_data_frame)
 
@@ -134,7 +151,9 @@ res_all = rbind(fullREM=summarise_DA_detection(true = DA_bool, predicted = pvals
                 ttest=summarise_DA_detection(true = DA_bool, predicted = runs_ttest_props <= 0.05),
                 ILR=summarise_DA_detection(true = DA_bool, predicted = pvals_ttest_ilr_adj <= 0.05),
                 HMP=summarise_DA_detection(true = DA_bool, predicted = pvals_runs_HMP <= 0.05),
-                HMP2=summarise_DA_detection(true = DA_bool, predicted = pvals_runs_HMP2 <= 0.05))
+                HMP2=summarise_DA_detection(true = DA_bool, predicted = pvals_runs_HMP2 <= 0.05),
+                perturbation=summarise_DA_detection(true = DA_bool, predicted = pvals_perturbation_adj <= 0.05),
+                permutation=summarise_DA_detection(true = DA_bool, predicted = pvals_permutation_adj <= 0.05))
 # rownames(res_all) = c('Multinomial', 'Dirichlet-Multinomial', 'ILR')
 res_all
 xtable::xtable(res_all)
@@ -143,7 +162,7 @@ res_all <- data.frame(res_all)
 res_all$model = rownames(res_all)
 res_all
 
-ggplot(res_all, aes(x=1, y = FP, col=model))+geom_point()
+ggplot(res_all, aes(x=1, y = FPR, col=model))+geom_point()
 
 ## group the runs by n, d, etc.
 summarise_DA_detection(true = DA_bool, predicted = pvals_fullREDMSL < 0.05)
@@ -153,12 +172,14 @@ table(DA_bool, pvals_data_frame$ttest_props <= 0.05)
 put_vals_in_table <- function(.pvals){
   rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREDMSL < 0.05),
       fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM <= 0.05),
-      diagREDMSL=summarise_DA_detection(true = DA_bool, predicted = pvals_diagREDMSL <= 0.05),
-      diagREDM=summarise_DA_detection(true = DA_bool, predicted = pvals_diagREDM <= 0.05),
+      diagREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDMSL <= 0.05),
+      diagREDM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDM <= 0.05),
       ttest=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_props <= 0.05),
       ILR=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_ilr_adj <= 0.05),
       HMP=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP <= 0.05),
-      HMP2=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP2 <= 0.05))
+      HMP2=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP2 <= 0.05),
+      perturbation=summarise_DA_detection(true = .pvals$true, predicted = .pvals$perturbation <= 0.05),
+      permutation=summarise_DA_detection(true = .pvals$true, predicted = .pvals$permutation <= 0.05))
 }
   
 give_accuracies_with_varying_var <- function(var, two_var=F){
@@ -189,19 +210,32 @@ varying_betashape <-give_accuracies_with_varying_var('beta_gamma_shape')
 varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)
 varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)
 
-ggplot(varying_d, aes(x=d, y = FP, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~mod, noel)
-ggplot(varying_n, aes(x=n, y = FP, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
-ggplot(varying_betashape, aes(x=beta_gamma_shape, y = FP, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+ggplot(varying_d, aes(x=d, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~mod, noel)
+ggplot(varying_n, aes(x=n, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/FPR_with_n.pdf"),
+       height = 3.0, width = 4)
+
+ggplot(varying_betashape, aes(x=beta_gamma_shape, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+
+## this is very confusing
 ggplot(varying_d, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/AUC_with_d.pdf"),
+       height = 3.0, width = 4.5)
 ggplot(varying_n, aes(x=n, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/AUC_with_n.pdf"),
+       height = 3.0, width = 4.5)
 ggplot(varying_betashape, aes(x=beta_gamma_shape, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
 ggplot(varying_d, aes(x=d, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_with_d.pdf"),
+       height = 3.0, width = 4.0)
 ggplot(varying_n, aes(x=n, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_with_N.pdf"),
+       height = 3.0, width = 4.0)
 ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
 ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_models.pdf"),
-       height = 3.5, width = 8)
-ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = FP, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
+       height = 3.0, width = 6.0)
+ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = FPR, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
 # ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_models.pdf"),
 #        height = 3.5, width = 8)
 ## add fraction of correct classification, which are values I should have for all combinations
@@ -213,7 +247,32 @@ ggplot(varying_n_betashape, aes(x=n, y = Accuracy, group=model, col=beta_gamma_s
 ggplot(varying_d_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=d))+
   geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
 
+varying_n[varying_n$n == 100,]
 
+table(true=DA_bool, diagREDMSL=pvals_diagREDMSL < 0.05)
+table(true=DA_bool, HMP=pvals_runs_HMP < 0.05)
+
+## plot only the non-DA
+pvals_data_frame[pvals_data_frame$true == F,]
+ggplot(varying_betashape[varying_betashape$beta_gamma_shape == 0,],
+       aes(y=FPR, x=model, col=model))+geom_point()
+
+
+##-----------------------------------------------------------------##
+## WHY IS THE FPR EXACTLY THE SAME IN EVERY N FOR THE DIAG MODELS??
+ggplot(varying_n[grepl('diag', varying_n$model),],
+       aes(y=FPR, x=n, col=model))+geom_point()+geom_line()
+
+varying_n[grepl('diag', varying_n$model),'FPR']
+
+##' the interesting part is the second list, first column: statistically signif values,
+##' but with no differential abundance (beta_gamma_shape = 0)
+##' There is one false positive when n=10  and when n=100. Otherwise there are zero. Then, shouldn't
+##' the FPR change, and be zero when n is 20 and 50?
+table(unlist(sapply(datasets, `[`, 'n')),
+unlist(sapply(datasets, `[`, 'beta_gamma_shape')),
+pvals_diagREDMSL < 0.05)
+##-----------------------------------------------------------------##
 
 table(DA_bool, M_est=pvals_fullREM <= 0.05)
 table(DA_bool, DM_est=pvals_fullREDMSL <= 0.05)

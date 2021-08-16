@@ -70,6 +70,13 @@ if(is.null(opt$beta_intercept_input)){
     cat('Reading input beta intercept file')
     beta[1,] = readRDS(opt$beta_intercept_input)
     sim_beta_1 = F
+    if(opt$beta_intercept_input == 'NA'){
+      sim_beta_1 = T
+    }else{   
+      cat('Reading input beta intercept file')
+      beta[1,] = readRDS(opt$beta_intercept_input)
+      sim_beta_1 = F
+    }
   }
 }
 }
@@ -87,13 +94,13 @@ if(is.null(opt$beta_slope_input)){
     sim_beta_2 = T
   }else{
     if(opt$beta_slope_input == 'NA'){
-        sim_beta_2  = T	
+      sim_beta_2  = T	
     }else{
-       sim_beta_2 = F
-       cat('Reading input beta slope file')
-       beta[2,] = readRDS(opt$beta_slope_input)
-   }
-}
+      sim_beta_2 = F
+      cat('Reading input beta slope file')
+      beta[2,] = readRDS(opt$beta_slope_input)
+    }
+  }
 }
 
 if(sim_beta_2){
