@@ -100,7 +100,7 @@ if(is.null(opt$beta_slope_input)){
   }
 }
 
-if(sim_beta_2) beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
+if(sim_beta_2) beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = beta_gamma_shape) ## for the slope coefficients
 
 
 ## Random effects; create sample-patient matrix
@@ -108,7 +108,24 @@ Z_sim0 = matrix(0, nrow=n, ncol=n)
 diag(Z_sim0) = 1
 Z_sim = t(rbind(Z_sim0, Z_sim0))
 
+sim_sd_RE = F
 if(is.null(opt$sdRE_input)){
+  ## independent random effect
+  ## simulate data to get covariances
+        sim_sd_RE = T
+}else{
+if(is.na(opt$sdRE_input)){
+sim_sd_RE = T}else{
+if(opt$sdRE_input == 'NA'){
+sim_sd_RE=T}  
+else{  cat('Reading covariance matrix\n')
+  cov <-  readRDS(opt$sdRE_input)
+  u <- mvtnorm::rmvnorm(n, mean = rep(0, d-1), sigma = cov)
+}
+}
+}
+
+if(sim_sd_RE){
   ## independent random effect
   ## simulate data to get covariances
   aaa <- sapply(1:(d-2), function(i) runif(n = 50))
@@ -160,3 +177,5 @@ write.table(paste0("3_analysis/helper/table_simulation_params_", uuid, ".txt"), 
 saveRDS(list(objects_counts=objects_counts, d=d, n= n, beta_gamma_shape=beta_gamma_shape, sd_RE=sd_RE, lambda=lambda, Nm_lambda=Nm_lambda,
              X_sim = X_sim, beta = beta, Z_sim = Z_sim, u = u, lambdas = lambdas, alphabar = alphabar, alpha = alpha, Nm = Nm, W = W),
         file = opt$outfile)
+
+

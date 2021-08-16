@@ -1,18 +1,21 @@
-configfile: "config_PCAWG.yaml"
+configfile: "config_PCAWG_do_not_modify.yaml"
 cancer_types = config["sample_groups"]
 # cancer_type = "Cervix-SCC"
 grouped_samples = config["grouped_samples"]
 
 samples_list = dict(zip(cancer_types, [grouped_samples[ct].split() for ct in cancer_types]))
-models = ['M', 'DM']
-# models = ['LNM']
-# num_iterations = 15000
-num_iterations = 2000
+models = ['M', 'DM', 'LNM']
+models = ['LNM']
+# models = ['DM']
+# models = ['M']
+num_iterations = 15000
+# num_iterations = 2000
 
 ## which parameters n, d, etc. do we use for each dataset?
 datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'generationC',\
  'GenerationCnormsimpler': 'generationC', 'generationFnorm': 'generationF', 'generationGnorm': 'generationG',\
  'generationMGnorm': 'generationG', 'GenerationHnorm': 'generationHnorm', 'GenerationInoRE': 'generationC',
+ 'GenerationJnorm' : 'generationC',  'GenerationJnorm2' : 'generationC',  'GenerationJnorm3' : 'generationC',
  'GenerationInoREscaledbeta': 'generationC'}
  ## just added the GenerationHnorm, I don't really know if it's correct
 
@@ -64,13 +67,24 @@ rule all:
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       ## now use the multiple function instead, so we can have multiple runs from the same set of parameteres
       expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+<<<<<<< HEAD
         datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+=======
+        datasetgeneration=['GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+>>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
        # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
        #  datasetgeneration='GenerationInoREscaledbeta', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+<<<<<<< HEAD
       #expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #  datasetgeneration='generationFnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+=======
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='generationFnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      #expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #  datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+>>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationHnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
@@ -156,9 +170,12 @@ rule inference:
     output:
        "../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData"
     shell:
-        """module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
+       "~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}"
+
+#    shell:
+#        """module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 #source activate rstan_env
-~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}
+#~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}
 #conda deactivate"""
 
 ## Original function for simulating data, with a single dataset and run for each combination of parameteres (deprecated)
@@ -293,10 +310,12 @@ rule analyse_simulation_TMB_multiple:
         fixed_beta_slope = 'NA',
         sdRE_input = 'NA',
         model = "{model}",
-        itnum= 1)
+        itnum= range(1))
     output:
         "../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"
     shell:
         "Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input '{input}'\
         --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
         --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T"
+
+

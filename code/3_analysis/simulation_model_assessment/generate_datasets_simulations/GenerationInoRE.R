@@ -30,7 +30,7 @@ option_list = list(
   make_option(c("--beta_slope_input"), type="character", default=NA,
               help="Fixed slope for the betas", metavar="character"),
   make_option(c("--sdRE_input"), type="character", default=NA,
-              help="Fixed slope for the betas", metavar="character"),
+              help="Fixed slope for the betas", metavar="character"), ## not used
   make_option(c("--outfile"), type="character", default=NA,
               help="Output file in which to write the dataset (RDS file)", metavar="character")
 );
@@ -64,6 +64,12 @@ if(is.null(opt$beta_intercept_input)){
     cat('Simulating beta intercept\n')
     sim_beta_1 = T
   }else{
+ if(opt$beta_intercept_input == 'NA'){
+    sim_beta_1 = T
+    }else{   
+    cat('Reading input beta intercept file')
+    beta[1,] = readRDS(opt$beta_intercept_input)
+    sim_beta_1 = F
     if(opt$beta_intercept_input == 'NA'){
       sim_beta_1 = T
     }else{   
@@ -72,6 +78,7 @@ if(is.null(opt$beta_intercept_input)){
       sim_beta_1 = F
     }
   }
+}
 }
 
 if(sim_beta_1) beta[1,] = runif(n = d-1, min = -1, max = 1)
