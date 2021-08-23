@@ -26,7 +26,9 @@ option_list = list(
   make_option(c("--optimiser"), type="character", default="optim",
               help="Which optimiser to use", metavar="character"),
   make_option(c("--nonexo_bool"), type="logical", default=F,
-              help="Should only nonexogenous signatures be selected?", metavar="logical")
+              help="Should only nonexogenous signatures be selected?", metavar="logical"),
+  make_option(c("--use_previous_run_startingvals"), type="logical", default=F,
+              help="Should we use any previous run, if available, to use the estimated values as starting values? The previous run should be called the same as the output, but with _NC.RDS instead of .RDS", metavar="logical")
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -95,8 +97,109 @@ if(opt$nonexo_bool | grepl('nonexo', opt$output)){
   dataset <- give_subset_sigs_TMBobj(dataset, sigs_to_remove = nonexogenous$V1)
 }
 
-# dataset = sort_columns_TMB(dataset)
-# results_inference = try(wrapper_run_TMB(opt$input, model = mod_model_name, typedata = "simulation", simulation = TRUE))
-results_inference = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb))
+## use previous values as starting values
+if(opt$use_previous_run_startingvals){
+  cat('Using initial values from previous runs\n')
+  outfile_not_converged <- gsub(".RDS", "_NC.RDS", opt$output)
+  
+  ## read a file that says how many times we have tried to make it converge, already. If it exceeds a threshold, save
+  ## the output file with the original name, instead of the _NC.RDS name.
+  ## get the number of previous tries, and add one to the <num_tries_for_convergence> document
+  
+  threshold_num_tries = 10
+  file_num_tries <- "logs/num_tries_for_convergence.txt"
+  header_num_tries='## Write down the number of tries of getting results that converge. If the number exceeds some limit, save the non-converged result\n'
+  num_tries_for_convergence <- read.table(file_num_tries, sep = '\t', comment.char = '#')
+  
+  ## check if there is an entry for the dataset under consideration
+  which_num_tries <- which(num_tries_for_convergence$V1 == opt$output)
+  if(length(which_num_tries)>0){
+    num_tries_for_convergence[which_num_tries,2] = num_tries_for_convergence[which_num_tries,2] + 1
+  }else{
+    ## if not, append it
+    num_tries_for_convergence <- rbind(num_tries_for_convergence, c(opt$output, 1))
+  }
+  
+  ## save updated file
+  cat(header_num_tries, file = file_num_tries)
+  write.table(num_tries_for_convergence, quote = F, sep = "\t", file = file_num_tries, append = T, col.names = FALSE, row.names = FALSE)
 
-saveRDS(object = results_inference, file = opt$output)
+  
+  ## use previous values as initial values
+  if(file.exists(outfile_not_converged)){
+    ## run with given initial parameters
+    results_inference_previous <- readRDS(outfile_not_converged)
+    
+    ## dependoing on the model, the list of initial params is different
+    ## need to compute dmin1
+
+    dmin1 <- length(python_like_select_name(results_inference_previous$par.fixed, 'beta'))/2
+    
+    if(opt$model == "fullREM"){
+      list_initial_params <- list(
+        beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+        u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+        logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
+        cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'))
+    }else if(opt$model == "diagREM"){
+      list_initial_params <- list(
+        beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+        u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+        logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'))
+    }else if(opt$model == "fullREDM"){
+      list_initial_params <- list(
+        beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+        u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+        logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
+        cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'),
+        log_lambda = matrix(c(2,2)))
+      }else if(opt$model == "diagREDM"){
+        list_initial_params <- list(
+          beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+          u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+          logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
+          log_lambda = matrix(c(2,2)))
+      }else if(opt$model =="fullREDMsinglelambda"){
+        list_initial_params <- list(
+          beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+          u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+          logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
+          cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'),
+          log_lambda = 2,2)
+    }else if(opt$model =="diagREDMsinglelambda"){
+      list_initial_params <- list(
+        beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+        u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+        logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
+        log_lambda = 2,2)
+      }else if(opt$model =="FEDMsinglelambda"){
+        stop('Custom initial values for FEDMsinglelambda: Not implemented')
+    }else{
+    }
+    
+    results_inference = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb,
+                                            initial_params = list_initial_params))
+  }else{
+    ## if there is no previous file, run without specified starting values
+    results_inference = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb))
+  }
+  if(!results_inference$pdHess){
+    ## if it still doesn't converge, save it as _NC
+    if(num_tries_for_convergence[which_num_tries,2] > threshold_num_tries){
+      saveRDS(object = results_inference, file = opt$output)
+    }else{
+      saveRDS(object = results_inference, file = outfile_not_converged)
+    }
+  }else{
+    ## if it has converged, save it with the proper name
+    saveRDS(object = results_inference, file = opt$output)
+  }
+}else{
+  # dataset = sort_columns_TMB(dataset)
+  # results_inference = try(wrapper_run_TMB(opt$input, model = mod_model_name, typedata = "simulation", simulation = TRUE))
+  results_inference = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb))
+  
+  saveRDS(object = results_inference, file = opt$output)
+}
+
+

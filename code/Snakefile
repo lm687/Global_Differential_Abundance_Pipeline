@@ -30,7 +30,7 @@ rule all:
       # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
       ## [Inference] Running TMB on PCAWG
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=cancer_types, model=['fullREM', 'fullREDMsinglelambda'])
-      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagRE_DM'])
+      expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagREDM'])
 ## [Benchmarking] Creating synthetic datasets
       # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{d}_{beta_intensity}_dataset.RDS", datasetgeneration="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
 ## [Benchmarking] Performing inference on the simulated datasets
@@ -66,8 +66,8 @@ rule all:
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       ## now use the multiple function instead, so we can have multiple runs from the same set of parameteres
-      expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-        datasetgeneration=['GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration=['GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
        # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
@@ -197,7 +197,7 @@ rule inference_TMB:
     output:
         "../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS"
     shell:
-        "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model} --feature_type {params.feature_type} --optimiser nlminb --simulation_bool F --read_directly T"
+        "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model} --feature_type {params.feature_type} --optimiser nlminb --simulation_bool F --read_directly T --use_previous_run_startingvals T"
 
 rule simulate_for_comparison_multiple:
     input:

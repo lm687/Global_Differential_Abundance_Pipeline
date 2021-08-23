@@ -35,10 +35,13 @@ if(debugging){
   ## debugging
   setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list()
-  opt$dataset_generation = 'generationFnorm'
+  opt$dataset_generation = 'GenerationJnorm'
   opt$model = 'fullREDMsinglelambda'
+  opt$model = 'fullREM'
+  opt$model = 'diagREDM'
+  # opt$model = 'diagREDMsinglelambda'
   opt$input_list = list.files("../data/assessing_models_simulation/inference_results/TMB/nlminb/", full.names = T)
-  opt$input_list = opt$input_list[grep(opt$dataset_generation , opt$input_list)]
+  opt$input_list = opt$input_list[grep(paste0(opt$dataset_generation, '_') , opt$input_list)]
   opt$input_list = opt$input_list[grep(opt$model , opt$input_list)]
   opt$input_list = opt$input_list[grepl("multiple_", opt$input_list)]
   opt$output_string = paste0(opt$dataset_generation , '_', opt$model, '_manual')
@@ -148,10 +151,10 @@ ggplot(df_beta_recovery,
   geom_abline(intercept = 0, slope = 1)
 ggsave(paste0(folder_output, "recovery_betaslope_scatter.pdf"))
 
-ggplot(df_beta_recovery,
-       aes(x=(beta_true), y=(beta_est), col=beta_gamma_shape))+geom_point()+
-  geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
-ggsave(paste0(folder_output, "recovery_betaslope_scatter_facets.pdf"), width = 10, height = 10)
+# ggplot(df_beta_recovery,
+#        aes(x=(beta_true), y=(beta_est), col=beta_gamma_shape))+geom_point()+
+#   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
+# ggsave(paste0(folder_output, "recovery_betaslope_scatter_facets.pdf"), width = 10, height = 10)
 
 
 ## plotting separately the differentially abundant (right) and non-differentially abundant (left) datasets
@@ -176,27 +179,27 @@ ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
 filename_betarecovery2 = paste0(folder_output, "betaslopes_nonDA.pdf")
 ggsave(filename_betarecovery2, height = 3, width = 8)
 
-ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
-       aes(x=idx_within_dataset, y=(beta_est), col=(pvals_adj<0.05)))+
-  geom_point(data = df_beta_recovery[!(df_beta_recovery$DA_bool),], aes(x=idx_within_dataset, y=beta_true), shape=4)+
-  geom_abline(slope = 0, intercept = 0, alpha=0.2)+
-  geom_point()+
-  geom_errorbar(aes(ymin=beta_est-beta_stderr, ymax=beta_est+beta_stderr), width=.2,
-                position=position_dodge(.9))+theme_bw()+
-  facet_wrap(.~idx, scales='free_x')+theme(legend.position = "bottom")
-filename_betarecovery3 = paste0(folder_output, "betaslopes_stderr_nonDA.pdf")
-ggsave(filename_betarecovery3, height = 8, width = 8)
+# ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
+#        aes(x=idx_within_dataset, y=(beta_est), col=(pvals_adj<0.05)))+
+#   geom_point(data = df_beta_recovery[!(df_beta_recovery$DA_bool),], aes(x=idx_within_dataset, y=beta_true), shape=4)+
+#   geom_abline(slope = 0, intercept = 0, alpha=0.2)+
+#   geom_point()+
+#   geom_errorbar(aes(ymin=beta_est-beta_stderr, ymax=beta_est+beta_stderr), width=.2,
+#                 position=position_dodge(.9))+theme_bw()+
+#   facet_wrap(.~idx, scales='free_x')+theme(legend.position = "bottom")
+# filename_betarecovery3 = paste0(folder_output, "betaslopes_stderr_nonDA.pdf")
+# ggsave(filename_betarecovery3, height = 8, width = 8)
 
-ggplot(df_beta_recovery[(df_beta_recovery$DA_bool),],
-       aes(x=idx_within_dataset, y=(beta_est), col=(pvals_adj<0.05)))+
-  geom_point(data = df_beta_recovery[df_beta_recovery$DA_bool,], aes(x=idx_within_dataset, y=beta_true), shape=4)+
-  geom_abline(slope = 0, intercept = 0, alpha=0.2)+geom_point()+
-  geom_errorbar(aes(ymin=beta_est-beta_stderr, ymax=beta_est+beta_stderr), width=.2,
-                position=position_dodge(.9))+
-  facet_wrap(.~interaction(idx, beta_gamma_shape), scales='free_x', nrow=length(unique(df_beta_recovery$beta_gamma_shape)))+
-  theme_bw()+theme(legend.position = "bottom")
-filename_betarecovery4 = paste0(folder_output, "betaslopes_stderr_DA.pdf")
-ggsave(filename_betarecovery4, height = 8, width = 8)
+# ggplot(df_beta_recovery[(df_beta_recovery$DA_bool),],
+#        aes(x=idx_within_dataset, y=(beta_est), col=(pvals_adj<0.05)))+
+#   geom_point(data = df_beta_recovery[df_beta_recovery$DA_bool,], aes(x=idx_within_dataset, y=beta_true), shape=4)+
+#   geom_abline(slope = 0, intercept = 0, alpha=0.2)+geom_point()+
+#   geom_errorbar(aes(ymin=beta_est-beta_stderr, ymax=beta_est+beta_stderr), width=.2,
+#                 position=position_dodge(.9))+
+#   facet_wrap(.~interaction(idx, beta_gamma_shape), scales='free_x', nrow=length(unique(df_beta_recovery$beta_gamma_shape)))+
+#   theme_bw()+theme(legend.position = "bottom")
+# filename_betarecovery4 = paste0(folder_output, "betaslopes_stderr_DA.pdf")
+# ggsave(filename_betarecovery4, height = 8, width = 8)
 
 print(paste0('Saved files:', c(filename_betarecovery1, filename_betarecovery2, filename_betarecovery3, filename_betarecovery4)))
 

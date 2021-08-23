@@ -874,6 +874,11 @@ summarise_DA_detection = function(true, predicted){
   FNs = sum(true & !predicted)
   FNR = FNs/sum(!true)
   Accuracy=(TPs + TNs)/length(true)
+  if(sum(true) == 0 | sum(!true) == 0){
+    WeightedAccuracy = NA
+  }else{
+    WeightedAccuracy=mean(c(TPs/sum(true), TNs/sum(!true)))
+  }
   total_pos = sum(true | predicted)
   Power = TPs/total_pos
   Sensitivity = TPs / (TPs + FNs)
@@ -888,7 +893,7 @@ summarise_DA_detection = function(true, predicted){
   }
   return(c(FPR=FPR, TPR=TPR, Power=Power, AUC=AUC, Specificity=Specificity,
            Sensitivity=Sensitivity, Recall=Recall, Precision=Precision,
-           Accuracy=Accuracy))
+           Accuracy=Accuracy, WeightedAccuracy=WeightedAccuracy))
 }
 
 fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbose=T){
@@ -1286,12 +1291,31 @@ give_betas <- function(TMB_obj){
   matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
 }
 
-plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F){
+plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
+
+  .summary_lambda <- cbind.data.frame(data.frame(python_like_select_rownames(summary(TMB_obj), 'log_lambda')),
+                                      name=c('Lambda 1', 'Lambda 2'))
+  
+  if(plot){
+    print(ggplot(.summary_lambda, aes(x=name, y=`Estimate`))+
+      geom_point()+
+      geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
+  }
+  
+  if(return_df){
+    return(.summary_lambda)
+  }
+}
+
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T, line_zero=T){
   if(typeof(TMB_obj) == 'character'){
+    .summary_betas <- NA
     if(theme_bw){
-      ggplot()+theme_bw()
+      plt <- ggplot()+theme_bw()
+      if(plot) print(plt)
     }else{
-      ggplot()
+      plt <- ggplot()
+      if(plot) print(plt)
     }
   }else{
     .summary_betas <- summary(TMB_obj)
@@ -1308,8 +1332,11 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
     }
-    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))+
-      geom_hline(yintercept = 0, lty='dashed', col='blue')+
+    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
+    
+    if(line_zero) plt <- plt + geom_hline(yintercept = 0, lty='dashed', col='blue')
+      
+    plt <- plt +
       geom_point()+
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
       ggtitle('Slopes')+facet_wrap(.~type_beta, scales = "free")
@@ -1323,10 +1350,16 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     }
     
     if(!TMB_obj$pdHess){
-      plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
+      if(plot) print(plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red'))
     }else{
-      plt
+      if(plot) print(plt)
     }
+  }
+  
+  if(return_df){
+    .summary_betas
+  }else{
+    return(plt)
   }
 }
 
