@@ -1,5 +1,16 @@
 rm(list = ls())
 
+debugging = F
+if(debugging){
+  ## debugging
+  # setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
+  setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+  getwd()
+  setwd("../../../")
+  getwd()
+  library(TMB, lib.loc = "/mnt/scratcha/fmlab/morril01/software/miniconda3/lib/R/library/")
+}
+
 library(optparse)
 # library(ROCR)
 library(ggplot2)
@@ -30,12 +41,11 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-debugging = F
 if(debugging){
   ## debugging
-  setwd("/Users/morril01/Documents/PhD/GlobalDA/code/")
   opt = list()
   opt$dataset_generation = 'GenerationJnorm'
+  opt$dataset_generation = 'generationFnorm'
   opt$model = 'fullREDMsinglelambda'
   opt$model = 'fullREM'
   opt$model = 'diagREDM'
@@ -83,7 +93,10 @@ if(opt$multiple_runs){
 }
 
 if(opt$dataset_generation == 'GenerationCnorm'){
-  datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
+  if(length(grep(pattern = 'GenerationCnormsimpler', datasets_files)) > 0){
+    ## if there are any files from GenerationCnormsimpler (if there are none the line below gives an empty list)
+    datasets_files = datasets_files[-grep(pattern = 'GenerationCnormsimpler', datasets_files)]
+  }
 }
 
 # match
