@@ -70,6 +70,7 @@ dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
 
 source("../2_inference_TMB/helper_TMB.R")
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
+source("../1_create_ROO/roo_functions.R")
 
 ## additional libraries
 # library(tikzDevice) ## for computer modern font
@@ -5639,6 +5640,7 @@ num_samples_all <- sapply(enough_samples, function(ct){
     .xx <- all_objects[[ct]]
     try(nrow(.xx$Y)/2)
 })
+
 ```
 
 $$
@@ -5648,39 +5650,40 @@ $$
 ```{r, effectsize1, dependson=c('load_objects_all'), echo=F}
 effect_size1nonexo <- sapply(enough_samples, function(ct){
   .xx <- all_objects_nonexo[[ct]]
-  try(sum((normalise_rw(.xx$Y[1:(nrow(.xx$Y)/2),]) - normalise_rw(.xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))**2)/(nrow(.xx$Y)/2))
+  print(dim(.xx$Y[1:(nrow(.xx$Y)/2),]))
+  print(dim(.xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))
+  try(compute_effect_size_1(mat1 = .xx$Y[1:(nrow(.xx$Y)/2),], mat2 = .xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))
 })
 names(effect_size1nonexo) <- enough_samples
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size1nonexo),
-                        num_samples=as.numeric(num_samples),
-                        minlogpval=-log(as.numeric(pvals_DMnonexo)),
+                        num_samples=as.numeric(num_samples[match(enough_samples, names(num_samples))]),
+                        minlogpval=-log(as.numeric(pvals_DMnonexo[match(enough_samples, names(pvals_DMnonexo))])),
                         label=enough_samples),
        aes(x=effect_size1nonexo, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
   theme_bw()+
   geom_point(aes(col=num_samples))+geom_label_repel(alpha=0.4)+
   theme(legend.position = "bottom")+ggtitle('Effect size #1, nonexo')
-
 ```
 
 ```{r, effectsize1all, dependson=c('load_objects_all'), echo=F}
 effect_size1all <- sapply(enough_samples, function(ct){
   .xx <- all_objects[[ct]]
-  try(sum((normalise_rw(.xx$Y[1:(nrow(.xx$Y)/2),]) - normalise_rw(.xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))**2)/(nrow(.xx$Y)/2))
+  try(compute_effect_size_1(.xx$Y[1:(nrow(.xx$Y)/2),],
+                            .xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))
 })
 names(effect_size1all) <- enough_samples
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size1all),
-                        num_samples=as.numeric(num_samples_all),
-                        minlogpval=-log(as.numeric(pvals_DM)),
+                        num_samples=as.numeric(num_samples_all[match(enough_samples, names(num_samples_all))]),
+                        minlogpval=-log(as.numeric(pvals_DM[match(enough_samples, names(pvals_DM))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
   theme_bw()+
   geom_point(aes(col=num_samples))+geom_label_repel(alpha=0.4)+
   theme(legend.position = "bottom")+ggtitle('Effect size #1, all sigs')
-
 ```
 
 $$
@@ -5691,13 +5694,14 @@ $$
 ```{r, effectsize2, dependson=c('load_objects_all'), echo=F}
 effect_size2nonexo <- sapply(enough_samples, function(ct){
   .xx <- all_objects_nonexo[[ct]]
-  try(sum((normalise_rw(.xx$Y[1:(nrow(.xx$Y)/2),]) - normalise_rw(.xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))**2)/(nrow(.xx$Y)/2)*log(mean(rowSums(.xx$Y))))
+  try(compute_effect_size_2(mat1 = .xx$Y[1:(nrow(.xx$Y)/2),],
+                            mat2 = .xx$Y[(1+nrow(.xx$Y)/2):(nrow(.xx$Y)),]))
 })
 names(effect_size2nonexo) <- enough_samples
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size2nonexo),
-                        num_samples=as.numeric(num_samples),
-                        minlogpval=-log(as.numeric(pvals_DMnonexo)),
+                        num_samples=as.numeric(num_samples[match(enough_samples, names(num_samples))]),
+                        minlogpval=-log(as.numeric(pvals_DMnonexo[match(enough_samples, names(pvals_DMnonexo))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
@@ -5710,7 +5714,6 @@ ggplot(cbind.data.frame(effect_size=as.numeric(effect_size2nonexo),
 
 Signature-averaged perturbation
 ```{r, effectsize3, dependson=c('load_objects_all'), echo=F, fig.width=5, fig.height=6}
-# source("../../../CDA_in_Cancer/code/ProjectDifferentialAbundance/ROO_DifferentialAbundance/roo_global_DA_tests/roo_global_DA_helper.R")
 effect_size3nonexo <- sapply(enough_samples, function(ct){
   .xx <- all_objects_nonexo[[ct]]
   # print(head(.xx$z))
@@ -5721,8 +5724,8 @@ effect_size3nonexo <- as.numeric(effect_size3nonexo)
 names(effect_size3nonexo) <- enough_samples
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3nonexo),
-                        num_samples=as.numeric(num_samples),
-                        minlogpval=-log(as.numeric(pvals_DMnonexo)),
+                        num_samples=as.numeric(num_samples[match(enough_samples, names(num_samples))]),
+                        minlogpval=-log(as.numeric(pvals_DMnonexo[match(enough_samples, names(pvals_DMnonexo))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
@@ -5732,6 +5735,7 @@ ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3nonexo),
   jcolors::scale_color_jcolors_contin("pal3", reverse = TRUE, bias = 2.25)+
     labs(x='Effect size', y='Negative log p-value')+
   guides(shape=F)
+
 ```
 
 Signature-averaged perturbation (all sigs)
@@ -5744,9 +5748,10 @@ effect_size3 <- sapply(enough_samples, function(ct){
 effect_size3 <- as.numeric(effect_size3)
 names(effect_size3) <- enough_samples
 
+
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3),
-                        num_samples=as.numeric(num_samples_all),
-                        minlogpval=-log(as.numeric(pvals_DM)),
+                        num_samples=as.numeric(num_samples_all[match(enough_samples, names(num_samples_all))]),
+                        minlogpval=-log(as.numeric(pvals_DM[match(enough_samples, names(pvals_DM))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
@@ -5760,19 +5765,18 @@ ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3),
 
 Total perturbation (sample-averaged)
 ```{r, effectsize3b, dependson=c('load_objects_all'), echo=F, fig.width=5, fig.height=6}
-# source("../../../CDA_in_Cancer/code/ProjectDifferentialAbundance/ROO_DifferentialAbundance/roo_global_DA_tests/roo_global_DA_helper.R")
 effect_size3bnonexo <- sapply(enough_samples, function(ct){
   .xx <- all_objects_nonexo[[ct]]
-  # print(head(.xx$z))
   try(give_totalperturbation_TMBobj(.xx, addone=T))
 })
 effect_size3bnonexo <- as.numeric(effect_size3bnonexo)
 
 names(effect_size3bnonexo) <- enough_samples
 
+
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3bnonexo),
-                        num_samples=as.numeric(num_samples),
-                        minlogpval=-log(as.numeric(pvals_DMnonexo)),
+                        num_samples=as.numeric(num_samples[match(enough_samples, names(num_samples))]),
+                        minlogpval=-log(as.numeric(pvals_DMnonexo[match(enough_samples, names(pvals_DMnonexo))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
@@ -5793,9 +5797,10 @@ effect_size4 <- sapply(enough_samples, function(ct){
 effect_size4 <- as.numeric(effect_size4)
 names(effect_size4) <- enough_samples
 
+
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size4),
-                        num_samples=as.numeric(num_samples_all),
-                        minlogpval=-log(as.numeric(pvals_DM)),
+                        num_samples=as.numeric(num_samples_all[match(enough_samples, names(num_samples_all))]),
+                        minlogpval=-log(as.numeric(pvals_DM[match(enough_samples, names(pvals_DM))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
@@ -6363,6 +6368,57 @@ fullRE_M_nonexo_SP <- sapply(enough_samples, function(ct){
 fullRE_DMSL_nonexo_SP <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMsinglelambdanonexo_", ct, "_signaturesPCAWG.RDS")))
 }, simplify = F); names(fullRE_DMSL_nonexo_SP) <- enough_samples
+
+diagRE_DMDL_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDM_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(diagRE_DMDL_SP) <- enough_samples
+diagRE_DMDL_nonexo_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDMnonexo_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(diagRE_DMDL_nonexo_SP) <- enough_samples
+
+```
+
+
+diagRE_DMDL_SP is missing
+```{r, summary_convergence_SP, dependson=c('read_tmb_runs'), fig.height=4.2, fig.width=7, echo=FALSE, dependson=c('read_tmb_runs')}
+list_models_SP <- c( 'fullRE_M_SP', 'fullRE_DMSL_SP',
+                  'fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP', 
+                  # 'diagRE_DMDL_SP',
+                  'diagRE_DMDL_nonexo_SP')
+
+all_summaries_SP <- lapply(lapply(list_models_SP, get), function(i){
+    give_summary_of_runs2(i, long_return = T)})
+names(all_summaries_SP) <- list_models_SP
+
+ggplot(melt(all_summaries_SP), aes(x=factor(L1, levels=list_models_SP), y=value, fill=L2))+geom_tile()+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  # theme(legend.position = "bottom")+
+  labs(x='')
+```
+
+
+```{r, names_logR_SP, echo=FALSE}
+## for names of betas
+colnames_all_sorted_SP <- list()
+logR_all_sorted_SP <- list()
+colnames_nonexo_sorted_SP <- list()
+logR_nonexo_sorted_SP <- list()
+colnames_nonexo_notsorted_SP <- list()
+logR_nonexo_notsorted_SP <- list()
+
+for(ct in enough_samples){
+
+  colnames_all_sorted_SP[[ct]] <- colnames(sort_columns_TMB(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
+                                     path_to_data = "../../data/"))$Y)
+  logR_all_sorted_SP[[ct]] <- vector_cats_to_logR(colnames_all_sorted_SP[[ct]])
+  colnames_nonexo_sorted_SP[[ct]] <- colnames(sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
+                                     path_to_data = "../../data/"), nonexogenous$V1))$Y)
+  logR_nonexo_sorted_SP[[ct]] <- vector_cats_to_logR(colnames_nonexo_sorted_SP[[ct]])
+  colnames_nonexo_notsorted_SP[[ct]] <- colnames(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
+                                     path_to_data = "../../data/"), nonexogenous$V1)$Y)
+  logR_nonexo_notsorted_SP[[ct]] <- vector_cats_to_logR(colnames_nonexo_notsorted_SP[[ct]])
+}
+
 ```
 
 ## differences between signatures from sigprofiler from the paper, and the ones I get
@@ -6417,31 +6473,129 @@ for(ct in enough_samples){
                                                  path_to_data = "../../data/")$Y))
   logR_notsorted_SP[[ct]] <- try(vector_cats_to_logR(colnames_notsorted_SP[[ct]]))
   
-  colnames_nonexo_notsorted_SP[[ct]] <- try(colnames(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
-                                                 path_to_data = "../../data/")$Y))
+  colnames_nonexo_notsorted_SP[[ct]] <- try(colnames(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = "signaturesPCAWG",
+                                                 path_to_data = "../../data/"), nonexogenous$V1)$Y))
   logR_nonexo_notsorted_SP[[ct]] <- try(vector_cats_to_logR(colnames_nonexo_notsorted_SP[[ct]]))
 }
-
 ```
+
+\section{Betas from PCAWG subset of signatures}
+Reminder that the clonesig signatures were a subset of WES data.
 
 ```{r, plot_betas_signaturesPCAWG, echo=F, fig.height=2, warning=FALSE}
 logR_notsorted_SP
 
-
 for(ct in enough_samples){
-  grid.arrange(plot_betas(fullRE_M_SP[[ct]], only_slope=T,
+  grid.arrange(plot_betas(fullRE_M_SP[[ct]], only_slope=T, plot=F,
                           names_cats=logR_notsorted_SP[[ct]])+ggtitle('fullRE M'),
-               plot_betas(fullRE_DMSL_SP[[ct]], only_slope=T,
+               plot_betas(fullRE_DMSL_SP[[ct]], only_slope=T, plot=F,
                           names_cats=logR_notsorted_SP[[ct]])+ggtitle('fullRE DMSL'),
-               plot_betas(fullRE_M_nonexo_SP[[ct]], only_slope=T,
+               plot_betas(fullRE_M_nonexo_SP[[ct]], only_slope=T, plot=F,
                           names_cats=logR_nonexo_notsorted_SP[[ct]])+ggtitle('fullRE M\nnonexo'),
-               plot_betas(fullRE_DMSL_nonexo_SP[[ct]], only_slope=T,
+               plot_betas(fullRE_DMSL_nonexo_SP[[ct]], only_slope=T, plot=F,
                           names_cats=logR_nonexo_notsorted_SP[[ct]])+ggtitle('fullRE DMSL\nnonexo'),
                top=ct, nrow=1)
 }
+
 ```
 
+\section{Overdispersion parameters in double-lambda DM}
+```{r, overdispersion_params_groups, dependson=c('load_runs_signaturesPCAWG'), fig.width=8.5, fig.height=7}
+sapply(diagRE_DMDL_SP, typeof)
+sapply(diagRE_DMDL_nonexo_SP, typeof)
+python_like_select(list.files("../../data/pcawg_robjects_cache/tmb_results/nlminb/"), 'diagREDM_')
+python_like_select(list.files("../../data/pcawg_robjects_cache/tmb_results/nlminb/"), 'diagREDMnonexo')
 
+ovrdisp <- do.call('rbind.data.frame', lapply(1:length(diagRE_DMDL_nonexo_SP), try(function(idx){
+  if(diagRE_DMDL_nonexo_SP[[idx]]$pdHess){
+    cbind.data.frame( plot_lambdas(diagRE_DMDL_nonexo_SP[[idx]], return_df=T, plot=F), ct=names(diagRE_DMDL_nonexo_SP)[idx])
+  }else{
+    c(NA, NA)
+  }
+})))
+ovrdisp
+ovrdisp[ovrdisp$name == 'Lambda 1','name'] = 'Early'
+ovrdisp[ovrdisp$name == 'Lambda 2','name'] = 'Late'
+
+ggplot(ovrdisp, aes(x=name,  y=`Estimate`))+
+  geom_point()+
+  geom_errorbar(aes(ymin=`Estimate`-`Std..Error`,
+                    ymax=`Estimate`+`Std..Error`), width=.1)+
+  theme_bw()+
+  facet_wrap(.~ct, scales = "free_y", nrow=6)+
+  labs(x='', y='Log lambda')
+
+
+```
+
+\section{Minimal perturbation}
+```{r, minimal_pert_1}
+minimalpert_L2 <- function(i){
+  sum(i)/sum(i^2)
+}
+
+betas_breast <- data.frame(plot_betas(diagRE_DMSL_nonexo[["Breast-AdenoCA"]], names_cats= logR_nonexo_notsorted[[ct]],
+                           return_df=T, plot=F))
+
+.slopes_minpert <- betas_breast %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+
+# minimalpert_L2(softmax(c(.slopes_minpert, 0)))
+median(c(.slopes_minpert, 0))
+
+aa <- plot_betas(diagRE_DMSL_nonexo[["Breast-AdenoCA"]], names_cats= logR_nonexo_notsorted_SP[[ct]],
+                           return_df=F, plot=F, only_slope = T, line_zero=F)
+# aa <- geom_hline(yintercept = 0)+geom_vline(xintercept = 1)+geom_hline(yintercept = median(c(.slopes_minpert, 0)), lty='dashed', col='blue')
+aa + geom_hline(yintercept = median(c(.slopes_minpert, 0)), lty='dashed', col='blue')+
+  geom_hline(yintercept = mean(c(.slopes_minpert, 0)), lty='dashed', col='red')
+
+```
+
+\subsection{Minimal perturbation in diagRE_DMDL_nonexo_S}
+```{r, minimalperturbation_diagRE_DMDL_nonexo_S}
+
+perturbed_betas_diagRE_DMDL_nonexo_SP <- lapply(names(diagRE_DMDL_nonexo_SP), try(function(idx_sp){
+  .betas_SP <- data.frame(plot_betas(diagRE_DMDL_nonexo_SP[[idx_sp]], names_cats= logR_nonexo_notsorted_SP[[idx_sp]],
+                             return_df=T, plot=F))
+  
+  .slopes_minpert_SP <- .betas_SP %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+  # print(.slopes_minpert_SP)
+  ## check if the CI of the betas touches this median value
+  .summary_betas_slope_SP <- python_like_select_rownames(summary(diagRE_DMDL_nonexo_SP[[idx_sp]]), 'beta')[c(F,T),]
+  nrow(.summary_betas_slope_SP)
+  # print(.summary_betas_slope_SP)
+  # print(logR_nonexo_notsorted_SP[[idx_sp]])
+  # print(dim(.summary_betas_slope_SP))
+  if(!is.null(dim(.summary_betas_slope_SP))){
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[,1],
+                      vec_stderr=.summary_betas_slope_SP[,2],
+                      vec_true=rep(median(c(.slopes_minpert, 0)), nrow(.summary_betas_slope_SP)))
+    names(.params_in_ci) <- sapply(logR_nonexo_notsorted_SP[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
+  }else{
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[1],
+                      vec_stderr=.summary_betas_slope_SP[2],
+                      vec_true=(median(c(.slopes_minpert, 0))))
+  }
+  .baseline <- strsplit(logR_nonexo_notsorted_SP[[idx_sp]][[1]], '/')[[1]][2]
+  return(list(betas_perturbed=.params_in_ci, baseline=.baseline))
+}))
+
+
+```
+
+```{r, minimalperturbation_diagRE_DMDL_nonexo_S_2, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S')}
+perturbed_betas_diagRE_DMDL_nonexo_SP_vec <- do.call('c', sapply(perturbed_betas_diagRE_DMDL_nonexo_SP, function(i) i[1]))
+perturbed_betas_diagRE_DMDL_nonexo_SP_df <- cbind.data.frame(sig=gsub("betas_perturbed.", "", names(perturbed_betas_diagRE_DMDL_nonexo_SP_vec)),
+                 perturbed=perturbed_betas_diagRE_DMDL_nonexo_SP_vec)
+perturbed_betas_diagRE_DMDL_nonexo_SP_df
+ggplot(perturbed_betas_diagRE_DMDL_nonexo_SP_df, aes(x=factor(sig, levels=gtools::mixedsort(unique(sig))), fill=factor(perturbed, levels=c(TRUE, FALSE))))+geom_bar(col='black', size=0.001)+theme_bw()+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+      scale_fill_manual(values=c('#f08080', '#e7feff'))+theme(legend.position = "bottom")+
+  labs(x='Signatures', y='Number of putatively perturbed and unperturbed signatures', fill='Perturbed')
+
+```
+
+\section{HMP}
+Simple HMP tests to see what is differentially abundant
 ```{r, HMP_pcawg, echo=F}
 # source("../1_create_ROO/roo_functions.R")
 # signature_roo[[1]]

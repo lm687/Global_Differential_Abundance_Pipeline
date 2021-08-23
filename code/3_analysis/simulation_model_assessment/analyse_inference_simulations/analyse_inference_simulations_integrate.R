@@ -5,17 +5,47 @@ source("../../../1_create_ROO/roo_functions.R")
 
 library(gridExtra)
 library(ggpubr)
+library(reshape2)
+library(jcolors)
+
+multiple_runs = T
+if(multiple_runs){
+  flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/"
+}else{
+  flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models/"
+}
 
 generation = "generationGnorm"
 generation = "generationMGnorm"
-generation = "generationFnorm"
 generation = "GenerationCnorm"
 generation = "GenerationInoRE"
+generation = "generationFnorm"
+generation = "GenerationJnorm3"
+generation = "GenerationJnorm2"
+generation = "GenerationJnorm"
+generation = "GenerationCnorm"
 
-runs_fullREM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREM.RDS"))
-runs_fullREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREDMsinglelambda.RDS"))
-runs_diagREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_diagREDMsinglelambda.RDS"))
-runs_diagREDM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_diagREDM.RDS"))
+manual = F
+if(manual){
+  names1 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREM_manual.RDS")
+  names2 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREDMsinglelambda_manual.RDS")
+  names3 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDMsinglelambda_manual.RDS")
+  names4 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDM_manual.RDS")
+  runs_fullREM0 = readRDS(names1)
+  runs_fullREDMSL0 = readRDS(names2)
+  runs_diagREDMSL0 = readRDS(names3)
+  runs_diagREDM0 = readRDS(names3)
+}else{
+  runs_fullREM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREM.RDS"))
+  runs_fullREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREDMsinglelambda.RDS"))
+  runs_diagREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDMsinglelambda.RDS"))
+  runs_diagREDM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDM.RDS"))
+}
+
+## match them all (wrt fullREM)
+runs_fullREDMSL0 <- runs_fullREDMSL0[match(rownames(runs_fullREM0), rownames(runs_fullREDMSL0)),]
+runs_diagREDMSL0 <- runs_diagREDMSL0[match(rownames(runs_fullREM0), rownames(runs_diagREDMSL0)),]
+runs_diagREDM0 <- runs_diagREDM0[match(rownames(runs_fullREM0), rownames(runs_diagREDM0)),]
 
 ## Problem with convergence is acute in DM
 table(is.na(runs_fullREM0$beta_est))
@@ -33,7 +63,7 @@ runs_fullREDMSL <- runs_fullREDMSL0[runs_fullREDMSL0$converged,]
 runs_diagREDMSL <- runs_diagREDMSL0[runs_diagREDMSL0$converged,]
 runs_diagREDM <- runs_diagREDM0[runs_diagREDM0$converged,]
 
-system(paste0("mkdir -p ../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/"))
+system(paste0("mkdir -p ", flder_out, generation, "/summaries/"))
 
 joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
                             fullRE_DMSL=runs_fullREDMSL[match(rownames(runs_fullREM),
@@ -49,7 +79,7 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
 # loadfonts(device = "win")
 # font_import(pattern = "lmodern*")
 # par(family = "LM Roman 10")
-pdf(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/betas_scatterplots.pdf"), height = 2.5)
+pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots.pdf"), height = 2.5)
 do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DM'), function(it_model){
   ggplot(joint_df, aes(x=fullRE_M.beta_true, y=get(paste0(it_model, '.beta_est'))))+geom_point()+theme_bw()+
     geom_abline(slope = 1, intercept = 0, lty='dashed', col='blue')+
@@ -61,18 +91,30 @@ do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMS
 }), nrow=1))
 dev.off()
 
-pdf(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/M_DM_comparison.pdf"))
+pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots_colour.pdf"), height = 2.5)
+do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DM'), function(it_model){
+  ggplot(joint_df, aes(x=fullRE_M.beta_true, y=get(paste0(it_model, '.beta_est')), col=fullRE_M.beta_gamma_shape))+geom_point()+theme_bw()+
+    geom_abline(slope = 1, intercept = 0, lty='dashed', col='blue')+
+    labs(x='True beta', y=paste0('Estimate from ', it_model))+
+    annotate("text", label=paste0('rho= ', signif(cor(joint_df[,c('fullRE_M.beta_true')], joint_df[,paste0(it_model, '.beta_est')], use="complete.obs"),
+                                                  3)),
+             x = Inf, y = -Inf, vjust=-0.4, hjust=1.0)+theme(legend.position = "bottom")
+  # theme(text=element_text(family="LM Roman 10", size=20))
+}), nrow=1))
+dev.off()
+
+pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison.pdf"))
 do.call('grid.arrange', list(ggplot(joint_df, aes(x=fullRE_M.beta_true, fullRE_M.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1),
                   ggplot(joint_df, aes(x=fullRE_DMSL.beta_true, fullRE_DMSL.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1)))
 dev.off()
 
-pdf(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/M_DM_comparison_only_common.pdf"))
+pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison_only_common.pdf"))
 do.call('grid.arrange', list(ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) & !is.na(joint_df$fullRE_DMSL.beta_est),], aes(x=fullRE_M.beta_true, fullRE_M.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1),
                              ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) & !is.na(joint_df$fullRE_DMSL.beta_est),], aes(x=fullRE_DMSL.beta_true, fullRE_DMSL.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1)))
 dev.off()
 
 datasets_files = list.files("../../../../data/assessing_models_simulation/datasets/", full.names = TRUE)
-datasets_files = datasets_files[grep(pattern = paste0('/', generation, '_'), datasets_files)]
+datasets_files = datasets_files[grep(pattern = paste0('/multiple_', generation, '_'), datasets_files)]
 length(datasets_files)
 
 # match
@@ -98,6 +140,7 @@ pvals_perturbation_adj =  unlist(sapply(lapply(datasets_files, function(i){.x <-
 aitchison_perturbation_test_alt_v2(.x$objects_counts, slot_name = "count_matrices_all")}), `[`, 'pval'))
 pvals_permutation_adj = unlist(lapply(datasets_files,  function(i){.x <- readRDS(i);
 permutation_test_fun_wrapper(.x$objects_counts, nbootstraps=40)}))
+pvals_chi_Harris <- sapply(datasets, function(i) iterative_chisqrt_wrapper(i$objects_counts) )
 
 length(pvals_runs_HMP) == length(pvals_perturbation_adj)
 length(pvals_runs_HMP) == length(pvals_permutation_adj)
@@ -105,26 +148,53 @@ length(pvals_runs_HMP) == length(pvals_permutation_adj)
 # res_M = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREM.RDS"))
 # res_DM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREDM.RDS"))
 
-runs_fullREM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREM.RDS"))
-runs_fullREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREDMsinglelambda.RDS"))
-runs_diagREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_diagREDMsinglelambda.RDS"))
-runs_diagREDM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_diagREDM.RDS"))
-
 ## get the p-values for my models
-for(str_models in c('fullREM0', 'fullREDMSL0', 'diagREDMSL0', 'diagREDM0')){
-  assign(gsub('0', '', paste0('pvals_', str_models)), get(paste0('runs_', str_models))[sapply(unique(get(paste0('runs_', str_models))$idx),
-                         function(i) which(get(paste0('runs_', str_models))$idx == i)[1]),'pvals_adj'])
-  assign(paste0('names(pvals_', gsub('0', '', str_models), ')'),
-         gsub("_dataset.*", "", rownames(get(paste0('runs_', str_models)))[unique(get(paste0('runs_', str_models))$idx)]))
-  
-  ## remove p-vals of runs that didn't converge
-  assign(paste0('pvals_', gsub('0', '', str_models))[!sapply(unique(get(paste0('runs_', str_models))$idx),
-         function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])], NA)
-  get(paste0('pvals_', gsub('0', '', (str_models))))[!sapply(unique(get(paste0('runs_', str_models))$idx),
-                                       function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])]
+
+## remove the last character because it determines what the row of the dataset is
+names_datasets_uniq <- sort(unique(gsub(".RDS", "", names(datasets)))) #sort(unique(c(rownames(runs_fullREM0), rownames(runs_fullREDMSL0),
+                        #             rownames(runs_diagREDMSL0), rownames(runs_diagREDM0))))
+head(names_datasets_uniq)
+names(datasets)
+
+if(multiple_runs){
+  for(str_models in c('fullREM0', 'fullREDMSL0', 'diagREDMSL0', 'diagREDM0')){
+    assign(gsub('0', '', paste0('pvals_', str_models)),
+           get(paste0('runs_', str_models))[sapply(names_datasets_uniq,
+           function(i) grep(i, rownames(get(paste0('runs_', str_models))))[1]),'pvals_adj'])
+    assign(paste0('names(pvals_', gsub('0', '', str_models), ')'),
+           gsub("_dataset.*", "", rownames(get(paste0('runs_', str_models)))[unique(get(paste0('runs_', str_models))$idx)]))
+    
+    ## remove p-vals of runs that didn't converge
+    assign(paste0('pvals_', gsub('0', '', str_models))[!sapply(unique(get(paste0('runs_', str_models))$idx),
+                                                               function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])], NA)
+    get(paste0('pvals_', gsub('0', '', (str_models))))[!sapply(unique(get(paste0('runs_', str_models))$idx),
+                                                               function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])]
+  }
+}else{
+  for(str_models in c('fullREM0', 'fullREDMSL0', 'diagREDMSL0', 'diagREDM0')){
+    assign(gsub('0', '', paste0('pvals_', str_models)), get(paste0('runs_', str_models))[sapply(unique(get(paste0('runs_', str_models))$idx),
+                           function(i) which(get(paste0('runs_', str_models))$idx == i)[1]),'pvals_adj'])
+    assign(paste0('names(pvals_', gsub('0', '', str_models), ')'),
+           gsub("_dataset.*", "", rownames(get(paste0('runs_', str_models)))[unique(get(paste0('runs_', str_models))$idx)]))
+    
+    ## remove p-vals of runs that didn't converge
+    assign(paste0('pvals_', gsub('0', '', str_models))[!sapply(unique(get(paste0('runs_', str_models))$idx),
+           function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])], NA)
+    get(paste0('pvals_', gsub('0', '', (str_models))))[!sapply(unique(get(paste0('runs_', str_models))$idx),
+                                         function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])]
+  }
 }
 
 all(names(pvals_fullREDMSL) == names(pvals_fullREM))
+all(names(pvals_fullREDMSL) == names(pvals_diagREDM))
+
+length(pvals_diagREDM)
+length(pvals_fullREDMSL)
+
+dim(runs_diagREDM0)
+dim(runs_diagREDMSL0)
+dim(runs_fullREDMSL0)
+dim(runs_fullREM0)
 
 if(length(pvals_fullREDMSL) != length(datasets)){
   stop('The number of runs is not the number of datasets')
@@ -136,6 +206,7 @@ pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   pvals_diagREDMSL=pvals_diagREDMSL,
                                   pvals_diagREDM=pvals_diagREDM,
                                   ttest_props=unlist(runs_ttest_props),
+                                  pvals_chi_Harris=pvals_chi_Harris,
                                   ttest_ilr_adj=pvals_ttest_ilr_adj,
                                   HMP=unlist(pvals_runs_HMP),
                                   HMP2=unlist(pvals_runs_HMP2),
@@ -148,6 +219,7 @@ res_all = rbind(fullREM=summarise_DA_detection(true = DA_bool, predicted = pvals
                 fullREDMSL=summarise_DA_detection(true = DA_bool, predicted = pvals_fullREM <= 0.05),
                 diagREDMSL=summarise_DA_detection(true = DA_bool, predicted = pvals_diagREDMSL <= 0.05),
                 diagREDM=summarise_DA_detection(true = DA_bool, predicted = pvals_diagREDM <= 0.05),
+                pvals_chi_Harris=summarise_DA_detection(true = DA_bool, predicted = pvals_chi_Harris <= 0.05),
                 ttest=summarise_DA_detection(true = DA_bool, predicted = runs_ttest_props <= 0.05),
                 ILR=summarise_DA_detection(true = DA_bool, predicted = pvals_ttest_ilr_adj <= 0.05),
                 HMP=summarise_DA_detection(true = DA_bool, predicted = pvals_runs_HMP <= 0.05),
@@ -157,6 +229,7 @@ res_all = rbind(fullREM=summarise_DA_detection(true = DA_bool, predicted = pvals
 # rownames(res_all) = c('Multinomial', 'Dirichlet-Multinomial', 'ILR')
 res_all
 xtable::xtable(res_all)
+# xtable::xtable(res_all[,-ncol(res_all)])
 
 res_all <- data.frame(res_all)
 res_all$model = rownames(res_all)
@@ -174,6 +247,7 @@ put_vals_in_table <- function(.pvals){
       fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM <= 0.05),
       diagREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDMSL <= 0.05),
       diagREDM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDM <= 0.05),
+      pvals_chi_Harris=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_chi_Harris <= 0.05),
       ttest=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_props <= 0.05),
       ILR=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_ilr_adj <= 0.05),
       HMP=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP <= 0.05),
@@ -207,38 +281,43 @@ give_accuracies_with_varying_var <- function(var, two_var=F){
 varying_d <-give_accuracies_with_varying_var('d')
 varying_n <-give_accuracies_with_varying_var('n')
 varying_betashape <-give_accuracies_with_varying_var('beta_gamma_shape')
+varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)
 varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)
 varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)
 
 ggplot(varying_d, aes(x=d, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~mod, noel)
 ggplot(varying_n, aes(x=n, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/FPR_with_n.pdf"),
+ggsave(paste0(flder_out, generation, "/summaries/FPR_with_n.pdf"),
        height = 3.0, width = 4)
 
 ggplot(varying_betashape, aes(x=beta_gamma_shape, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
-## this is very confusing
 ggplot(varying_d, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/AUC_with_d.pdf"),
+ggsave(paste0(flder_out, generation, "/summaries/AUC_with_d.pdf"),
        height = 3.0, width = 4.5)
 ggplot(varying_n, aes(x=n, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/AUC_with_n.pdf"),
+ggsave(paste0(flder_out, generation, "/summaries/AUC_with_n.pdf"),
        height = 3.0, width = 4.5)
 ggplot(varying_betashape, aes(x=beta_gamma_shape, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
 ggplot(varying_d, aes(x=d, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_with_d.pdf"),
+ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_d.pdf"),
        height = 3.0, width = 4.0)
 ggplot(varying_n, aes(x=n, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_with_N.pdf"),
+ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_N.pdf"),
        height = 3.0, width = 4.0)
 ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_models.pdf"),
+ggsave(paste0(flder_out, generation, "/summaries/accuracy_models.pdf"),
        height = 3.0, width = 6.0)
 ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = FPR, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
-# ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/accuracy_models.pdf"),
+# ggsave(paste0(flder_out, generation, "/summaries/accuracy_models.pdf"),
 #        height = 3.5, width = 8)
 ## add fraction of correct classification, which are values I should have for all combinations
+
+ggplot(varying_n, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N.pdf"),
+       height = 3.0, width = 4.0)
+
 
 ggplot(varying_n_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=n))+
   geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
@@ -259,7 +338,6 @@ ggplot(varying_betashape[varying_betashape$beta_gamma_shape == 0,],
 
 
 ##-----------------------------------------------------------------##
-## WHY IS THE FPR EXACTLY THE SAME IN EVERY N FOR THE DIAG MODELS??
 ggplot(varying_n[grepl('diag', varying_n$model),],
        aes(y=FPR, x=n, col=model))+geom_point()+geom_line()
 
@@ -301,7 +379,7 @@ joint_df$fullRE_M.beta_true
 #   theme_bw()+theme(legend.position = "bottom")
 #   # scale_colour_viridis_d(option = "plasma")
 #   # scale_colour_manual(values = c("red","#2e8b57", "red", "#2e8b57")) #"#2e8b57"))
-# ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/M_betaslopes_confint.pdf"),
+# ggsave(paste0(flder_out, generation, "/summaries/M_betaslopes_confint.pdf"),
 #        height = 14, width = 8)
 
 # ggplot(joint_df,
@@ -312,7 +390,7 @@ joint_df$fullRE_M.beta_true
 #                 position=position_dodge(.9))+
 #   facet_wrap(.~interaction(DM.idx, DfullRE_M.beta_gamma_shape, DM.DA_bool), scales='free_x', nrow=length(unique(joint_df$DfullRE_M.beta_gamma_shape)))+
 #   theme_bw()+theme(legend.position = "bottom")
-# ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/DM_betaslopes_confint.pdf"),
+# ggsave(paste0(flder_out, generation, "/summaries/DM_betaslopes_confint.pdf"),
        # height = 14, width = 8)
 
 all(joint_df$fullRE_M.DA_bool == joint_df$DM.DA_bool)
@@ -360,7 +438,7 @@ ggplot(droplevels(joint_df_grouping_by_n), aes(x=sensitivity_DM, y=1-specificity
 ggplot(droplevels(joint_df_grouping_by_n), aes(x=fullRE_M.n, y=sensitivity_DM,
                                                group=fullRE_M.beta_gamma_shape))+
   geom_point()+geom_line()+facet_wrap(.~fullRE_M.beta_gamma_shape)
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/fullRE_M.beta_gamma_shape_sensitivity.pdf"))
+ggsave(paste0(flder_out, generation, "/summaries/fullRE_M.beta_gamma_shape_sensitivity.pdf"))
 
 head(melt(joint_df_grouping_by_n, id.vars = c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "M_type", "fullRE_M.DA_bool", "sensitivity_M", "specificity_DM")))
 plot(joint_df_grouping_by_n$sensitivity_M, 1-joint_df_grouping_by_n$specificity_M)
@@ -405,14 +483,14 @@ ggplot(joint_df, aes(x=fullRE_M.d, y=as.numeric(fullRE_M.converged), group=inter
   geom_jitter(height = 0.1, alpha=0.2, col='#07367d')+geom_violin()+facet_wrap(.~fullRE_M.n)+
   theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
   ggtitle('Success in convergence of Multinomial runs')
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/M_d_n_convergence.pdf"))
+ggsave(paste0(flder_out, generation, "/summaries/M_d_n_convergence.pdf"))
 
 ggplot(joint_df, aes(x=fullRE_DMSL.d, y=as.numeric(fullRE_DMSL.converged),
                      group=interaction(fullRE_DMSL.n, fullRE_DMSL.d)))+
   geom_jitter(height = 0.1, alpha=0.2, col='#07367d')+geom_violin()+facet_wrap(.~fullRE_DMSL.n)+
   theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
   ggtitle('Success in convergence of Dirichlet-Multinomial runs')
-ggsave(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/DM_d_n_convergence.pdf"))
+ggsave(paste0(flder_out, generation, "/summaries/DM_d_n_convergence.pdf"))
 
 ggplot(joint_df, aes(x=M.d, y=as.numeric(M.converged), group=interaction(M.n, M.d), col=fullRE_M.beta_gamma_shape))+
   geom_jitter(height = 0.1, alpha=0.8)+geom_violin()+facet_wrap(.~M.n)+
@@ -449,7 +527,7 @@ joint_df_grouping_convergence_2_d = joint_df[sapply(unique(joint_df$fullRE_DMSL.
   mutate(convergence_M=sum(fullRE_M.converged)/(sum(fullRE_M.converged)+sum(!fullRE_M.converged)),
          convergence_DM=sum(fullRE_DMSL.converged)/length(fullRE_DMSL.converged))
 
-pdf(paste0("../../../../results/results_TMB/simulated_datasets/mixed_effects_models/", generation, "/summaries/M_DM_convergence.pdf"))
+pdf(paste0(flder_out, generation, "/summaries/M_DM_convergence.pdf"))
 grid.arrange(ggplot(joint_df_grouping_convergence, aes(x=fullRE_M.d, y=convergence_M, col=fullRE_M.n, group=fullRE_M.n))+geom_line()+geom_point()+ggtitle('Convergence Multinomial'),
 ggplot(joint_df_grouping_convergence, aes(x=fullRE_M.d, y=convergence_DM, col=fullRE_M.n, group=fullRE_M.n))+geom_line()+geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
 dev.off()
@@ -466,4 +544,24 @@ grid.arrange(ggplot(joint_df_grouping_convergence_2_d, aes(x=fullRE_M.beta_gamma
                geom_point()+ggtitle('Convergence Multinomial'),
              ggplot(joint_df_grouping_convergence_2_d, aes(x=fullRE_M.beta_gamma_shape, y=convergence_DM, col=M.d,  group=interaction(M.d)))+geom_line()+
                geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
+
+
+##power
+
+ggplot(varying_n_betashape %>% dplyr::select(Power, model, n, beta_gamma_shape),
+       aes(x=beta_gamma_shape+0.001, col=n, y=Power, group=n))+
+  geom_line()+geom_point()+facet_wrap(.~model)+
+  theme_bw()+scale_x_continuous(trans = "log10")
+
+ggplot(varying_n_betashape %>% dplyr::select(Power, model, n, beta_gamma_shape),
+       aes(x=beta_gamma_shape+0.001, col=model, y=Power, group=model))+
+  geom_line()+geom_point()+facet_wrap(.~n, nrow=1)+
+  theme_bw()+scale_x_continuous(trans = "log10")+theme(legend.position = "bottom")+
+  scale_color_jcolors(palette = "pal8")
+ggsave(paste0(flder_out, generation, "/summaries/power_facet.pdf"), width = 6.5, height = 3)
+
+
+ggplot(varying_n, aes(x=Sensitivity, y=1-Specificity, group=model, col=model))+geom_step()+theme_bw()
+
+plot(varying_n$Sensitivity, varying_n$Specificity)
 
