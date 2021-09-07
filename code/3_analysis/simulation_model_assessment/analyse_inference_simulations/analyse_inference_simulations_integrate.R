@@ -1,3 +1,6 @@
+## To get results we need both the datasets files and the inference results
+
+
 rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 source("../../../2_inference_TMB/helper_TMB.R")
@@ -22,8 +25,8 @@ generation = "GenerationInoRE"
 generation = "generationFnorm"
 generation = "GenerationJnorm3"
 generation = "GenerationJnorm2"
-generation = "GenerationJnorm"
 generation = "GenerationCnorm"
+generation = "GenerationJnorm"
 
 manual = F
 if(manual){
@@ -103,14 +106,20 @@ do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMS
 }), nrow=1))
 dev.off()
 
-pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison.pdf"))
-do.call('grid.arrange', list(ggplot(joint_df, aes(x=fullRE_M.beta_true, fullRE_M.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1),
-                  ggplot(joint_df, aes(x=fullRE_DMSL.beta_true, fullRE_DMSL.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1)))
+pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison.pdf"), height = 3)
+do.call('grid.arrange', list(ggplot(joint_df, aes(x=fullRE_M.beta_true, y=fullRE_M.beta_est, col=fullRE_M.d))+geom_point()+
+                               geom_abline(intercept = 0, slope = 1)+theme_bw()+theme(legend.position = "bottom"),
+                  ggplot(joint_df, aes(x=fullRE_DMSL.beta_true, y=fullRE_DMSL.beta_est, col=fullRE_M.d))+geom_point()+
+                    geom_abline(intercept = 0, slope = 1)+theme_bw()+theme(legend.position = "bottom"), ncol=2))
 dev.off()
 
-pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison_only_common.pdf"))
-do.call('grid.arrange', list(ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) & !is.na(joint_df$fullRE_DMSL.beta_est),], aes(x=fullRE_M.beta_true, fullRE_M.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1),
-                             ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) & !is.na(joint_df$fullRE_DMSL.beta_est),], aes(x=fullRE_DMSL.beta_true, fullRE_DMSL.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1)))
+pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison_only_common.pdf"), height = 3)
+do.call('grid.arrange', list(ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) & !is.na(joint_df$fullRE_DMSL.beta_est),],
+                                    aes(x=fullRE_M.beta_true, fullRE_M.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1)+
+                               theme_bw()+theme(legend.position = "bottom"),
+                             ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) & !is.na(joint_df$fullRE_DMSL.beta_est),],
+                                    aes(x=fullRE_DMSL.beta_true, fullRE_DMSL.beta_est))+geom_point()+geom_abline(intercept = 0, slope = 1)+
+                               theme_bw()+theme(legend.position = "bottom"), ncol=2))
 dev.off()
 
 datasets_files = list.files("../../../../data/assessing_models_simulation/datasets/", full.names = TRUE)
@@ -127,9 +136,13 @@ DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
 
 runs_ttest_irl = lapply(datasets_files, function(i)  try(wrapper_run_ttest_ilr(i)))
+hist(as.numeric(runs_ttest_irl), breaks=30); table(sapply(runs_ttest_irl, typeof))
 runs_ttest_props = lapply(datasets_files, function(i)  try(wrapper_run_ttest_props(i)))
+hist(as.numeric(runs_ttest_props), breaks=30); table(sapply(runs_ttest_props, typeof))
+table(sapply(runs_ttest_irl, typeof), sapply(runs_ttest_props, typeof))
 pvals_runs_HMP = lapply(datasets_files, function(i)  try(wrapper_run_HMP_Xdc.sevsample(i)))
 pvals_runs_HMP2 = lapply(datasets_files, function(i)  try(wrapper_run_HMP_Xmcupo.sevsample(i)))
+table(sapply(pvals_runs_HMP, typeof), sapply(pvals_runs_HMP2, typeof))
 pvals_ttest_ilr = as.numeric(unlist(runs_ttest_irl))
 pvals_ttest_ilr_adj = pvals_ttest_ilr
 # pvals_perturbation_adj1 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
@@ -564,4 +577,30 @@ ggsave(paste0(flder_out, generation, "/summaries/power_facet.pdf"), width = 6.5,
 ggplot(varying_n, aes(x=Sensitivity, y=1-Specificity, group=model, col=model))+geom_step()+theme_bw()
 
 plot(varying_n$Sensitivity, varying_n$Specificity)
+
+
+## comparison of ilr and test of  propportions when removcing the first column
+small_num <- 0.0001
+ggplot(pvals_data_frame, aes(x=ttest_props+small_num,
+                             y=ttest_ilr_adj+small_num))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")+
+  scale_y_continuous(trans = "log2")+
+  geom_vline(xintercept = (0.05+small_num), lty='dashed', col='blue')+
+  geom_hline(yintercept = (0.05+small_num), lty='dashed', col='blue')
+
+runs_ttest_props
+
+
+## looking at results that have been created using the same set of parameters
+
+### NOTE! because this is slightly confusing
+## these are not datasets: the 01 indicates the first beta of dataset 0!
+rownames(runs_fullREM0)[grep("_dataset04", rownames(runs_fullREM0))]
+rownames(datasets_files)[grep("_dataset04", rownames(datasets_files))]
+
+## we don't have any replicates at the moment
+rownames(runs_fullREM0)[grep("_dataset1", rownames(runs_fullREM0))] ## no runs with dataset #2
+
+
+runs_diagREDM0[grep("multiple_GenerationJnorm_50_100_80_7_0.6_NA_NA_NA_dataset", rownames(runs_diagREDM0)),]
+
 

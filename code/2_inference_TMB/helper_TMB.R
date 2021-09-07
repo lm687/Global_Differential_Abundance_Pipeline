@@ -1307,7 +1307,8 @@ plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
   }
 }
 
-plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T, line_zero=T){
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
+                       line_zero=T, add_confint=F){
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1330,6 +1331,9 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       if(remove_SBS){
         names_cats <- gsub("SBS", "", names_cats) 
       }
+      if(length(unique(.summary_betas$LogR)) != length(names_cats)){
+        stop('Number of beta slope/intercept pairs should be the same as the length of the name of the categories')
+      }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
     }
     plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
@@ -1343,6 +1347,13 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     
     if(theme_bw){
       plt <- plt + theme_bw()
+    }
+    
+    if(add_confint){
+      confints <- cbind(.summary_betas, confint=t(give_confidence_interval(.summary_betas[,'Estimate'], .summary_betas[,'Std. Error'])))
+      plt <- plt+
+        geom_errorbar(data = confints, aes(ymin=confint.1, ymax=confint.2), width=.1 ,col='blue', alpha=0.6)
+
     }
     
     if(rotate_axis){
