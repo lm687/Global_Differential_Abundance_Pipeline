@@ -71,6 +71,7 @@ dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
 source("../2_inference_TMB/helper_TMB.R")
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
 source("../1_create_ROO/roo_functions.R")
+source("../3_analysis/helper/pcawg.colour.palette.R")
 
 ## additional libraries
 # library(tikzDevice) ## for computer modern font
@@ -5610,13 +5611,20 @@ for(i in names(roo_obj2)){
 
 
 ```{r, cor_pvals_samples}
+pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", all_pvals$ct),
+                                      scheme = "tumour.subtype")
+
+names(pcawg_palette) <- all_pvals$ct
+
 ggplot(data.frame(num_samples=num_samples[match(all_pvals$ct, names(num_samples))],
                   pvalue=all_pvals$pvalue,
-                  ct=all_pvals$ct), aes(x=num_samples, y=pvalue, label=ct))+
+                  ct=all_pvals$ct), aes(x=num_samples, y=pvalue, label=ct, col=ct, group=1))+
   geom_point()+scale_y_continuous(trans = "log2")+
   geom_smooth(method = lm)+theme_bw()+
   geom_label_repel()+geom_hline(yintercept = log2(0.05), lty='dashed')+
-  labs(x='Number of samples', y = 'p-value (log2')
+  labs(x='Number of samples', y = 'p-value (log2')+
+  scale_color_manual(values = pcawg_palette)+
+  guides(col=FALSE)
 
 ```
 
@@ -6156,6 +6164,19 @@ ggplot(comparison_betas_models_rbind_stats_per_ct, aes(x=rmse_fullDMSL_fullM,
   geom_point()+geom_label_repel()+theme_bw()+labs(x='RMSE of betas between\nfullRE DMSL and fullRE M',
                                                   y = 'Slope of linear model of betas\n(fullRE DMSL ~ fullRE M)')+guides(col=F)+
   facet_wrap(.~beta_type)+theme(strip.text.x = element_text(size = 10))
+
+head(comparison_betas_models_rbind_stats_per_ct)
+pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", comparison_betas_models_rbind_stats_per_ct$ct),
+                                      scheme = "tumour.subtype")
+
+names(pcawg_palette) <- comparison_betas_models_rbind_stats_per_ct$ct
+
+ggplot(comparison_betas_models_rbind_stats_per_ct, aes(x=rmse_fullDMSL_fullM,
+                                                       y=slope_fullDMSL_fullM, col=ct, label=ct2))+
+  geom_point()+geom_label_repel()+theme_bw()+labs(x='RMSE of betas between\nfullRE DMSL and fullRE M',
+                                                  y = 'Slope of linear model of betas\n(fullRE DMSL ~ fullRE M)')+guides(col=F)+
+  facet_wrap(.~beta_type)+theme(strip.text.x = element_text(size = 10))+
+  scale_color_manual(values = pcawg_palette)
 ```
 
 Compare the random effects intercepts. We cannot compare across cancer types because the number of observation is different. For each cancer type, compare the intercept fullRE DMSL of each patient to the intercept of fullRE M and diagRE DMSL. I.e. for each cancer type we have a boxplot. 
@@ -6550,7 +6571,9 @@ ggplot(ovrdisp, aes(x=ct,  y=`Estimate`, group=name, col=name))+
   theme_bw()+
   theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
   labs(x='', y='Log lambda', col='Group')+theme(legend.position = "bottom")+
-    theme(plot.margin=unit(c(1,1,1.5,1.2),"cm"))
+    theme(        legend.margin=margin(0,0,0,0),
+                  legend.box.margin=margin(-10,-10,-10,-10),
+                  plot.margin = unit(c(1,1,1,1), "cm"))
 ```
 
 \section{Minimal perturbation}
@@ -6759,10 +6782,10 @@ ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3_SP),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
   theme_bw()+
-  geom_point(aes(col=num_sigs))+geom_label_repel(alpha=0.4)+
+  geom_point(aes(col=num_sigs))+geom_label_repel(alpha=0.4, size=3)+
   theme(legend.position = "bottom")+#ggtitle('Total perturbation\nnon-exogenous signatures')+
   jcolors::scale_color_jcolors_contin("pal3", reverse = TRUE)+
-    labs(x='Effect size', y='Negative log p-value', col='Number of signatures')+
+    labs(x='Effect size', y='Negative log p-value (all signatures)', col='Number of signatures')+
   guides(shape=F)
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3nonexo_SP),
@@ -6773,10 +6796,10 @@ ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3nonexo_SP),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
   theme_bw()+
-  geom_point(aes(col=num_sigs))+geom_label_repel(alpha=0.4)+
+  geom_point(aes(col=num_sigs))+geom_label_repel(alpha=0.4, size=3)+
   theme(legend.position = "bottom")+#ggtitle('Total perturbation\nnon-exogenous signatures')+
   jcolors::scale_color_jcolors_contin("pal3", reverse = TRUE)+
-    labs(x='Effect size', y='Negative log p-value', col='Number of signatures')+
+    labs(x='Effect size', y='Negative log p-value (non-exogenous signatures)', col='Number of signatures')+
   guides(shape=F)
 ```
 
@@ -6800,3 +6823,30 @@ pvals_diagRE_DM
 ```
 
 See script `PCAWG_HMP_and_alternative_methods.R` for the analyses of PCAWG data using alternative models.
+
+\section{Tracksig}
+
+```{r, tracksig_comparison, fig.height=6, fig.width=6, dev='tikz'}
+
+tracksig = read.csv("../../data/restricted/tracksig/changepoints_stats_tracksig.csv", stringsAsFactors = FALSE)
+tracksig = tracksig %>% group_by(type) %>% dplyr::summarize(count = n(), bool_changepoints=sum(n_changepoints > 0))%>%
+  mutate(tracksig_frac= bool_changepoints/count  )
+tracksig = cbind.data.frame(pvals_diagRE_DM,
+                 tracksig[match(names(pvals_diagRE_DM), tracksig$type),],
+                 effect_size3_SP=effect_size3_SP[match(names(pvals_diagRE_DM), names(effect_size3_SP))])
+tracksig$ct = rownames(tracksig)
+tracksig$minpvals = -log2(tracksig$pvals_diagRE_DM)
+
+ggplot(tracksig, aes(x=pvals_diagRE_DM, y=tracksig_frac, label=ct))+geom_point()+geom_label_repel()+
+  labs(x='P-value of diagRE DMDL', y='Fraction of TrackSig samples with some changepoint')+scale_x_continuous(trans = "log2")+theme_bw()
+
+pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", tracksig$ct), scheme = "tumour.subtype")
+names(pcawg_palette) <- tracksig$ct
+
+ggplot(tracksig, aes(x=effect_size3_SP, y=tracksig_frac, label=ct, col=ct))+
+  geom_point(aes(size=minpvals))+geom_label_repel(max.overlaps = 5)+
+  labs(x='Effect size', y='Fraction of TrackSig samples with some changepoint', col="")+theme_bw()+
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=4), size=FALSE)
+
+```
