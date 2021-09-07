@@ -29,8 +29,9 @@ rule all:
 ## [Inference] Running stan code on PCAWG
       # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
       ## [Inference] Running TMB on PCAWG
-      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=cancer_types, model=['fullREM', 'fullREDMsinglelambda'])
-      expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagREDM'])
+      expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG",
+        cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'diagREDM'])
+      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagREDM'])
 ## [Benchmarking] Creating synthetic datasets
       # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{d}_{beta_intensity}_dataset.RDS", datasetgeneration="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
 ## [Benchmarking] Performing inference on the simulated datasets
@@ -61,35 +62,25 @@ rule all:
       #  datasetgeneration="GenerationCnorm",  n=config["simulation_n_generationC"], nlambda=config["simulation_nlambda_generationC"],
       #  lmbda=config["simulation_lambda_generationC"], d=config["simulation_d_generationC"],\
        # beta_intensity = config["beta_gamma_shape_generationC"], nits=num_iterations, model=['diagREDMsinglelambda'])
-<<<<<<< HEAD
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       ## now use the multiple function instead, so we can have multiple runs from the same set of parameteres
-      expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-<<<<<<< HEAD
-        datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
-=======
-        datasetgeneration=['GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
->>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      #   datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      #   datasetgeneration=['GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationInoRE', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
        # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
        #  datasetgeneration='GenerationInoREscaledbeta', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
-<<<<<<< HEAD
-      #expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-      #  datasetgeneration='generationFnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
-=======
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='generationFnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       #expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #  datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
->>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationHnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-=======
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationCnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
@@ -108,7 +99,6 @@ rule all:
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       #   datasetgeneration='GenerationHnorm', model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
->>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
       #   datasetgeneration='GenerationCnorm', model='fullREM')
         # expand("../results/results_TMB/simulated_datasets/mixed_effects_models/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
         # datasetgeneration='GenerationCnormsimpler', model='fullREM')
