@@ -675,15 +675,20 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-    if(length(idx_beta) == 1){
-      if(is.na(idx_beta)){
-        NA
-      }else{
-        if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
-        NA
-      }
+    if(!i$pdHess){
+      ## didn't converge
+      NA
     }else{
-      wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+      if(length(idx_beta) == 1){
+        if(is.na(idx_beta)){
+          NA
+        }else{
+          if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
+          wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+        }
+      }else{
+        wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+      }
     }
   }
 }

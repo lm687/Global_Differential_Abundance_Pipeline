@@ -1,6 +1,5 @@
 ## To get results we need both the datasets files and the inference results
 
-
 rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 source("../../../2_inference_TMB/helper_TMB.R")
@@ -14,35 +13,46 @@ library(jcolors)
 multiple_runs = T
 if(multiple_runs){
   flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/"
+  flder_in <- "../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/"
 }else{
   flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models/"
+  flder_in <- "../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/"
 }
 
-generation = "generationGnorm"
-generation = "generationMGnorm"
-generation = "GenerationCnorm"
-generation = "GenerationInoRE"
-generation = "generationFnorm"
-generation = "GenerationJnorm3"
-generation = "GenerationJnorm2"
-generation = "GenerationCnorm"
+## multiple runs
 generation = "GenerationJnorm"
+generation = "GenerationK"
+generation = "GenerationK2"
+generation = "GenerationJnormTwoLambdas"
+generation = "generationFnorm"
+generation = "GenerationCnorm"
+generation = "GenerationJnorm2"
+generation = "GenerationJnorm3"
+generation = "GenerationInoREtwolambdas"
+generation = "generationHnormtwolambdas"
+##########################################
+## single replicate
+# generation = "generationGnorm"
+# generation = "generationMGnorm"
+# generation = "GenerationInoRE"
+# generation = "GenerationCnorm"
+
 
 manual = F
 if(manual){
-  names1 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREM_manual.RDS")
-  names2 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREDMsinglelambda_manual.RDS")
-  names3 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDMsinglelambda_manual.RDS")
-  names4 <- paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDM_manual.RDS")
+  names1 <- paste0(flder_in, generation, "_fullREM_manual.RDS")
+  names2 <- paste0(flder_in, generation, "_fullREDMsinglelambda_manual.RDS")
+  names3 <- paste0(flder_in, generation, "_diagREDMsinglelambda_manual.RDS")
+  names4 <- paste0(flder_in, generation, "_diagREDM_manual.RDS")
   runs_fullREM0 = readRDS(names1)
   runs_fullREDMSL0 = readRDS(names2)
   runs_diagREDMSL0 = readRDS(names3)
   runs_diagREDM0 = readRDS(names3)
 }else{
-  runs_fullREM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREM.RDS"))
-  runs_fullREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_fullREDMsinglelambda.RDS"))
-  runs_diagREDMSL0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDMsinglelambda.RDS"))
-  runs_diagREDM0 = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/", generation, "_diagREDM.RDS"))
+  runs_fullREM0 = readRDS(paste0(flder_in, generation, "_fullREM.RDS"))
+  runs_fullREDMSL0 = readRDS(paste0(flder_in, generation, "_fullREDMsinglelambda.RDS"))
+  runs_diagREDMSL0 = readRDS(paste0(flder_in, generation, "_diagREDMsinglelambda.RDS"))
+  runs_diagREDM0 = readRDS(paste0(flder_in, generation, "_diagREDM.RDS"))
 }
 
 ## match them all (wrt fullREM)
@@ -177,9 +187,29 @@ if(multiple_runs){
     assign(paste0('names(pvals_', gsub('0', '', str_models), ')'),
            gsub("_dataset.*", "", rownames(get(paste0('runs_', str_models)))[unique(get(paste0('runs_', str_models))$idx)]))
     
+    get(paste0('pvals_', gsub('0', '', str_models)))
+    
     ## remove p-vals of runs that didn't converge
-    assign(paste0('pvals_', gsub('0', '', str_models))[!sapply(unique(get(paste0('runs_', str_models))$idx),
-                                                               function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])], NA)
+    if(sum(!sapply(unique(get(paste0('runs_', str_models))$idx),
+                   function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])) > 0){
+      # if there is any non-converged run
+      cat('\nRemoving p-values of runs that did not converge in ', str_models, '\n')
+      # get(paste0('pvals_', gsub('0', '', str_models))[!sapply(unique(get(paste0('runs_', str_models))$idx),
+      #                                                           function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])])
+      print(typeof(get(paste0('pvals_', gsub('0', '', str_models)))))
+      print(length(sapply(unique(get(paste0('runs_', str_models))$idx),
+                          function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])))
+      print(table(sapply(unique(get(paste0('runs_', str_models))$idx),
+                          function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])))
+      print(length(get(paste0('pvals_', gsub('0', '', str_models)))))
+      ## this below gave problems in only diagDM in GenerationK2, and I don't know why. I am now using the alternative that follows it
+      # assign(paste0('pvals_', gsub('0', '', str_models))[!sapply(unique(get(paste0('runs_', str_models))$idx),
+      #                                                            function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])], NA)
+      assign(paste0('get(pvals_', gsub('0', '', str_models), ')')[!sapply(unique(get(paste0('runs_', str_models))$idx),
+                                                                          function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])], NA)
+      
+    }
+    get(paste0('pvals_', gsub('0', '', str_models)))
     get(paste0('pvals_', gsub('0', '', (str_models))))[!sapply(unique(get(paste0('runs_', str_models))$idx),
                                                                function(i) get(paste0('runs_', str_models))[(get(paste0('runs_', str_models))$idx == i),'converged'][1])]
   }
@@ -228,25 +258,51 @@ pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   true=DA_bool)
 head(pvals_data_frame)
 
-res_all = rbind(fullREM=summarise_DA_detection(true = DA_bool, predicted = pvals_fullREDMSL < 0.05),
-                fullREDMSL=summarise_DA_detection(true = DA_bool, predicted = pvals_fullREM <= 0.05),
-                diagREDMSL=summarise_DA_detection(true = DA_bool, predicted = pvals_diagREDMSL <= 0.05),
-                diagREDM=summarise_DA_detection(true = DA_bool, predicted = pvals_diagREDM <= 0.05),
-                pvals_chi_Harris=summarise_DA_detection(true = DA_bool, predicted = pvals_chi_Harris <= 0.05),
-                ttest=summarise_DA_detection(true = DA_bool, predicted = runs_ttest_props <= 0.05),
-                ILR=summarise_DA_detection(true = DA_bool, predicted = pvals_ttest_ilr_adj <= 0.05),
-                HMP=summarise_DA_detection(true = DA_bool, predicted = pvals_runs_HMP <= 0.05),
-                HMP2=summarise_DA_detection(true = DA_bool, predicted = pvals_runs_HMP2 <= 0.05),
-                perturbation=summarise_DA_detection(true = DA_bool, predicted = pvals_perturbation_adj <= 0.05),
-                permutation=summarise_DA_detection(true = DA_bool, predicted = pvals_permutation_adj <= 0.05))
-# rownames(res_all) = c('Multinomial', 'Dirichlet-Multinomial', 'ILR')
-res_all
+## select only runs that have converged for all models
+DA_bool_all_converged <- DA_bool
+DA_bool_all_converged[!(!is.na(pvals_fullREDMSL) & !is.na(pvals_fullREM) & !is.na(pvals_diagREDMSL) &
+                          !is.na(pvals_diagREDM) & !is.na(pvals_chi_Harris) & !is.na(runs_ttest_props) &
+                          !is.na(pvals_ttest_ilr_adj) & !is.na(pvals_runs_HMP) & !is.na(pvals_runs_HMP2) &
+                          !is.na(pvals_perturbation_adj) & !is.na(pvals_permutation_adj))] <- NA
+table(is.na(DA_bool_all_converged))
+pvals_data_frame_all_converged = cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL[!is.na(DA_bool_all_converged)],
+                                                  pvals_fullREM=pvals_fullREM[!is.na(DA_bool_all_converged)],
+                                                  pvals_diagREDMSL=pvals_diagREDMSL[!is.na(DA_bool_all_converged)],
+                                                  pvals_diagREDM=pvals_diagREDM[!is.na(DA_bool_all_converged)],
+                                                  ttest_props=unlist(runs_ttest_props)[!is.na(DA_bool_all_converged)],
+                                                  pvals_chi_Harris=pvals_chi_Harris[!is.na(DA_bool_all_converged)],
+                                                  ttest_ilr_adj=pvals_ttest_ilr_adj[!is.na(DA_bool_all_converged)],
+                                                  HMP=unlist(pvals_runs_HMP)[!is.na(DA_bool_all_converged)],
+                                                  HMP2=unlist(pvals_runs_HMP2)[!is.na(DA_bool_all_converged)],
+                                                  perturbation_adj=pvals_perturbation_adj[!is.na(DA_bool_all_converged)],
+                                                  permutation_adj=pvals_permutation_adj[!is.na(DA_bool_all_converged)],
+                                                  true=DA_bool_all_converged[!is.na(DA_bool_all_converged)])
+
+give_res_all <- function(pvals_df){
+  rbind(fullREM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREDMSL < 0.05),
+      fullREDMSL=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREM <= 0.05),
+      diagREDMSL=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_diagREDMSL <= 0.05),
+      diagREDM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_diagREDM <= 0.05),
+      pvals_chi_Harris=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_chi_Harris <= 0.05),
+      ttest=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_props <= 0.05),
+      ILR=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_ilr_adj <= 0.05),
+      HMP=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP <= 0.05),
+      HMP2=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP2 <= 0.05),
+      perturbation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$perturbation_adj <= 0.05),
+      permutation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$permutation_adj <= 0.05))
+}
+
+res_all = give_res_all(pvals_data_frame)
 xtable::xtable(res_all)
 # xtable::xtable(res_all[,-ncol(res_all)])
 
 res_all <- data.frame(res_all)
 res_all$model = rownames(res_all)
 res_all
+
+## only results when we haev results for all the models
+res_all_common_all_converged <-  give_res_all(pvals_data_frame_all_converged)
+res_all_common_all_converged
 
 ggplot(res_all, aes(x=1, y = FPR, col=model))+geom_point()
 
@@ -269,10 +325,10 @@ put_vals_in_table <- function(.pvals){
       permutation=summarise_DA_detection(true = .pvals$true, predicted = .pvals$permutation <= 0.05))
 }
   
-give_accuracies_with_varying_var <- function(var, two_var=F){
+give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datasets, pvals_data_frame_arg=pvals_data_frame){
   if(two_var){
-    do.call('rbind', apply(expand.grid(sapply(var, function(i) unique(unlist(sapply(datasets, `[`, i))))), 1, function(vars_it){
-      .pvals <- pvals_data_frame[which(sapply(datasets, '[', var[1]) == vars_it[[1]] & sapply(datasets, '[', var[2]) == vars_it[[2]]),]
+    do.call('rbind', apply(expand.grid(sapply(var, function(i) unique(unlist(sapply(datasets_arg, `[`, i))))), 1, function(vars_it){
+      .pvals <- pvals_data_frame_arg[which(sapply(datasets_arg, '[', var[1]) == vars_it[[1]] & sapply(datasets_arg, '[', var[2]) == vars_it[[2]]),]
       .res_all_subset = put_vals_in_table(.pvals)
       .return <- cbind.data.frame(.res_all_subset, VAR1=vars_it[1], VAR2=vars_it[2], model=rownames(.res_all_subset))
       colnames(.return)[(ncol(.return)-2)] <- var[1]
@@ -280,8 +336,8 @@ give_accuracies_with_varying_var <- function(var, two_var=F){
       return(.return)
     }))    
   }else{
-    do.call('rbind', lapply(unique(unlist(sapply(datasets, `[`, var))), function(vars_it){
-    .pvals <- pvals_data_frame[which(sapply(datasets, '[', var) == vars_it),]
+    do.call('rbind', lapply(unique(unlist(sapply(datasets_arg, `[`, var))), function(vars_it){
+    .pvals <- pvals_data_frame_arg[which(sapply(datasets_arg, '[', var) == vars_it),]
     .res_all_subset = put_vals_in_table(.pvals)
     .return <- cbind.data.frame(.res_all_subset, d=vars_it, model=rownames(.res_all_subset))
     colnames(.return)[(ncol(.return)-1)] <- var
@@ -292,8 +348,14 @@ give_accuracies_with_varying_var <- function(var, two_var=F){
 
 
 varying_d <-give_accuracies_with_varying_var('d')
+varying_d_all_converged <-give_accuracies_with_varying_var('d', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
+                                                           pvals_data_frame_arg = pvals_data_frame_all_converged)
 varying_n <-give_accuracies_with_varying_var('n')
+varying_n_all_converged <-give_accuracies_with_varying_var('n', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
+                                             pvals_data_frame_arg = pvals_data_frame_all_converged)
 varying_betashape <-give_accuracies_with_varying_var('beta_gamma_shape')
+varying_betashape_all_converged <-give_accuracies_with_varying_var('beta_gamma_shape', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
+                                                                   pvals_data_frame_arg = pvals_data_frame_all_converged)
 varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)
 varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)
 varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)
@@ -303,25 +365,52 @@ ggplot(varying_n, aes(x=n, y = FPR, col=model, group=model))+geom_point()+geom_l
 ggsave(paste0(flder_out, generation, "/summaries/FPR_with_n.pdf"),
        height = 3.0, width = 4)
 
+ggplot(varying_n_all_converged, aes(x=n, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
+  labs(col=FALSE)#+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/FPR_with_n_all_converged.pdf"),
+       height = 3.0, width = 4)
+
 ggplot(varying_betashape, aes(x=beta_gamma_shape, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
 ggplot(varying_d, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 ggsave(paste0(flder_out, generation, "/summaries/AUC_with_d.pdf"),
        height = 3.0, width = 4.5)
+ggplot(varying_d_all_converged, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/AUC_with_d_all_converged.pdf"),
+       height = 3.0, width = 4.5)
+
 ggplot(varying_n, aes(x=n, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 ggsave(paste0(flder_out, generation, "/summaries/AUC_with_n.pdf"),
        height = 3.0, width = 4.5)
+ggplot(varying_n_all_converged, aes(x=n, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/AUC_with_n_all_converged.pdf"),
+       height = 3.0, width = 5.5)
+
 ggplot(varying_betashape, aes(x=beta_gamma_shape, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
 
 ggplot(varying_d, aes(x=d, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
 ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_d.pdf"),
        height = 3.0, width = 4.0)
+ggplot(varying_d_all_converged, aes(x=d, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_d_all_converged.pdf"),
+       height = 3.0, width = 4.0)
+
+
 ggplot(varying_n, aes(x=n, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
 ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_N.pdf"),
        height = 3.0, width = 4.0)
+ggplot(varying_n_all_converged, aes(x=n, y = Accuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_N_all_converged.pdf"),
+       height = 3.0, width = 4.0)
+
 ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
 ggsave(paste0(flder_out, generation, "/summaries/accuracy_models.pdf"),
        height = 3.0, width = 6.0)
+
+ggplot(varying_betashape_all_converged, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
+ggsave(paste0(flder_out, generation, "/summaries/accuracy_models_all_converged.pdf"),
+       height = 3.0, width = 6.0)
+
 ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = FPR, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
 # ggsave(paste0(flder_out, generation, "/summaries/accuracy_models.pdf"),
 #        height = 3.5, width = 8)
@@ -329,6 +418,9 @@ ggplot(varying_betashape, aes(x=beta_gamma_shape+.001, y = FPR, group=model))+ge
 
 ggplot(varying_n, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
 ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N.pdf"),
+       height = 3.0, width = 4.0)
+ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged.pdf"),
        height = 3.0, width = 4.0)
 
 
@@ -347,8 +439,25 @@ table(true=DA_bool, HMP=pvals_runs_HMP < 0.05)
 ## plot only the non-DA
 pvals_data_frame[pvals_data_frame$true == F,]
 ggplot(varying_betashape[varying_betashape$beta_gamma_shape == 0,],
-       aes(y=FPR, x=model, col=model))+geom_point()
+       aes(y=FPR, x=factor(model, levels=c("fullREM", "fullREDMSL", "diagREDMSL", "diagREDM", "HMP", "HMP2",
+                                           "pvals_chi_Harris",  "permutation", "perturbation", "ttest", "ILR"))))+
+         geom_point()+labs(x="")+
+  theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+ggsave(paste0(flder_out, generation, "/summaries/FDR_nonDA.pdf"),
+       height = 3.0, width = 4.0)
+ggplot(varying_n_betashape[varying_n_betashape$beta_gamma_shape == 0,],
+       aes(y=FPR, x=factor(model, levels=c("fullREM", "fullREDMSL", "diagREDMSL", "diagREDM", "HMP", "HMP2",
+                                           "pvals_chi_Harris",  "permutation", "perturbation", "ttest", "ILR")),
+           col=n))+geom_violin()+
+  geom_point()+labs(x="")+
+  theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+ggsave(paste0(flder_out, generation, "/summaries/FDR_nonDA_varyingn.pdf"),
+       height = 3.0, width = 4.0)
 
+##-----------------------------------------------------------------##
+
+## now only including datasets for which we have results for all models
+res_all_common_all_converged
 
 ##-----------------------------------------------------------------##
 ggplot(varying_n[grepl('diag', varying_n$model),],
@@ -381,6 +490,37 @@ head(melt(list(table(DA_bool, M_est=pvals_fullREM <= 0.05),
 
 joint_df$fullRE_M.beta_true
 
+colnames(joint_df)[grepl('onverged', colnames(joint_df))]
+joint_df_converged <- (melt(joint_df, measure.vars = c("fullRE_M.converged", "fullRE_DMSL.converged",
+                                     "diagRE_DMSL.converged", "diagRE_DM.converged")))
+ggplot(joint_df_converged, aes(x=diagRE_DM.d, fill=value))+geom_bar()+facet_wrap(.~gsub(".converged", "", variable), nrow=1)+theme_bw()+
+  theme(legend.position = "bottom")+labs(x="d")
+ggsave(paste0(flder_out, generation, "/summaries/convergence-varying_d.pdf"),
+       height = 3.0, width = 6.0)
+
+ggplot(joint_df_converged, aes(x=diagRE_DM.n, fill=value))+geom_bar()+facet_wrap(.~gsub(".converged", "", variable), nrow=1)+theme_bw()+
+  theme(legend.position = "bottom")+labs(x="n")
+ggsave(paste0(flder_out, generation, "/summaries/convergence-varying_n.pdf"),
+       height = 3.0, width = 6.0)
+
+joint_df_converged$value2 <- joint_df_converged$value
+joint_df_converged$value2[is.na(joint_df_converged$value2 )] <- FALSE
+
+joint_df_converged$n = apply(joint_df_converged[,c('diagRE_DM.n', 'diagRE_DMSL.n', 'fullRE_DMSL.n', 'fullRE_M.n')],
+                             1, function(i){.x <- unique(i); .x[!is.na(.x)]})
+joint_df_converged$d = apply(joint_df_converged[,c('diagRE_DM.d', 'diagRE_DMSL.d', 'fullRE_DMSL.d', 'fullRE_M.d')],
+                             1, function(i){.x <- unique(i); .x[!is.na(.x)]})
+
+ggplot(joint_df_converged %>% group_by(joint_df_converged$d,
+                                       joint_df_converged$n, variable) %>%
+         dplyr::summarise(mean=mean(value2)), aes(x=factor(`joint_df_converged$n`), y=`joint_df_converged$d`, fill=mean))+
+  geom_tile()+
+  facet_wrap(.~gsub(".converged", "", variable), nrow=1)+
+  theme_bw()+
+  theme(legend.position = "bottom")+labs(x="n")+
+  jcolors::scale_fill_jcolors_contin("pal3", reverse = FALSE)+labs(y='d', fill='Fraction of converged runs')
+ggsave(paste0(flder_out, generation, "/summaries/convergence-varying_n_d.pdf"),
+       height = 2.5, width = 7.0)
 
 # ggplot(joint_df,
 #        aes(x=fullRE_M.idx_within_dataset, y=(fullRE_M.beta_est), col=fullRE_M.pvals_adj<0.05))+
@@ -598,9 +738,15 @@ rownames(runs_fullREM0)[grep("_dataset04", rownames(runs_fullREM0))]
 rownames(datasets_files)[grep("_dataset04", rownames(datasets_files))]
 
 ## we don't have any replicates at the moment
-rownames(runs_fullREM0)[grep("_dataset1", rownames(runs_fullREM0))] ## no runs with dataset #2
+rownames(runs_fullREM0)[grep("_dataset1", rownames(runs_fullREM0))] ## (no?) runs with dataset #2
+rownames(runs_fullREM0)[grep("_dataset2", rownames(runs_fullREM0))] ## (no?) runs with dataset #2
 
 
 runs_diagREDM0[grep("multiple_GenerationJnorm_50_100_80_7_0.6_NA_NA_NA_dataset", rownames(runs_diagREDM0)),]
 
+rownames(runs_fullREM)
+table(gsub('.{0,1}$', '', gsub("^.*\\_","", rownames(runs_fullREM))))
 
+## if there are multiple runs
+ggplot(runs_fullREM0[grepl(sub("_[^_]+$", "", rownames(runs_fullREM0)[grep("_dataset1", rownames(runs_fullREM0))][1]),
+      rownames(runs_fullREM0)),], aes(x=idx, y=beta_est))+geom_point()+facet_wrap(.~idx_within_dataset)
