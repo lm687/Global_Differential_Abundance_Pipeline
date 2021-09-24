@@ -68,6 +68,8 @@ dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
 
 ```{r,, load_functions, cache=FALSE, echo=FALSE}
 
+library(viridis)
+
 source("../2_inference_TMB/helper_TMB.R")
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
 source("../1_create_ROO/roo_functions.R")
@@ -6414,11 +6416,10 @@ pvals_diagRE_DMDL_SP
 
 ```
 
-diagRE_DMDL_SP is missing
-```{r, summary_convergence_SP, dependson=c('read_tmb_runs'), fig.height=4.2, fig.width=7, echo=FALSE, dependson=c('read_tmb_runs', 'load_runs_signaturesPCAWG')}
+```{r, summary_convergence_SP, fig.height=4.2, fig.width=7, echo=FALSE, dependson=c('read_tmb_runs', 'load_runs_signaturesPCAWG')}
 list_models_SP <- c( 'fullRE_M_SP', 'fullRE_DMSL_SP',
                   'fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP', 
-                  # 'diagRE_DMDL_SP',
+                  'diagRE_DMDL_SP',
                   'diagRE_DMDL_nonexo_SP')
 
 all_summaries_SP <- lapply(lapply(list_models_SP, get), function(i){
@@ -6518,7 +6519,6 @@ for(ct in enough_samples){
 Reminder that the clonesig signatures were a subset of WES data.
 
 ```{r, plot_betas_signaturesPCAWG, echo=F, fig.height=2, warning=FALSE, dependson=c('load_runs_signaturesPCAWG')}
-logR_notsorted_SP
 
 for(ct in enough_samples){
   grid.arrange(plot_betas(fullRE_M_SP[[ct]], only_slope=T, plot=F,
@@ -6536,11 +6536,6 @@ for(ct in enough_samples){
 
 \section{Overdispersion parameters in double-lambda DM}
 ```{r, overdispersion_params_groups, dependson=c('load_runs_signaturesPCAWG'), fig.width=8.5, fig.height=7}
-sapply(diagRE_DMDL_SP, typeof)
-sapply(diagRE_DMDL_nonexo_SP, typeof)
-python_like_select(list.files("../../data/pcawg_robjects_cache/tmb_results/nlminb/"), 'diagREDM_')
-python_like_select(list.files("../../data/pcawg_robjects_cache/tmb_results/nlminb/"), 'diagREDMnonexo')
-
 ovrdisp <- do.call('rbind.data.frame', lapply(1:length(diagRE_DMDL_nonexo_SP), try(function(idx){
   if(diagRE_DMDL_nonexo_SP[[idx]]$pdHess){
     cbind.data.frame( plot_lambdas(diagRE_DMDL_nonexo_SP[[idx]], return_df=T, plot=F), ct=names(diagRE_DMDL_nonexo_SP)[idx])
@@ -6548,7 +6543,6 @@ ovrdisp <- do.call('rbind.data.frame', lapply(1:length(diagRE_DMDL_nonexo_SP), t
     c(NA, NA)
   }
 })))
-ovrdisp
 ovrdisp[ovrdisp$name == 'Lambda 1','name'] = 'Early'
 ovrdisp[ovrdisp$name == 'Lambda 2','name'] = 'Late'
 
@@ -6622,6 +6616,21 @@ aaa + geom_hline(yintercept = median(c(.slopes_minpert, 0)), lty='dashed', col='
 
 ```
 
+
+```{r, minimalperturbation_allplots, dependson=c('load_runs_signaturesPCAWG')}
+pdf("../../results/results_TMB/pcawg/minimalperturbation_SP_all.pdf", width = 4, height = 3)
+for(ct in names(diagRE_DMDL_nonexo_SP)){
+  .betas_ct_it <- data.frame(plot_betas(TMB_obj = diagRE_DMDL_nonexo_SP[[ct]],
+                                        names_cats= logR_nonexo_notsorted_SP[[ct]],
+                             return_df=T, plot=F))
+  .slopes_minpert <- .betas_ct_it %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+  print(aaa <- plot_betas(TMB_obj = diagRE_DMDL_nonexo_SP[[ct]], names_cats= logR_nonexo_notsorted_SP[[ct]],
+                             return_df=F, plot=F, only_slope = T, line_zero=F, add_confint = T)+
+          geom_hline(yintercept = median(c(.slopes_minpert, 0)), lty='dashed', col='blue')+ggtitle(ct))
+}
+dev.off()
+```
+
 \subsection{Minimal perturbation in diagRE_DMDL_nonexo_S}
 ```{r, minimalperturbation_diagRE_DMDL_nonexo_S, dependson=c('load_runs_signaturesPCAWG')}
 
@@ -6634,19 +6643,44 @@ perturbed_betas_diagRE_DMDL_nonexo_SP <- lapply(names(diagRE_DMDL_nonexo_SP), tr
   ## check if the CI of the betas touches this median value
   .summary_betas_slope_SP <- python_like_select_rownames(summary(diagRE_DMDL_nonexo_SP[[idx_sp]]), 'beta')[c(F,T),]
   nrow(.summary_betas_slope_SP)
+  
+  minimal_change_baseline <- median(c(.slopes_minpert_SP, 0))
   # print(.summary_betas_slope_SP)
   # print(logR_nonexo_notsorted_SP[[idx_sp]])
   # print(dim(.summary_betas_slope_SP))
   if(!is.null(dim(.summary_betas_slope_SP))){
     .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[,1],
                       vec_stderr=.summary_betas_slope_SP[,2],
-                      vec_true=rep(median(c(.slopes_minpert, 0)), nrow(.summary_betas_slope_SP)))
-    names(.params_in_ci) <- sapply(logR_nonexo_notsorted_SP[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
+                      vec_true=rep(minimal_change_baseline, nrow(.summary_betas_slope_SP)))
   }else{
     .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[1],
                       vec_stderr=.summary_betas_slope_SP[2],
-                      vec_true=(median(c(.slopes_minpert, 0))))
+                      vec_true=minimal_change_baseline)
   }
+  .params_in_ci <- sapply(1:length(.params_in_ci), function(i){
+      ## for the ones in which there is a change, say whether it's up- or down-regulated
+      if(!.params_in_ci[i]){
+        ## if there is a change: not in confidence interval
+        if(is.null(dim(.summary_betas_slope_SP))){
+          ## one-dim
+          if(.summary_betas_slope_SP[1] > minimal_change_baseline){
+            'increase'
+          }else{
+            'decrease'
+          }
+        }else{
+          ## multi-dim
+          if(.summary_betas_slope_SP[i,1] > minimal_change_baseline){
+            'increase'
+          }else{
+            'decrease'
+          }
+        }
+      }else{
+        'FALSE'
+      }
+    })
+  names(.params_in_ci) <- sapply(logR_nonexo_notsorted_SP[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
   .baseline <- strsplit(logR_nonexo_notsorted_SP[[idx_sp]][[1]], '/')[[1]][2]
   return(list(betas_perturbed=.params_in_ci, baseline=.baseline))
 }))
@@ -6655,30 +6689,39 @@ perturbed_betas_diagRE_DMDL_nonexo_SP <- lapply(names(diagRE_DMDL_nonexo_SP), tr
 ```
 
 ```{r, minimalperturbation_diagRE_DMDL_nonexo_S_2, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG'), dev='tikz'}
-perturbed_betas_diagRE_DMDL_nonexo_SP_vec <- do.call('c', sapply(perturbed_betas_diagRE_DMDL_nonexo_SP, function(i) i[1]))
-perturbed_betas_diagRE_DMDL_nonexo_SP_df <- cbind.data.frame(sig=gsub("betas_perturbed.", "", names(perturbed_betas_diagRE_DMDL_nonexo_SP_vec)),
-                 perturbed=perturbed_betas_diagRE_DMDL_nonexo_SP_vec)
 
-ggplot(perturbed_betas_diagRE_DMDL_nonexo_SP_df, aes(x=factor(sig, levels=gtools::mixedsort(unique(sig))), fill=factor(perturbed, levels=c(TRUE, FALSE))))+geom_bar(col='black', size=0.001)+theme_bw()+
-  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
-      scale_fill_manual(values=c('#f08080', '#e7feff'))+theme(legend.position = "bottom")+
+perturbed_betas_diagRE_DMDL_nonexo_SP_vec <- do.call('c', sapply(perturbed_betas_diagRE_DMDL_nonexo_SP, function(i) i[1]))
+
+perturbed_betas_diagRE_DMDL_nonexo_SP_df <- cbind.data.frame(sig=gsub("betas_perturbed.", "",
+                                                                      names(perturbed_betas_diagRE_DMDL_nonexo_SP_vec)),
+                                                             perturbed=perturbed_betas_diagRE_DMDL_nonexo_SP_vec)
+ggplot(perturbed_betas_diagRE_DMDL_nonexo_SP_df, aes(x=factor(sig, levels=gtools::mixedsort(unique(sig))),
+                                                     fill=factor(perturbed, levels=c('increase', 'decrease', 'FALSE'))))+
+  geom_bar(col='black', size=0.001)+theme_bw()+
+  scale_fill_manual(values=c( '#b1d8b7', '#f08080', '#e7feff'))+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1), legend.position = "bottom")+
   labs(x='Signatures', y='Number of putatively perturbed\n and unperturbed signatures', fill='Perturbed')
 
 ```
 
+Minimal perturbation per signature
 ```{r, minimalperturbation_diagRE_DMDL_nonexo_S_3, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG'), dev='tikz'}
 names(perturbed_betas_diagRE_DMDL_nonexo_SP) <- names(diagRE_DMDL_nonexo_SP)
 ggplot(reshape2::melt(lapply(perturbed_betas_diagRE_DMDL_nonexo_SP, `[`, 'betas_perturbed')),
-       aes(x=L1, fill=factor(value, levels=c(TRUE, FALSE))))+geom_bar(col='black', size=0.001)+theme_bw()+
-        scale_fill_manual(values=c('#f08080', '#e7feff'))+theme(legend.position = "bottom")+
+       aes(x=L1, fill=factor(value, levels=c('increase', 'decrease', 'FALSE'))))+geom_bar(col='black', size=0.001)+theme_bw()+
+        scale_fill_manual(values=c('#b1d8b7', '#f08080', '#e7feff'))+theme(legend.position = "bottom")+
     theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+labs(x='Cancer type',
-                                                                         y='Number of putatively perturbed\n and unperturbed signatures')
+                                                                         y='Number of putatively perturbed\n and unperturbed signatures',  fill='Perturbed')
 
+```
 
-# ggplot(perturbed_betas_diagRE_DMDL_nonexo_SP_df, aes(x=factor(sig, levels=gtools::mixedsort(unique(sig))), fill=factor(perturbed, levels=c(TRUE, FALSE))))+geom_bar(col='black', size=0.001)+theme_bw()+
-#   theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
-#       scale_fill_manual(values=c('#f08080', '#e7feff'))+theme(legend.position = "bottom")+
-#   labs(x='Signatures', y='Number of putatively perturbed and unperturbed signatures', fill='Perturbed')
+Table of perturbed signatures
+```{r, table_minimal_pert, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG')}
+
+write("", "../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = F)
+for(i in names(perturbed_betas_diagRE_DMDL_nonexo_SP)){
+  write(paste0(i, '&', paste0(names(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed)[perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed], collapse = ", "), '\\\\'), "../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = T)
+}
 
 ```
 
@@ -6817,9 +6860,49 @@ names(HMP_res_sigs) <- names(signature_roo)
 # test_HMP_ROOSigs(signature_roo[[1]],  slot='count_matrices_active')
 ```
 
-```{r, HMP_pcawg_2}
-HMP_res_sigs
-pvals_diagRE_DM
+```{r, pvals_pcawg_SP, dependson=c('p_vals_SP'), dev='tikz', fig.height=4.5, fig.width=5.5}
+p.adjust(pvals_diagRE_DMDL_SP, method = "BH")
+p.adjust(pvals_diagRE_DMDL_nonexo_SP, method = "BH")
+
+pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", enough_samples), scheme = "tumour.subtype")
+names(pcawg_palette) <- enough_samples
+
+df_pvals_DMDL_SP <- cbind.data.frame(pvals_DM=pvals_diagRE_DMDL_SP,
+                                     pvals_DMnonexo=pvals_diagRE_DMDL_nonexo_SP,
+                        num_samples=as.numeric(num_samples_all_SP),
+                        num_sigs_nonexo=as.numeric(num_sigs_nonexo_SP),
+                        ct=enough_samples,
+                        pvals_DM_censored=sapply(-log(pvals_diagRE_DMDL_SP),
+                                                 function(i) min(i, 25)),
+                        pvals_DMnonexo_censored=sapply(-log(pvals_diagRE_DMDL_nonexo_SP),
+                                                       function(i) min(i, 25)),
+                        bool_censored=((-log(pvals_diagRE_DMDL_nonexo_SP) > 25 )| (-log(pvals_diagRE_DMDL_SP) > 25)))
+ggplot(df_pvals_DMDL_SP,
+       aes(x=pvals_DM_censored, y=pvals_DMnonexo_censored,
+           # size=num_samples,
+           label=ct, size=bool_censored))+geom_point(aes (col=ct))+
+  geom_hline(yintercept = -log(0.05), lty='dashed')+geom_vline(xintercept = -log(0.05), lty='dashed')+
+  geom_label_repel(size=3.2, alpha=0.6, max.overlaps = 30)+  theme_bw()+
+  theme(legend.position = "bottom", legend.text=element_text(size=8))+
+  labs(x='- Log p-value all signatures', y='- Log p-value nonexogenous signatures')+
+  guides(size=FALSE, col=FALSE)+ #, col=guide_legend(ncol=4), 
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  lims(x=c(0, 30), y=c(0,30))
+
+```
+
+
+```{r, pvals_pcawg_SP_2, dependson=c('p_vals_SP')}
+
+t.test(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05,'num_samples'],
+       df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo > 0.05,'num_samples'])
+
+t.test(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05,'num_sigs_nonexo'],
+       df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo > 0.05,'num_sigs_nonexo'])
+
+mean(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05,'num_sigs_nonexo'])
+mean(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo > 0.05,'num_sigs_nonexo'])
+
 ```
 
 See script `PCAWG_HMP_and_alternative_methods.R` for the analyses of PCAWG data using alternative models.
@@ -6849,4 +6932,76 @@ ggplot(tracksig, aes(x=effect_size3_SP, y=tracksig_frac, label=ct, col=ct))+
   scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=4), size=FALSE)
 
+```
+
+Barplots of cancer types with and without differential abundance
+<!-- give_barplot_from_obj(obj = obj_Bone_Osteosarc, legend_on = TRUE, verbose=F) -->
+
+```{r, barplots_SP_thesis, fig.height=3, dev='tikz'}
+give_barplot_from_obj(obj = signatures_PCAWG[['CNS-Medullo']], legend_on = F,
+                        nrow=1, verbose=F,
+                        only_normalised=T)
+give_barplot_from_obj(obj = signatures_PCAWG[['Uterus-AdenoCA']], legend_on = F,
+                        nrow=1, verbose=F,
+                        only_normalised=T)
+give_barplot_from_obj(obj = signatures_PCAWG[['Ovary-AdenoCA']], legend_on = F,
+                        nrow=1, verbose=F,
+                        only_normalised=T)
+```
+
+\section{Correlations of cancer types and of signatures based on betas}
+```{r, correlations_from_beta_slopes, dependson=c('load_runs_signaturesPCAWG', 'names_logR_SP'), fig.height=6.5, echo=F}
+aaa <- list()
+for(ct in names(diagRE_DMDL_nonexo_SP)){
+  .betas_ct_it <- data.frame(plot_betas(TMB_obj = diagRE_DMDL_nonexo_SP[[ct]],
+                                        names_cats= logR_nonexo_notsorted_SP[[ct]],
+                                        return_df=T, plot=F))
+  .slopes_minpert <- .betas_ct_it %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+  aaa[[ct]] <- plot_betas(TMB_obj = diagRE_DMDL_nonexo_SP[[ct]], names_cats= logR_nonexo_notsorted_SP[[ct]],
+                    return_df=T, plot=F, only_slope = T, line_zero=F, add_confint = T)
+}
+
+aaa <- lapply(aaa, function(i) cbind(i, numerator_LogR = gsub("/.*", "", i$LogR)))
+aaa <- lapply(names(aaa), function(i) cbind(aaa[[i]], ct=i))
+aaa <- do.call('rbind', aaa)
+
+## now put NA whenever we don't have a 
+
+aaa_dcast <- dcast(aaa, formula = numerator_LogR~ct, value.var = 'Estimate')
+rownames(aaa_dcast) <- aaa_dcast$numerator_LogR
+aaa_dcast <- aaa_dcast[,-1]
+
+cors <- outer(1:ncol(aaa_dcast), 1:ncol(aaa_dcast), Vectorize(function(i,j){
+  try(cor(x = unlist(aaa_dcast[,i]), y = unlist(aaa_dcast[,j]), use = "pairwise.complete.obs"))}))
+cors <- apply(cors, 2, as.numeric)
+
+cors[is.na(cors)] = 0
+
+rownames(cors) <- colnames(cors) <- colnames(aaa_dcast)
+print(pheatmap::pheatmap(cors, color = viridis::inferno(10)))
+dev.off()
+
+pdf("../../results/results_TMB/pcawg/correlation_cancertypes_from_betaslopes.pdf")
+print(pheatmap::pheatmap(cors, color = viridis::inferno(10)))
+dev.off()
+
+
+```
+
+```{r, correlations_from_beta_slopes_2, dependson=c('load_runs_signaturesPCAWG', 'names_logR_SP', 'correlations_from_beta_slopes'), fig.height=6, echo=F}
+cors_sigs <- outer(1:nrow(aaa_dcast), 1:nrow(aaa_dcast), Vectorize(function(i,j){
+    try(cor(x = unlist(aaa_dcast[i,]), y = unlist(aaa_dcast[j,]), use = "pairwise.complete.obs"))}))
+cors_sigs <- apply(cors_sigs, 2, as.numeric)
+
+cors_sigs[is.na(cors_sigs)] = 0
+
+rownames(cors_sigs) <- colnames(cors_sigs) <- paste0('SBS', rownames(aaa_dcast))
+
+print(pheatmap::pheatmap(cors_sigs))
+
+dev.off()
+
+pdf("../../results/results_TMB/pcawg/correlation_signatures_from_betaslopes.pdf")
+print(pheatmap::pheatmap(cors_sigs))
+dev.off()
 ```

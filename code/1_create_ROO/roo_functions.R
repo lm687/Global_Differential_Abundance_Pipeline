@@ -884,9 +884,15 @@ give_perturbation_ROOSigs_alt_v2 = function(exposures_cancertype_obj, slot_name=
 
 
 
-bootstrap_for_statistic = function(object_roo){
+bootstrap_for_statistic = function(object_roo, verbose){
   .object_roo_fun = object_roo
-  totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[1]] ## bootstrap
+  if(verbose){
+    'This function was wrong until 20210920. We were adding up the same first matrix twice'
+  }
+  ## previous; wrong
+  # totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[1]] ## bootstrap
+  ## current version, correct
+  totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[2]] ## bootstrap
   ## sample in two groups
   .x_boot = lapply(1:nrow(totals), function(i){
     multinom1 = t(rmultinom(n=1, size = sum(.object_roo_fun@count_matrices_all[[1]][i,]), prob = totals[i,]/sum(totals[i,])))
@@ -902,13 +908,13 @@ bootstrap_for_statistic = function(object_roo){
   
 }
 
-permutation_test_fun_wrapper =  function(objects_sigs_per_CT_features_arg, nbootstraps){
-  .x =  permutation_test_fun(objects_sigs_per_CT_features_arg, nbootstraps)
+permutation_test_fun_wrapper =  function(objects_sigs_per_CT_features_arg, nbootstraps, verbose=T){
+  .x =  permutation_test_fun(objects_sigs_per_CT_features_arg, nbootstraps, verbose)
   return(sum(abs(.x[[1]]) > abs(.x[[2]]))/nbootstraps)
 }
 
-permutation_test_fun = function(objects_sigs_per_CT_features_arg, nbootstraps){
-  null_statistics = replicate(n = nbootstraps, expr = bootstrap_for_statistic(objects_sigs_per_CT_features_arg))
+permutation_test_fun = function(objects_sigs_per_CT_features_arg, nbootstraps, verbose){
+  null_statistics = replicate(n = nbootstraps, expr = bootstrap_for_statistic(objects_sigs_per_CT_features_arg, verbose))
   null_statistics = null_statistics[!is.nan(null_statistics)]
   observed_statistic = give_total_perturbation(objects_sigs_per_CT_features_arg)
   list(null_statistics, observed_statistic)
