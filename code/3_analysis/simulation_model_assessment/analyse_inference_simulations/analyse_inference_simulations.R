@@ -26,6 +26,9 @@ option_list = list(
               help="Generation name", metavar="character"),
   make_option(c("--multiple_runs"), type="logical", default=F,
               help="Boolean: are we analysing mutiple runs?", metavar="logical")
+  make_option(c("--read_input_from_file"), type="logical", default=F,
+              help="Boolean: are we reading the input files from a file? (set to T if the number of input files is very large)", metavar="logical")
+read_input_from_file
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -53,7 +56,12 @@ if(debugging){
   # opt$model = 'fullREDM'
   # opt$dataset_generation = 'GenerationCnorm'
 }else{
-  opt$input_list = strsplit(opt$input_list, " ")[[1]]
+  if(opt$read_input_from_file){
+    ## large number of input files: read list from file
+    opt$input_list = read.lines(opt$input_list)
+  }else{
+    opt$input_list = strsplit(opt$input_list, " ")[[1]]
+  }
 }
 
 if(opt$multiple_runs){

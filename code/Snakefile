@@ -301,12 +301,17 @@ rule analyse_simulation_TMB_multiple:
         fixed_beta_slope = 'NA',
         sdRE_input = 'NA',
         model = "{model}",
-        itnum= range(1))
+        itnum= range(4))
     output:
         "../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"
-    shell:
-        "Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input '{input}'\
-        --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
-        --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T"
-
+    run:
+        if len(wildcards.input) < 10e6:
+            shell("Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input '{input}'\
+            --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
+            --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T")
+        else:
+            shell("cat '{input}' > tmp_input_snake; Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input tmp_input_snake \
+            --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
+            --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T \
+            --read_input_from_file T")
 
