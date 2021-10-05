@@ -16,8 +16,9 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
  'GenerationCnormsimpler': 'generationC', 'generationFnorm': 'generationF', 'generationGnorm': 'generationG',\
  'generationMGnorm': 'generationG', 'GenerationHnorm': 'generationHnorm', 'GenerationInoRE': 'generationC',
  'GenerationJnorm' : 'generationC',  'GenerationJnorm2' : 'generationC',  'GenerationJnorm3' : 'generationC',
- 'GenerationInoREscaledbeta': 'generationC', 'GenerationK': 'generationG', 'GenerationK2': 'generationG', 'GenerationJnormTwoLambdas': 'generationG',
- 'GenerationInoREtwolambdas': 'generationG', 'generationHnormtwolambdas': 'generationG'}
+ 'GenerationInoREscaledbeta': 'generationC', 'GenerationK': 'generationG', 'GenerationK2': 'generationG',\
+ 'GenerationJnormTwoLambdas': 'generationG', 'GenerationInoREtwolambdas': 'generationG',\
+ 'generationHnormtwolambdas': 'generationG'}
  ## just added the GenerationHnorm, I don't really know if it's correct
 
 rule all:
@@ -137,9 +138,11 @@ rule all:
     	# 	beta_intensity = 0, model="fullREDMsinglelambda", itnum=range(100),\
     	# 	fixed_beta_intercept="betaintercept1d4", sdRE_input="covmat1d4",\
     	# 	fixed_beta_slope="betaslope1d4", optimiser='nlminb')
-        expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
-        datasetgeneration=['GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas', 'generationHnormtwolambdas'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
-
+        # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+        # datasetgeneration=['GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas', 'generationHnormtwolambdas'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+        expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+         datasetgeneration=['GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas',\
+          'generationHnormtwolambdas'])
 
 rule index_vcf:
     input:
@@ -245,17 +248,17 @@ rule simulate_for_comparison_multiple:
 
 
 ## This is for stan and it has been deprecated
-rule inference_simulation_stan:
-    input:
-        "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
-    log:
-        "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Nits{nits}_Model{model}.log"
-    params:
-       model=expand("{model}", model = models),
-       nits=expand("{nits}", nits = num_iterations)
-    output:
-       "../data/assessing_models_simulation/inference_results/{datasetgeneration}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData"
-    shell:
+# rule inference_simulation_stan:
+#     input:
+#         "../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_dataset.RDS"
+#     log:
+#         "logs/inference/simulation_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_Nits{nits}_Model{model}.log"
+#     params:
+#        model=expand("{model}", model = models),
+#        nits=expand("{nits}", nits = num_iterations)
+#     output:
+#        "../data/assessing_models_simulation/inference_results/{datasetgeneration}_n{n}_nlambda{nlambda}_lambda{lmbda}_d{d}_beta_intensity{beta_intensity}_Nits{nits}_Model{model}ROO.RData"
+#     shell:
         """#module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
 #source activate rstan_env
 # ~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_simulations.R --infile {input} --output {output} --niterations {params.nits} --model {params.model}
@@ -333,4 +336,14 @@ rule analyse_simulation_TMB_multiple:
         --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
         --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T"
 
+
+rule analyse_simulation_TMB_multiple_integrate:
+    input:
+      lambda wildcards: expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+       model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda','diagREDM'], datasetgeneration=wildcards.datasetgeneration)
+    "../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_fullREM/{datasetgeneration}_fullREM_results_info.txt"
+    output:
+        "../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS"
+    shell:
+        "Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations_integrate.R --input '{input}' --generation {wildcards.datasetgeneration}"
 

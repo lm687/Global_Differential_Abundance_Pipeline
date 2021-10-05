@@ -694,6 +694,50 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
 }
 
 
+wald_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
+  ## wald test for the overdispersion parameter
+  if(typeof(i) == "character"){
+    return(NA)
+  }else{
+    idx_beta = which(names(i$par.fixed) == "log_lambda")
+    if(!i$pdHess){
+      ## didn't converge
+      NA
+    }else{
+      scaled_coefs <- scale(i$par.fixed[idx_beta], center = T, scale = F)
+      wald_generalised(v = as.vector(scaled_coefs),
+                       sigma = i$cov.fixed[idx_beta,idx_beta])
+    }
+  }
+}
+
+ttest_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
+  ## wald test for the overdispersion parameter
+  if(typeof(i) == "character"){
+    return(NA)
+  }else{
+    idx_beta = which(names(i$par.fixed) == "log_lambda")
+    if(!i$pdHess){
+      ## didn't converge
+      NA
+    }else{
+      .summary <- summary(i)
+      loglambdas <- python_like_select_rownames(.summary, 'log_lambda')
+      mean_coefs <- loglambdas[,1]
+      SE_coefs <- loglambdas[,2]
+      
+      dmin1 <- nrow(python_like_select_rownames(.summary, 'beta'))/2
+      num_patients <- nrow(python_like_select_rownames(.summary, 'u_large'))/dmin1
+      tstatistic <- (mean_coefs[1]-mean_coefs[2])/sum(SE_coefs)
+      df <- num_patients*2 - 2
+      #' For significance testing, the degrees of freedom for this test
+      #' is 2n − 2 where n is the number of participants in each group. 
+      2*pt(-abs(tstatistic), df=df)
+    }
+  }
+}
+
+
 select_slope = function(i){
   stop('Deprecated due to error! use <select_slope_2> instead')
   i[(length(i)/2+1):(length(i))]

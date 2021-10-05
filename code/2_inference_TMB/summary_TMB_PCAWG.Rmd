@@ -708,6 +708,18 @@ ggplot(BoneOsteosarc_correlations_df_both, aes(x=value, col=dataset))+geom_densi
   facet_wrap(.~normalisation_bool)
 ```
 
+```{r, BoneOsteosarc_correlations_3, echo=FALSE, fig.height=2.5, fig.width=4, dev='tikz',  dependson=c('BoneOsteosarc_correlations', 'BoneOsteosarc_correlations_2')}
+
+## smaller plot
+ggplot(BoneOsteosarc_correlations_df_both, aes(x=value, col=dataset))+geom_density()+
+  # ggtitle('Correlations of fitted values (Bone Osteosarcoma))')+
+  theme_bw()+
+  theme(legend.position = "bottom")+
+  labs(x='Correlations of fitted values')+
+  scale_color_manual(name = "Dataset",values = c('red', 'blue', 'green'))+
+  facet_wrap(.~normalisation_bool)
+```
+
 \clearpage
 \subsection{Breast-AdenoCA}
 \subsubsection{Barplot and general statistics}
@@ -5624,7 +5636,7 @@ ggplot(data.frame(num_samples=num_samples[match(all_pvals$ct, names(num_samples)
   geom_point()+scale_y_continuous(trans = "log2")+
   geom_smooth(method = lm)+theme_bw()+
   geom_label_repel()+geom_hline(yintercept = log2(0.05), lty='dashed')+
-  labs(x='Number of samples', y = 'p-value (log2')+
+  labs(x='Number of samples', y = 'p-value (log2)')+
   scale_color_manual(values = pcawg_palette)+
   guides(col=FALSE)
 
@@ -6557,18 +6569,59 @@ ggplot(ovrdisp, aes(x=name,  y=`Estimate`))+
 
 ```
 
+
+Test for differential precision (1/overdispersion) parameter
+```{r, overdispersion_params_groups_test}
+differential_precision <- p.adjust(sapply(diagRE_DMDL_nonexo_SP, wald_TMB_wrapper_overdisp), method = 'fdr')
+names(differential_precision) <- names(diagRE_DMDL_nonexo_SP)
+sort(differential_precision)
+table(differential_precision <= 0.05)
+differential_precision[(differential_precision <= 0.05)]
+```
+
+
 ```{r, overdispersion_params_groups_2, dev='tikz', dependson=c('load_runs_signaturesPCAWG')}
+ovrdisp$differentially_abundant = ifelse(ovrdisp$ct %in% names(differential_precision[(differential_precision <= 0.05)]), yes = '*', no = '')
+ovrdisp$differentially_abundant
 ggplot(ovrdisp, aes(x=ct,  y=`Estimate`, group=name, col=name))+
   geom_point(position=position_dodge(width=0.5))+
   geom_errorbar(aes(ymin=`Estimate`-`Std..Error`,
                     ymax=`Estimate`+`Std..Error`), width=.1, position=position_dodge(width=0.5))+
   theme_bw()+
+  geom_text(aes(y=Inf, label=differentially_abundant, vjust=1.8), col='black')+
   theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
   labs(x='', y='Log lambda', col='Group')+theme(legend.position = "bottom")+
     theme(        legend.margin=margin(0,0,0,0),
                   legend.box.margin=margin(-10,-10,-10,-10),
                   plot.margin = unit(c(1,1,1,1), "cm"))
 ```
+
+
+
+Test for differential precision (1/overdispersion) parameter
+```{r, overdispersion_params_groups_test_2}
+differential_precision_2 <- p.adjust(sapply(diagRE_DMDL_nonexo_SP, ttest_TMB_wrapper_overdisp), method = 'fdr')
+names(differential_precision_2) <- names(diagRE_DMDL_nonexo_SP)
+sort(differential_precision_2)
+table(differential_precision_2 <= 0.05)
+differential_precision_2[(differential_precision_2 <= 0.05)]
+
+ovrdisp$differential_precision_2 = ifelse(ovrdisp$ct %in% names(differential_precision_2[(differential_precision_2 <= 0.05)]), yes = '*', no = '')
+
+ggplot(ovrdisp, aes(x=ct,  y=`Estimate`, group=name, col=name))+
+  geom_point(position=position_dodge(width=0.5))+
+  geom_errorbar(aes(ymin=`Estimate`-`Std..Error`,
+                    ymax=`Estimate`+`Std..Error`), width=.1, position=position_dodge(width=0.5))+
+  theme_bw()+
+  geom_text(aes(y=Inf, label=differential_precision_2, vjust=1.8), col='black')+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='', y='Log lambda', col='Group')+theme(legend.position = "bottom")+
+    theme(        legend.margin=margin(0,0,0,0),
+                  legend.box.margin=margin(-10,-10,-10,-10),
+                  plot.margin = unit(c(1,1,1,1), "cm"))
+```
+
+
 
 \section{Minimal perturbation}
 Note: this is using the original, non SP, signatures (hence not the best version).
@@ -6715,12 +6768,25 @@ ggplot(reshape2::melt(lapply(perturbed_betas_diagRE_DMDL_nonexo_SP, `[`, 'betas_
 
 ```
 
+```{r, hehehhee}
+
+```
+
 Table of perturbed signatures
 ```{r, table_minimal_pert, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG')}
+relevel_perturbation <- cbind(c('increase', 'decrease'), c('+', '-'))
 
 write("", "../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = F)
+# for(i in names(perturbed_betas_diagRE_DMDL_nonexo_SP)){
+#   write(paste0(i, '&', paste0(names(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed)[perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed], collapse = ", "), '\\\\'), "../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = T)
+# }
 for(i in names(perturbed_betas_diagRE_DMDL_nonexo_SP)){
-  write(paste0(i, '&', paste0(names(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed)[perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed], collapse = ", "), '\\\\'), "../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = T)
+  # write(x = paste0(i, '&', paste0(sapply(which(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed != 'FALSE'), function(j){
+  #     paste0(names(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed)[j], '(', relevel_perturbation[match(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed[j], relevel_perturbation[,1]),2] , ')', collapse='', sep='')
+  #   }), collapse=', ', sep=''), '\\\\'),  file="../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = T)
+    write(x = paste0(paste0(i, '&', paste0(sapply(which(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed != 'FALSE'), function(j){
+      paste0(names(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed)[j], ' (', relevel_perturbation[match(perturbed_betas_diagRE_DMDL_nonexo_SP[[i]]$betas_perturbed[j], relevel_perturbation[,1]),2] , ')', collapse='', sep='')
+    }), collapse=', ', sep=''), '\\\\')),  file="../../results/results_TMB/pcawg/minimal_perturbation_sigs.txt", append = T)
 }
 
 ```
@@ -6852,12 +6918,45 @@ Simple HMP tests to see what is differentially abundant
 # source("../1_create_ROO/roo_functions.R")
 # signature_roo[[1]]
 require(HMP)
+
 HMP_res_sigs <- lapply(signature_roo, function(signature_roo_it){
   HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
                       t(signature_roo_it[[2]])))
 })
+HMP_res_sigs_pval <- sapply(HMP_res_sigs, `[`, 'p value')
 names(HMP_res_sigs) <- names(signature_roo)
+names(HMP_res_sigs_pval)
+names(pvals_diagRE_DMDL_SP)
+HMP_res_sigs_pval_adj <- p.adjust(HMP_res_sigs_pval[names(HMP_res_sigs_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
+HMP_res_sigs_pval_adj
 # test_HMP_ROOSigs(signature_roo[[1]],  slot='count_matrices_active')
+```
+
+
+```{r, comparison_pvals, dependson=c('HMP_pcawg')}
+pvals_diagRE_DMDL_SP_adj <- p.adjust(pvals_diagRE_DMDL_SP, 'fdr')
+pvals_diagRE_DMDL_nonexo_SP_adj <- p.adjust(pvals_diagRE_DMDL_nonexo_SP, 'fdr')
+pvals_fullRE_M_nonexo_SP_adj <- p.adjust(pvals_fullRE_M_nonexo_SP, 'fdr')
+pvals_fullRE_DMSL_nonexo_SP_adj <- p.adjust(pvals_fullRE_DMSL_nonexo_SP, 'fdr')
+names(pvals_diagRE_DMDL_SP_adj) <- names(pvals_diagRE_DMDL_nonexo_SP_adj) <- names(pvals_fullRE_M_nonexo_SP_adj) <- names(pvals_fullRE_DMSL_nonexo_SP_adj) <- names(pvals_diagRE_DMDL_SP)
+
+table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
+      fullRE_DMSL_DA=pvals_fullRE_DMSL_nonexo_SP_adj <= 0.05)
+
+
+names(pvals_diagRE_DMDL_nonexo_SP_adj)[which((pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05) & (fullRE_DMSL_DA=pvals_fullRE_DMSL_nonexo_SP_adj > 0.05))]
+names(pvals_diagRE_DMDL_nonexo_SP_adj)[which((pvals_diagRE_DMDL_nonexo_SP_adj > 0.05) & (fullRE_DMSL_DA=pvals_fullRE_DMSL_nonexo_SP_adj <= 0.05))]
+
+table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
+      fullRE_M_DA=pvals_fullRE_M_nonexo_SP_adj <= 0.05)
+
+table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
+      HMP_DA=HMP_res_sigs_pval_adj <= 0.05)
+
+
+# table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj < 0.05, HMP_res_sigs_DA=HMP_res_sigs < 0.05)
+
+
 ```
 
 ```{r, pvals_pcawg_SP, dependson=c('p_vals_SP'), dev='tikz', fig.height=4.5, fig.width=5.5}
@@ -6867,16 +6966,16 @@ p.adjust(pvals_diagRE_DMDL_nonexo_SP, method = "BH")
 pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", enough_samples), scheme = "tumour.subtype")
 names(pcawg_palette) <- enough_samples
 
-df_pvals_DMDL_SP <- cbind.data.frame(pvals_DM=pvals_diagRE_DMDL_SP,
-                                     pvals_DMnonexo=pvals_diagRE_DMDL_nonexo_SP,
+df_pvals_DMDL_SP <- cbind.data.frame(pvals_DM=pvals_diagRE_DMDL_SP_adj,
+                                     pvals_DMnonexo=pvals_diagRE_DMDL_nonexo_SP_adj,
                         num_samples=as.numeric(num_samples_all_SP),
                         num_sigs_nonexo=as.numeric(num_sigs_nonexo_SP),
                         ct=enough_samples,
-                        pvals_DM_censored=sapply(-log(pvals_diagRE_DMDL_SP),
+                        pvals_DM_censored=sapply(-log(pvals_diagRE_DMDL_SP_adj),
                                                  function(i) min(i, 25)),
-                        pvals_DMnonexo_censored=sapply(-log(pvals_diagRE_DMDL_nonexo_SP),
+                        pvals_DMnonexo_censored=sapply(-log(pvals_diagRE_DMDL_nonexo_SP_adj),
                                                        function(i) min(i, 25)),
-                        bool_censored=((-log(pvals_diagRE_DMDL_nonexo_SP) > 25 )| (-log(pvals_diagRE_DMDL_SP) > 25)))
+                        bool_censored=((-log(pvals_diagRE_DMDL_nonexo_SP_adj) > 25 )| (-log(pvals_diagRE_DMDL_SP_adj) > 25)))
 ggplot(df_pvals_DMDL_SP,
        aes(x=pvals_DM_censored, y=pvals_DMnonexo_censored,
            # size=num_samples,

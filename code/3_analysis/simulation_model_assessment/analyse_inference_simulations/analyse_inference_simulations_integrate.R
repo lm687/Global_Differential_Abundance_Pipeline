@@ -1,16 +1,57 @@
 ## To get results we need both the datasets files and the inference results
 
-rm(list = ls())
-setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+local=F
+
+if(local){
+  rm(list = ls())
+  setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+  
+  multiple_runs = T
+  ## multiple runs
+  # generation = "GenerationJnorm"
+  # generation = "GenerationK"
+  generation = "GenerationK2"
+  # generation = "generationFnorm"
+  # generation = "GenerationCnorm"
+  # generation = "GenerationJnorm2"
+  # generation = "GenerationJnorm3"
+  # generation = "GenerationJnormTwoLambdas"
+  # generation = "GenerationInoREtwolambdas"
+  # generation = "generationHnormtwolambdas"
+  ##########################################
+  # multiple_runs = F
+  ## single replicate
+  # generation = "generationGnorm"
+  # generation = "generationMGnorm"
+  # generation = "GenerationInoRE"
+  # generation = "GenerationCnorm"
+}else{
+  library(optparse)
+  setwd("3_analysis/simulation_model_assessment/analyse_inference_simulations")
+  multiple_runs <- T
+  option_list = list(
+    make_option(c("--input"), type="character", default=NA,
+                help="_results_info.txt for the models that we want to use. Only useful for snakemake; they are not used here", metavar="character"),
+    make_option(c("--generation"), type="character", default=NA,
+                help="Generation of simulation. This is used", metavar="character")
+  );
+  opt_parser = OptionParser(option_list=option_list);
+  opt = parse_args(opt_parser);
+  generation <- opt$generation
+}
+
 source("../../../2_inference_TMB/helper_TMB.R")
 source("../../../1_create_ROO/roo_functions.R")
 
+library(grid)
 library(gridExtra)
 library(ggpubr)
 library(reshape2)
 library(jcolors)
+library(cowplot)
+library(ggrepel)
 
-multiple_runs = T
+
 if(multiple_runs){
   flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/"
   flder_in <- "../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries_multiple/"
@@ -19,23 +60,6 @@ if(multiple_runs){
   flder_in <- "../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/"
 }
 
-## multiple runs
-generation = "GenerationJnorm"
-generation = "GenerationK"
-generation = "GenerationK2"
-generation = "GenerationJnormTwoLambdas"
-generation = "generationFnorm"
-generation = "GenerationCnorm"
-generation = "GenerationJnorm2"
-generation = "GenerationJnorm3"
-generation = "GenerationInoREtwolambdas"
-generation = "generationHnormtwolambdas"
-##########################################
-## single replicate
-# generation = "generationGnorm"
-# generation = "generationMGnorm"
-# generation = "GenerationInoRE"
-# generation = "GenerationCnorm"
 
 
 manual = F
@@ -92,6 +116,10 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
 # loadfonts(device = "win")
 # font_import(pattern = "lmodern*")
 # par(family = "LM Roman 10")
+
+print(joint_df)
+
+try({
 pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots.pdf"), height = 2.5)
 do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DM'), function(it_model){
   ggplot(joint_df, aes(x=fullRE_M.beta_true, y=get(paste0(it_model, '.beta_est'))))+geom_point()+theme_bw()+
@@ -102,9 +130,9 @@ do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMS
              x = Inf, y = -Inf, vjust=-0.4, hjust=1.0)
     # theme(text=element_text(family="LM Roman 10", size=20))
 }), nrow=1))
-dev.off()
+dev.off()})
 
-pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots_colour.pdf"), height = 2.5)
+try({pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots_colour.pdf"), height = 2.5)
 do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DM'), function(it_model){
   ggplot(joint_df, aes(x=fullRE_M.beta_true, y=get(paste0(it_model, '.beta_est')), col=fullRE_M.beta_gamma_shape))+geom_point()+theme_bw()+
     geom_abline(slope = 1, intercept = 0, lty='dashed', col='blue')+
@@ -115,6 +143,7 @@ do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMS
   # theme(text=element_text(family="LM Roman 10", size=20))
 }), nrow=1))
 dev.off()
+})
 
 pdf(paste0(flder_out, generation, "/summaries/M_DM_comparison.pdf"), height = 3)
 do.call('grid.arrange', list(ggplot(joint_df, aes(x=fullRE_M.beta_true, y=fullRE_M.beta_est, col=fullRE_M.d))+geom_point()+
@@ -155,18 +184,18 @@ pvals_runs_HMP2 = lapply(datasets_files, function(i)  try(wrapper_run_HMP_Xmcupo
 table(sapply(pvals_runs_HMP, typeof), sapply(pvals_runs_HMP2, typeof))
 pvals_ttest_ilr = as.numeric(unlist(runs_ttest_irl))
 pvals_ttest_ilr_adj = pvals_ttest_ilr
-# pvals_perturbation_adj1 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
+# pvals_perturbation1 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
 # aitchison_perturbation_test(.x$objects_counts, slot_name = "count_matrices_all")})
-# pvals_perturbation_adj2 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
+# pvals_perturbation2 =  lapply(datasets_files, function(i){.x <- readRDS(i); ## gives computationally singular systems
 # aitchison_perturbation_test_alt(.x$objects_counts, slot_name = "count_matrices_all")})
-pvals_perturbation_adj =  unlist(sapply(lapply(datasets_files, function(i){.x <- readRDS(i);
+pvals_perturbation =  unlist(sapply(lapply(datasets_files, function(i){.x <- readRDS(i);
 aitchison_perturbation_test_alt_v2(.x$objects_counts, slot_name = "count_matrices_all")}), `[`, 'pval'))
-pvals_permutation_adj = unlist(lapply(datasets_files,  function(i){.x <- readRDS(i);
+pvals_permutation = unlist(lapply(datasets_files,  function(i){.x <- readRDS(i);
 permutation_test_fun_wrapper(.x$objects_counts, nbootstraps=40)}))
 pvals_chi_Harris <- sapply(datasets, function(i) iterative_chisqrt_wrapper(i$objects_counts) )
 
-length(pvals_runs_HMP) == length(pvals_perturbation_adj)
-length(pvals_runs_HMP) == length(pvals_permutation_adj)
+length(pvals_runs_HMP) == length(pvals_perturbation)
+length(pvals_runs_HMP) == length(pvals_permutation)
 
 # res_M = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREM.RDS"))
 # res_DM = readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/", generation, "_fullREDM.RDS"))
@@ -253,8 +282,8 @@ pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   ttest_ilr_adj=pvals_ttest_ilr_adj,
                                   HMP=unlist(pvals_runs_HMP),
                                   HMP2=unlist(pvals_runs_HMP2),
-                                  perturbation_adj=pvals_perturbation_adj,
-                                  permutation_adj=pvals_permutation_adj,
+                                  perturbation=pvals_perturbation,
+                                  permutation=pvals_permutation,
                                   true=DA_bool)
 head(pvals_data_frame)
 
@@ -263,7 +292,7 @@ DA_bool_all_converged <- DA_bool
 DA_bool_all_converged[!(!is.na(pvals_fullREDMSL) & !is.na(pvals_fullREM) & !is.na(pvals_diagREDMSL) &
                           !is.na(pvals_diagREDM) & !is.na(pvals_chi_Harris) & !is.na(runs_ttest_props) &
                           !is.na(pvals_ttest_ilr_adj) & !is.na(pvals_runs_HMP) & !is.na(pvals_runs_HMP2) &
-                          !is.na(pvals_perturbation_adj) & !is.na(pvals_permutation_adj))] <- NA
+                          !is.na(pvals_perturbation) & !is.na(pvals_permutation))] <- NA
 table(is.na(DA_bool_all_converged))
 pvals_data_frame_all_converged = cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL[!is.na(DA_bool_all_converged)],
                                                   pvals_fullREM=pvals_fullREM[!is.na(DA_bool_all_converged)],
@@ -274,8 +303,8 @@ pvals_data_frame_all_converged = cbind.data.frame(pvals_fullREDMSL=pvals_fullRED
                                                   ttest_ilr_adj=pvals_ttest_ilr_adj[!is.na(DA_bool_all_converged)],
                                                   HMP=unlist(pvals_runs_HMP)[!is.na(DA_bool_all_converged)],
                                                   HMP2=unlist(pvals_runs_HMP2)[!is.na(DA_bool_all_converged)],
-                                                  perturbation_adj=pvals_perturbation_adj[!is.na(DA_bool_all_converged)],
-                                                  permutation_adj=pvals_permutation_adj[!is.na(DA_bool_all_converged)],
+                                                  perturbation=pvals_perturbation[!is.na(DA_bool_all_converged)],
+                                                  permutation=pvals_permutation[!is.na(DA_bool_all_converged)],
                                                   true=DA_bool_all_converged[!is.na(DA_bool_all_converged)])
 
 give_res_all <- function(pvals_df){
@@ -288,8 +317,8 @@ give_res_all <- function(pvals_df){
       ILR=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_ilr_adj <= 0.05),
       HMP=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP <= 0.05),
       HMP2=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP2 <= 0.05),
-      perturbation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$perturbation_adj <= 0.05),
-      permutation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$permutation_adj <= 0.05))
+      perturbation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$perturbation <= 0.05),
+      permutation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$permutation <= 0.05))
 }
 
 res_all = give_res_all(pvals_data_frame)
@@ -356,7 +385,7 @@ varying_n_all_converged <-give_accuracies_with_varying_var('n', datasets_arg = d
 varying_betashape <-give_accuracies_with_varying_var('beta_gamma_shape')
 varying_betashape_all_converged <-give_accuracies_with_varying_var('beta_gamma_shape', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
                                                                    pvals_data_frame_arg = pvals_data_frame_all_converged)
-varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)
+# varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)
 varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)
 varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)
 
@@ -423,6 +452,21 @@ ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=
 ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged.pdf"),
        height = 3.0, width = 4.0)
 
+scale_color_jcolors(palette = "pal8")
+###
+sort(unique(varying_n_all_converged$model))
+
+colours_models <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
+  fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
+  ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
+  pvals_chi_Harris= "#2A297A", ttest=  "#995533"   )
+
+jcolors::display_jcolors(palette = "pal8")
+jcolors::jcolors(palette = "pal8")
+ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
+  scale_color_manual(values=colours_models)+guides(col=FALSE)+ggtitle(generation)#+facet_wrap(.~model)
+ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2.pdf"),
+       height = 3.0, width = 4.0)
 
 ggplot(varying_n_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=n))+
   geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
@@ -645,18 +689,18 @@ ggplot(joint_df, aes(x=fullRE_DMSL.d, y=as.numeric(fullRE_DMSL.converged),
   ggtitle('Success in convergence of Dirichlet-Multinomial runs')
 ggsave(paste0(flder_out, generation, "/summaries/DM_d_n_convergence.pdf"))
 
-ggplot(joint_df, aes(x=M.d, y=as.numeric(M.converged), group=interaction(M.n, M.d), col=fullRE_M.beta_gamma_shape))+
-  geom_jitter(height = 0.1, alpha=0.8)+geom_violin()+facet_wrap(.~M.n)+
-  theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
-  ggtitle('Success in convergence of Multinomial runs')
+# ggplot(joint_df, aes(x=M.d, y=as.numeric(M.converged), group=interaction(M.n, M.d), col=fullRE_M.beta_gamma_shape))+
+#   geom_jitter(height = 0.1, alpha=0.8)+geom_violin()+facet_wrap(.~M.n)+
+#   theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
+#   ggtitle('Success in convergence of Multinomial runs')
 
-ggplot(joint_df, aes(x=fullRE_M.beta_gamma_shape, y=as.numeric(M.converged), group=fullRE_M.beta_gamma_shape, col=M.d))+
-  geom_violin()+
-  geom_point()+
-  # geom_jitter(height = 0.1, alpha=0.8)+
-  facet_wrap(.~M.n)+
-  theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
-  ggtitle('Success in convergence of Multinomial runs')
+# ggplot(joint_df, aes(x=fullRE_M.beta_gamma_shape, y=as.numeric(M.converged), group=fullRE_M.beta_gamma_shape, col=M.d))+
+#   geom_violin()+
+#   geom_point()+
+#   # geom_jitter(height = 0.1, alpha=0.8)+
+#   facet_wrap(.~M.n)+
+#   theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
+#   ggtitle('Success in convergence of Multinomial runs')
 
 ## get percentage of successful runs
 joint_df_grouping_convergence = joint_df[sapply(unique(joint_df$fullRE_DMSL.idx), function(i) which(joint_df$fullRE_DMSL.idx == i)[1]),] %>%
@@ -689,15 +733,15 @@ grid.arrange(ggplot(joint_df_grouping_convergence_2, aes(x=fullRE_M.beta_gamma_s
                geom_point()+ggtitle('Convergence Multinomial'),
              ggplot(joint_df_grouping_convergence_2, aes(x=fullRE_M.beta_gamma_shape, y=convergence_DM, group=fullRE_M.beta_gamma_shape))+geom_line()+
                geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
-grid.arrange(ggplot(joint_df_grouping_convergence_2_n, aes(x=fullRE_M.beta_gamma_shape, y=convergence_M, col=M.n, group=interaction(M.n)))+geom_line()+
-               geom_point()+ggtitle('Convergence Multinomial'),
-             ggplot(joint_df_grouping_convergence_2_n, aes(x=fullRE_M.beta_gamma_shape, y=convergence_DM, col=M.n,  group=interaction(M.n)))+geom_line()+
-               geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
-grid.arrange(ggplot(joint_df_grouping_convergence_2_d, aes(x=fullRE_M.beta_gamma_shape, y=convergence_M, col=M.d, group=interaction(M.d)))+geom_line()+
-               geom_point()+ggtitle('Convergence Multinomial'),
-             ggplot(joint_df_grouping_convergence_2_d, aes(x=fullRE_M.beta_gamma_shape, y=convergence_DM, col=M.d,  group=interaction(M.d)))+geom_line()+
-               geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
-
+# grid.arrange(ggplot(joint_df_grouping_convergence_2_n, aes(x=fullRE_M.beta_gamma_shape, y=convergence_M, col=M.n, group=interaction(M.n)))+geom_line()+
+#                geom_point()+ggtitle('Convergence Multinomial'),
+#              ggplot(joint_df_grouping_convergence_2_n, aes(x=fullRE_M.beta_gamma_shape, y=convergence_DM, col=M.n,  group=interaction(M.n)))+geom_line()+
+#                geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
+# grid.arrange(ggplot(joint_df_grouping_convergence_2_d, aes(x=fullRE_M.beta_gamma_shape, y=convergence_M, col=M.d, group=interaction(M.d)))+geom_line()+
+#                geom_point()+ggtitle('Convergence Multinomial'),
+#              ggplot(joint_df_grouping_convergence_2_d, aes(x=fullRE_M.beta_gamma_shape, y=convergence_DM, col=M.d,  group=interaction(M.d)))+geom_line()+
+#                geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
+# 
 
 ##power
 
@@ -750,3 +794,79 @@ table(gsub('.{0,1}$', '', gsub("^.*\\_","", rownames(runs_fullREM))))
 ## if there are multiple runs
 ggplot(runs_fullREM0[grepl(sub("_[^_]+$", "", rownames(runs_fullREM0)[grep("_dataset1", rownames(runs_fullREM0))][1]),
       rownames(runs_fullREM0)),], aes(x=idx, y=beta_est))+geom_point()+facet_wrap(.~idx_within_dataset)
+
+
+a <- ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+
+  geom_point()+geom_line()+theme_bw()+
+  scale_color_manual(values=colours_models)+ggtitle(generation)+
+  guides(col=guide_legend(nrow=2))+
+  theme(legend.position = "bottom")+
+  labs(col=NULL)
+
+legend <- cowplot::get_legend(a)
+pdf(paste0(flder_out, "legend_models.pdf"), height = 1, width = 6.5)
+grid.newpage()
+grid.draw(legend)
+dev.off()
+
+## save results for tests
+
+object_save <- list(generation=generation,
+                    DA_bool=DA_bool,
+                    runs_ttest_irl=runs_ttest_irl,
+                    runs_ttest_props=runs_ttest_props,
+                    pvals_runs_HMP=pvals_runs_HMP,
+                    pvals_runs_HMP2=pvals_runs_HMP2,
+                    pvals_ttest_ilr=pvals_ttest_ilr,
+                    pvals_perturbation=pvals_perturbation,
+                    pvals_permutation=pvals_permutation,
+                    pvals_chi_Harris=pvals_chi_Harris,
+                    joint_df=joint_df)
+
+saveRDS(object = object_save,
+        file = paste0("../../../../data/assessing_models_simulation/summaries_synthetic_DA/",
+                      generation, ".RDS"))
+
+
+## we have much fewer datasets than runs
+DA_bool %>% length
+nrow(runs_fullREM0)
+
+table(gsub(".*_", "", names(DA_bool)))
+table(gsub(".*_", "", rownames(runs_fullREM0)))
+
+length(runs_ttest_props)
+ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
+  scale_color_manual(values=colours_models)+guides(col=FALSE)+ggtitle(generation)+
+  geom_label_repel(data = varying_n_all_converged %>% dplyr::filter(n == max(n)),
+             aes(x=n, y=WeightedAccuracy, label=model), alpha=0.6, size=3)
+ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_annotated.pdf"),
+       height = 3.0, width = 4.0)
+
+ggplot(varying_d, aes(x=model, y = AUC, group=model, col=d))+geom_boxplot()+geom_jitter()+theme_bw()
+ggplot(varying_n, aes(x=model, y = AUC, group=model, col=n))+geom_boxplot()+geom_jitter()+theme_bw()
+
+
+sort_first_col_by_second <- function(x) unlist(x[order(x[,2], decreasing = T),1])
+sort_first_col_by_second(varying_n %>% dplyr::group_by(model) %>% dplyr::summarise(median(WeightedAccuracy)))
+
+ggplot(varying_n, aes(x=factor(model,
+                               levels=sort_first_col_by_second(varying_n %>%
+                                       dplyr::group_by(model) %>%
+                                       dplyr::summarise(median(WeightedAccuracy, na.rm = T)))),
+                      y = WeightedAccuracy, group=model, col=model))+geom_boxplot()+geom_jitter()+theme_bw()+
+  scale_color_manual(values=colours_models)+ggtitle(generation)+guides(col=FALSE)+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_n_boxplot.pdf"),
+       height = 3.0, width = 4)
+
+ggplot(varying_d, aes(x=factor(model,
+                               levels=sort_first_col_by_second(varying_d %>%
+                                                                 dplyr::group_by(model) %>%
+                                                                 dplyr::summarise(median(WeightedAccuracy, na.rm = T)))),
+                      y = WeightedAccuracy, group=model, col=model))+geom_boxplot()+geom_jitter()+theme_bw()+
+  scale_color_manual(values=colours_models)+ggtitle(generation)+guides(col=FALSE)+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_d_boxplot.pdf"),
+       height = 3.0, width = 4)
+
