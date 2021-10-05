@@ -83,6 +83,12 @@ echo "\nsimulation_n_generationC:
 
 echo "beta_gamma_shape_generationC:
 - 0
+- 0.0001
+- 0.0002
+- 0.0005
+- 0.00075
+- 0.001
+- 0.002
 - 0.005
 - 0.01
 - 0.02
