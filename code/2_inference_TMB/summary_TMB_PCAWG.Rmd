@@ -7011,19 +7011,23 @@ See script `PCAWG_HMP_and_alternative_methods.R` for the analyses of PCAWG data 
 ```{r, tracksig_comparison, fig.height=6, fig.width=6, dev='tikz'}
 
 tracksig = read.csv("../../data/restricted/tracksig/changepoints_stats_tracksig.csv", stringsAsFactors = FALSE)
-tracksig = tracksig %>% group_by(type) %>% dplyr::summarize(count = n(), bool_changepoints=sum(n_changepoints > 0))%>%
-  mutate(tracksig_frac= bool_changepoints/count  )
-tracksig = cbind.data.frame(pvals_diagRE_DM,
-                 tracksig[match(names(pvals_diagRE_DM), tracksig$type),],
-                 effect_size3_SP=effect_size3_SP[match(names(pvals_diagRE_DM), names(effect_size3_SP))])
+tracksig = tracksig %>% group_by(type) %>%
+  dplyr::summarize(count = n(),bool_changepoints=sum(n_changepoints > 0)) %>%
+  mutate(tracksig_frac= bool_changepoints/count)
+tracksig = cbind.data.frame(pvals_diagRE_DMDL_SP_adj,
+                 tracksig[match(names(pvals_diagRE_DMDL_SP_adj), tracksig$type),],
+                 effect_size3_SP=effect_size3_SP[match(names(pvals_diagRE_DMDL_SP_adj), names(effect_size3_SP))])
 tracksig$ct = rownames(tracksig)
 tracksig$minpvals = -log2(tracksig$pvals_diagRE_DM)
 
-ggplot(tracksig, aes(x=pvals_diagRE_DM, y=tracksig_frac, label=ct))+geom_point()+geom_label_repel()+
-  labs(x='P-value of diagRE DMDL', y='Fraction of TrackSig samples with some changepoint')+scale_x_continuous(trans = "log2")+theme_bw()
+ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point()+geom_label_repel()+
+  labs(x='-log2 p-value of diagRE DMDL', y='Fraction of TrackSig samples with some changepoint')+
+  # scale_x_continuous(trans = "log2")+
+  theme_bw()
 
 pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", tracksig$ct), scheme = "tumour.subtype")
 names(pcawg_palette) <- tracksig$ct
+
 
 ggplot(tracksig, aes(x=effect_size3_SP, y=tracksig_frac, label=ct, col=ct))+
   geom_point(aes(size=minpvals))+geom_label_repel(max.overlaps = 5)+
