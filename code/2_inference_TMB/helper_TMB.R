@@ -675,15 +675,64 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-    if(length(idx_beta) == 1){
-      if(is.na(idx_beta)){
-        NA
-      }else{
-        if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
-        NA
-      }
+    if(!i$pdHess){
+      ## didn't converge
+      NA
     }else{
-      wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+      if(length(idx_beta) == 1){
+        if(is.na(idx_beta)){
+          NA
+        }else{
+          if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
+          wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+        }
+      }else{
+        wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
+      }
+    }
+  }
+}
+
+
+wald_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
+  ## wald test for the overdispersion parameter
+  if(typeof(i) == "character"){
+    return(NA)
+  }else{
+    idx_beta = which(names(i$par.fixed) == "log_lambda")
+    if(!i$pdHess){
+      ## didn't converge
+      NA
+    }else{
+      scaled_coefs <- scale(i$par.fixed[idx_beta], center = T, scale = F)
+      wald_generalised(v = as.vector(scaled_coefs),
+                       sigma = i$cov.fixed[idx_beta,idx_beta])
+    }
+  }
+}
+
+ttest_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
+  ## wald test for the overdispersion parameter
+  if(typeof(i) == "character"){
+    return(NA)
+  }else{
+    idx_beta = which(names(i$par.fixed) == "log_lambda")
+    if(!i$pdHess){
+      ## didn't converge
+      NA
+    }else{
+      .summary <- summary(i)
+      loglambdas <- python_like_select_rownames(.summary, 'log_lambda')
+      mean_coefs <- loglambdas[,1]
+      SE_coefs <- loglambdas[,2]
+      
+      dmin1 <- nrow(python_like_select_rownames(.summary, 'beta'))/2
+      num_patients <- nrow(python_like_select_rownames(.summary, 'u_large'))/dmin1
+      tstatistic <- (mean_coefs[1]-mean_coefs[2])/sum(SE_coefs)
+      df <- num_patients*2 - 2
+      #' For significance testing, the degrees of freedom for this test
+      #' is 2n − 2 where n is the number of participants in each group. 
+      2*pt(-abs(tstatistic), df=df)
     }
   }
 }
@@ -874,6 +923,11 @@ summarise_DA_detection = function(true, predicted){
   FNs = sum(true & !predicted)
   FNR = FNs/sum(!true)
   Accuracy=(TPs + TNs)/length(true)
+  if(sum(true) == 0 | sum(!true) == 0){
+    WeightedAccuracy = NA
+  }else{
+    WeightedAccuracy=mean(c(TPs/sum(true), TNs/sum(!true)))
+  }
   total_pos = sum(true | predicted)
   Power = TPs/total_pos
   Sensitivity = TPs / (TPs + FNs)
@@ -888,7 +942,7 @@ summarise_DA_detection = function(true, predicted){
   }
   return(c(FPR=FPR, TPR=TPR, Power=Power, AUC=AUC, Specificity=Specificity,
            Sensitivity=Sensitivity, Recall=Recall, Precision=Precision,
-           Accuracy=Accuracy))
+           Accuracy=Accuracy, WeightedAccuracy=WeightedAccuracy))
 }
 
 fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbose=T){
@@ -1286,12 +1340,32 @@ give_betas <- function(TMB_obj){
   matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
 }
 
-plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F){
+plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
+
+  .summary_lambda <- cbind.data.frame(data.frame(python_like_select_rownames(summary(TMB_obj), 'log_lambda')),
+                                      name=c('Lambda 1', 'Lambda 2'))
+  
+  if(plot){
+    print(ggplot(.summary_lambda, aes(x=name, y=`Estimate`))+
+      geom_point()+
+      geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
+  }
+  
+  if(return_df){
+    return(.summary_lambda)
+  }
+}
+
+plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
+                       line_zero=T, add_confint=F){
   if(typeof(TMB_obj) == 'character'){
+    .summary_betas <- NA
     if(theme_bw){
-      ggplot()+theme_bw()
+      plt <- ggplot()+theme_bw()
+      if(plot) print(plt)
     }else{
-      ggplot()
+      plt <- ggplot()
+      if(plot) print(plt)
     }
   }else{
     .summary_betas <- summary(TMB_obj)
@@ -1306,10 +1380,16 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       if(remove_SBS){
         names_cats <- gsub("SBS", "", names_cats) 
       }
+      if(length(unique(.summary_betas$LogR)) != length(names_cats)){
+        stop('Number of beta slope/intercept pairs should be the same as the length of the name of the categories')
+      }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
     }
-    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))+
-      geom_hline(yintercept = 0, lty='dashed', col='blue')+
+    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
+    
+    if(line_zero) plt <- plt + geom_hline(yintercept = 0, lty='dashed', col='blue')
+      
+    plt <- plt +
       geom_point()+
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
       ggtitle('Slopes')+facet_wrap(.~type_beta, scales = "free")
@@ -1318,15 +1398,28 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       plt <- plt + theme_bw()
     }
     
+    if(add_confint){
+      confints <- cbind(.summary_betas, confint=t(give_confidence_interval(.summary_betas[,'Estimate'], .summary_betas[,'Std. Error'])))
+      plt <- plt+
+        geom_errorbar(data = confints, aes(ymin=confint.1, ymax=confint.2), width=.1 ,col='blue', alpha=0.6)
+
+    }
+    
     if(rotate_axis){
       plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
     }
     
     if(!TMB_obj$pdHess){
-      plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
+      if(plot) print(plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red'))
     }else{
-      plt
+      if(plot) print(plt)
     }
+  }
+  
+  if(return_df){
+    .summary_betas
+  }else{
+    return(plt)
   }
 }
 

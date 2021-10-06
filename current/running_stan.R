@@ -1,6 +1,13 @@
+<<<<<<< HEAD
+#rm(list = ls())
+#setwd("~/Documents/PhD/GlobalDA/code/")
+#Sys.setenv(LANG='en')
+setwd("../code/")
+=======
 rm(list = ls())
 setwd("~/Documents/PhD/GlobalDA/code/")
 Sys.setenv(LANG='en')
+>>>>>>> 5063666b2c8fc99d73c1c5ec8cb80be53a1a69d3
 
 library(rstan)
 library(uuid)
