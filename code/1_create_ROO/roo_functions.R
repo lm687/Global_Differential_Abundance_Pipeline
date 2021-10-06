@@ -884,9 +884,15 @@ give_perturbation_ROOSigs_alt_v2 = function(exposures_cancertype_obj, slot_name=
 
 
 
-bootstrap_for_statistic = function(object_roo){
+bootstrap_for_statistic = function(object_roo, verbose){
   .object_roo_fun = object_roo
-  totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[1]] ## bootstrap
+  if(verbose){
+    'This function was wrong until 20210920. We were adding up the same first matrix twice'
+  }
+  ## previous; wrong
+  # totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[1]] ## bootstrap
+  ## current version, correct
+  totals = .object_roo_fun@count_matrices_all[[1]] + .object_roo_fun@count_matrices_all[[2]] ## bootstrap
   ## sample in two groups
   .x_boot = lapply(1:nrow(totals), function(i){
     multinom1 = t(rmultinom(n=1, size = sum(.object_roo_fun@count_matrices_all[[1]][i,]), prob = totals[i,]/sum(totals[i,])))
@@ -902,13 +908,13 @@ bootstrap_for_statistic = function(object_roo){
   
 }
 
-permutation_test_fun_wrapper =  function(objects_sigs_per_CT_features_arg, nbootstraps){
-  .x =  permutation_test_fun(objects_sigs_per_CT_features_arg, nbootstraps)
+permutation_test_fun_wrapper =  function(objects_sigs_per_CT_features_arg, nbootstraps, verbose=T){
+  .x =  permutation_test_fun(objects_sigs_per_CT_features_arg, nbootstraps, verbose)
   return(sum(abs(.x[[1]]) > abs(.x[[2]]))/nbootstraps)
 }
 
-permutation_test_fun = function(objects_sigs_per_CT_features_arg, nbootstraps){
-  null_statistics = replicate(n = nbootstraps, expr = bootstrap_for_statistic(objects_sigs_per_CT_features_arg))
+permutation_test_fun = function(objects_sigs_per_CT_features_arg, nbootstraps, verbose){
+  null_statistics = replicate(n = nbootstraps, expr = bootstrap_for_statistic(objects_sigs_per_CT_features_arg, verbose))
   null_statistics = null_statistics[!is.nan(null_statistics)]
   observed_statistic = give_total_perturbation(objects_sigs_per_CT_features_arg)
   list(null_statistics, observed_statistic)
@@ -948,3 +954,58 @@ aitchison_perturbation_test_alt_v2 <- function(object, slot_name, addone=T){
   }
   .res
 }
+
+iterative_chisqrt <- function(S1, S2){
+  ## copied from forward_variable_selection.R
+  ## where S1 and S2 are datasets, in which the columns are the categories
+  ## 1. compute 96 independent chi-sqrt tests, for each of the categories
+  ncats <- ncol(S1)
+  unordered_pvals = lapply(1:ncats, function(mut_cat){
+    chisq.test(rbind(c(sum(S1[,mut_cat]), sum(S1) - sum(S1[,mut_cat])),
+                     c(sum(S2[,mut_cat]), sum(S2) - sum(S2[,mut_cat]))))
+  })
+  unordered_pvals = sapply(unordered_pvals, function(res_chisqrt) res_chisqrt$p.value)
+  
+  ## 2. rank by v-value (lowest to highest)
+  rank = order(unordered_pvals, decreasing = FALSE)
+  
+  ordered_pvals = rep(NA, length(unordered_pvals))
+  ordered_pvals[1] = min(unordered_pvals)
+  
+  ## 3. for mi, from lowest to highest, re-calculate p-value
+  S1 = S1[,rank]
+  S2 = S2[,rank]
+  for(i in 2:(ncats-1)){
+    ordered_pvals[i] = chisq.test(rbind(c(sum(S1[,i]), sum(S1[,(i+1):ncats])),
+                                        c(sum(S2[,i]), sum(S2[,(i+1):ncats]))))$p.value
+  }
+  ordered_pvals[96] = chisq.test(rbind(c(sum(S1[,i]), sum(S1[,ncats-1])),
+                                       c(sum(S2[,i]), sum(S2[,ncats-1]))))$p.value
+  
+  # plot(unordered_pvals[rank], ordered_pvals)
+  # plot(unordered_pvals, sapply(1:96, function(idx) ordered_pvals[which(rank == idx)]))
+  ## 4. Order, again, the p-values
+  sapply(1:ncats, function(idx) ordered_pvals[which(rank == idx)])
+}
+
+
+iterative_chisqrt_wrapper <- function(object, slot_name='count_matrices_all'){
+  counts <- slot(object, name = slot_name)
+  iterative_chisqrt(counts[[1]],
+                    counts[[2]])[1]
+}
+
+
+compute_effect_size_1 <- function(mat1, mat2){
+  stopifnot(all(dim(mat1) == dim(mat2)))
+  ## the rows in mat1 and mat2 correspond to the same patients
+  sum((normalise_rw(mat1) - normalise_rw(mat2))**2)/nrow(mat1)
+}
+
+compute_effect_size_2 <- function(mat1, mat2){
+  stopifnot(all(dim(mat1) == dim(mat2)))
+  ## the rows in mat1 and mat2 correspond to the same patients
+  try(sum((normalise_rw(mat1) - normalise_rw(mat2))**2)/(nrow(mat1))*log(mean(rowSums(rbind(mat1,mat2)))))
+}
+
+
