@@ -1605,3 +1605,30 @@ wrapper_run_HMP_Xmcupo.sevsample <- function(i){
   x = x[[1]]@count_matrices_all
   return(HMP::Xmcupo.sevsample(x)$`p value`)
 }
+
+plot_ternary <- function(x, legend_on=T, plot_points=T){
+  require(Ternary)
+  
+  if(ncol(x) != 3){stop('Number of columns must be three. Create a subcomposition or amalgamation if needed.')}
+  TernaryPlot(atip = colnames(x)[1], btip = colnames(x)[2], ctip = colnames(x)[3],
+              grid.lines = 0, grid.col = NULL)
+  dens <- TernaryDensity(x, resolution = 10L)
+  
+  cls_legend = rbind(viridisLite::viridis(48L, alpha = 0.6),
+                     seq(from = 0, to = 47, by=1))
+  if(legend_on){
+    legend(x=-0.4,y=1.08,
+           fill = cls_legend[1,][c(T,F,F,F,F)],
+           legend = round(as.numeric(cls_legend[2,][c(T,F,F,F,F)])/sum(dens['z',]), 2), ncol=5,
+           y.intersp=0.8,x.intersp=0.5,text.width=0.1, cex=0.9, bty = "n")
+  }
+  ColourTernary(dens)
+  if(plot_points)  TernaryPoints(x, col = 'red', pch = '.', cex=5)
+  TernaryDensityContour(x, resolution = 30L)
+}
+
+split_matrix_in_half <- function(x){
+  list(x[1:(nrow(x)/2),],
+       x[(1+(nrow(x)/2)):nrow(x),])
+}
+

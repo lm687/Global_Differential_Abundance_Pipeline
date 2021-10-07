@@ -6919,16 +6919,32 @@ Simple HMP tests to see what is differentially abundant
 # signature_roo[[1]]
 require(HMP)
 
+
+THIS IS NOT DONE FOR SP SIGNATURES! AND WE ALSO NEED IT FOR NONEXOGENOUS SIGNATURES!
+
+all_objects_nonexo_SP
 HMP_res_sigs <- lapply(signature_roo, function(signature_roo_it){
   HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
                       t(signature_roo_it[[2]])))
 })
+
+HMP_res_sigs_nonexo <- lapply(signature_roo, function(signature_roo_it){
+  signature_roo_it <- give_subset_sigs_TMBobj(signature_roo_it, sigs_to_remove = nonexogenous$V1)
+  HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
+                      t(signature_roo_it[[2]])))
+})
+
+
 HMP_res_sigs_pval <- sapply(HMP_res_sigs, `[`, 'p value')
 names(HMP_res_sigs) <- names(signature_roo)
 names(HMP_res_sigs_pval)
 names(pvals_diagRE_DMDL_SP)
 HMP_res_sigs_pval_adj <- p.adjust(HMP_res_sigs_pval[names(HMP_res_sigs_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
 HMP_res_sigs_pval_adj
+
+HMP_res_sigs_nonexo_pval <-  sapply(HMP_res_sigs_nonexo, `[`, 'p value')
+HMP_res_sigs_nonexo_pval_adj <-  p.adjust(HMP_res_sigs_nonexo_pval[names(HMP_res_sigs_nonexo_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
+HMP_res_sigs_nonexo_pval_adj
 # test_HMP_ROOSigs(signature_roo[[1]],  slot='count_matrices_active')
 ```
 
@@ -6959,7 +6975,7 @@ table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
 
 ```
 
-```{r, pvals_pcawg_SP, dependson=c('p_vals_SP'), dev='tikz', fig.height=4.5, fig.width=5.5}
+```{r, pvals_pcawg_SP, dependson=c('p_vals_SP', 'comparison_pvals'), dev='tikz', fig.height=4.5, fig.width=5.5}
 p.adjust(pvals_diagRE_DMDL_SP, method = "BH")
 p.adjust(pvals_diagRE_DMDL_nonexo_SP, method = "BH")
 
@@ -6991,7 +7007,7 @@ ggplot(df_pvals_DMDL_SP,
 ```
 
 
-```{r, pvals_pcawg_SP_2, dependson=c('p_vals_SP')}
+```{r, pvals_pcawg_SP_2, dependson=c('p_vals_SP', 'pvals_pcawg_SP')}
 
 t.test(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05,'num_samples'],
        df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo > 0.05,'num_samples'])
@@ -7003,6 +7019,24 @@ mean(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05,'num_sigs_nonexo']
 mean(df_pvals_DMDL_SP[df_pvals_DMDL_SP$pvals_DMnonexo > 0.05,'num_sigs_nonexo'])
 
 ```
+
+Does DA or not scale with the avergae number of mutations in the observed exposures (i.e. per patient and group) of the relevant ct?
+```{r, num_muts_samples, dependson=c('pvals_pcawg_SP')}
+
+average_num_muts_SP <- sapply(enough_samples, function(ct){
+    .xx <- all_objects_SP[[ct]]
+    try(mean(rowSums(.xx$Y)))
+})
+
+average_num_muts_SP
+
+plot(log2(df_pvals_DMDL_SP$pvals_DM), log2(average_num_muts_SP))
+
+t.test(log2(average_num_muts_SP)[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05],
+       log2(average_num_muts_SP)[df_pvals_DMDL_SP$pvals_DMnonexo > 0.05])
+
+```
+
 
 See script `PCAWG_HMP_and_alternative_methods.R` for the analyses of PCAWG data using alternative models.
 
