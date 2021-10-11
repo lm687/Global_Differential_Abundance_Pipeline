@@ -29,11 +29,12 @@ probs <- softmax(cbind(logR, 0))
 plot(compositions::acomp(probs), col=factor(x[,2]))
 
 Nm <- rpois(n*2, lambda = 90)
-Nm_b <- rpois(n*2, lambda = 45)
+Nm_b <- rpois(n*2, lambda = 25)
 hist(Nm)
 
 ## add shared overdispersion
 lambda <- c(200,200)
+lambda <- c(20,20)
 alpha <- rep(lambda, each=n)*probs
 
 ## add two overdispersion parameters
@@ -54,8 +55,10 @@ give_DM <- function(alpha, Nm){
 
 ## modify sigma
 sigma_SIGMAb <- sigma *9
+sigma_SIGMAc <- sigma *0.4
 beta_b <- beta/9
 u_SIGMAb <- mvtnorm::rmvnorm(n, mean=c(0,0), sigma = sigma_SIGMAb)
+u_SIGMAc <- mvtnorm::rmvnorm(n, mean=c(0,0), sigma = sigma_SIGMAc)
 logR_SIGMAb <- x %*% beta + z %*% u_SIGMAb
 logR_SIGMAb_BETAb <- x %*% beta_b + z %*% u_SIGMAb
 logR_SIGMAc_BETAb <- x %*% beta_b + z %*% u_SIGMAc
@@ -134,4 +137,33 @@ dev.off()
 ##' - Nm: number of mutations, which also determine the variance in the normalised count exposures (but which is fixed in the model)
 ##' - overdispersion parameter, and whether there are two
 
+## compensating lower overdispersion by having a higher variance for the random effects
+## initial situation: the one we have above
+## second situation, with lambda*, Sigma, where lambda* >> lambda (i.e. less overdispersion)
+## third situation, with lambda*, Sigma*, in which the (low) overdispersion of lambda* is compensated by larger RE, i,e.
+## higher variance in Sigma
+
+lambda_d <- c(6000,6000)
+alpha_OVERDISPd <- rep(lambda_d, each=n)*probs
+W_OVERDISPd <-  give_DM(alpha_OVERDISPd, Nm)
+
+pdf(file = "../../../results/models_explanatory/DM_parameters_and_identifiability_W_OVERDISPd.pdf", heigh=3)
+par(mfrow=c(1,2), mar=c(0,0,0,0))
+sapply(split_matrix_in_half(W_OVERDISPd), plot_ternary, legend_on=F, plot_points=F)
+dev.off()
+
+# sigma_SIGMAd <- sigma
+# diag(sigma_SIGMAd) <- diag(sigma_SIGMAd)*5
+sigma_SIGMAd <- sigma*7
+u_SIGMAd <- mvtnorm::rmvnorm(n, mean=c(0,0), sigma = sigma_SIGMAd)
+logR_SIGMAd <- x %*% beta + z %*% u_SIGMAd
+probs_SIGMAd <- softmax(cbind(logR_SIGMAd, 0))
+alpha_SIGMAd_OVERDISPd <- rep(lambda_d, each=n)*probs_SIGMAd
+W_SIGMAd_OVERDISPd <-  give_DM(alpha_SIGMAd_OVERDISPd, Nm)
+
+
+pdf(file = "../../../results/models_explanatory/DM_parameters_and_identifiability_W_SIGMAd_OVERDISPd.pdf", heigh=3)
+par(mfrow=c(1,2), mar=c(0,0,0,0))
+sapply(split_matrix_in_half(W_SIGMAd_OVERDISPd), plot_ternary, legend_on=F, plot_points=F)
+dev.off()
 

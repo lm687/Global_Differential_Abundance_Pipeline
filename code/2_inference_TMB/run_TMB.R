@@ -81,6 +81,10 @@ if(opt$model == "fullREM"){
   TMB::compile("2_inference_TMB/mm_multinomial/FE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
   dyn.load(dynlib("2_inference_TMB/mm_multinomial/FE_dirichletmultinomial_single_lambda"))
   mod_model_name = "FEDMsinglelambda"
+}else if(opt$model =="fullREDMnoscaling"){
+  TMB::compile("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomialnoscaling.cpp",  "-std=gnu++17")
+  dyn.load(dynlib("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomialnoscaling"))
+  mod_model_name = "fullREDMnoscaling"
 }else{
   stop('Specifiy a valid <model>')
 }
@@ -153,6 +157,12 @@ if(opt$use_previous_run_startingvals){
         logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
         cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'),
         log_lambda = matrix(c(2,2)))
+      }else if(opt$model == "fullREDMnoscaling"){
+        list_initial_params <- list(
+          beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
+          u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
+          cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'),
+          log_lambda = matrix(c(2,2)))
       }else if(opt$model == "diagREDM"){
         list_initial_params <- list(
           beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
