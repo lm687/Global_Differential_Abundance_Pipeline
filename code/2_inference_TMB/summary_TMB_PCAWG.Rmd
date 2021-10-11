@@ -69,6 +69,7 @@ dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
 ```{r,, load_functions, cache=FALSE, echo=FALSE}
 
 library(viridis)
+library(grid)
 
 source("../2_inference_TMB/helper_TMB.R")
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
@@ -6410,6 +6411,14 @@ diagRE_DMDL_SP <- sapply(enough_samples, function(ct){
 diagRE_DMDL_nonexo_SP <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDMnonexo_", ct, "_signaturesPCAWG.RDS")))
 }, simplify = F); names(diagRE_DMDL_nonexo_SP) <- enough_samples
+
+"../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDM"
+# fullREDMnoscaling_SP <- sapply(enough_samples, function(ct){
+#   try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscaling_", ct, "_signaturesPCAWG.RDS")))
+# }, simplify = F); names(fullREDMnoscaling_SP) <- enough_samples
+fullREDMnoscaling_SP_nonexo <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexo_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullREDMnoscaling_SP_nonexo) <- enough_samples
 ```
 
 ```{r, p_vals_SP, dependson=c('load_runs_signaturesPCAWG')}
@@ -6432,7 +6441,7 @@ pvals_diagRE_DMDL_SP
 list_models_SP <- c( 'fullRE_M_SP', 'fullRE_DMSL_SP',
                   'fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP', 
                   'diagRE_DMDL_SP',
-                  'diagRE_DMDL_nonexo_SP')
+                  'diagRE_DMDL_nonexo_SP', 'fullREDMnoscaling_SP_nonexo')
 
 all_summaries_SP <- lapply(lapply(list_models_SP, get), function(i){
     give_summary_of_runs2(i, long_return = T)})
@@ -6920,31 +6929,31 @@ Simple HMP tests to see what is differentially abundant
 require(HMP)
 
 
-THIS IS NOT DONE FOR SP SIGNATURES! AND WE ALSO NEED IT FOR NONEXOGENOUS SIGNATURES!
-
-all_objects_nonexo_SP
-HMP_res_sigs <- lapply(signature_roo, function(signature_roo_it){
-  HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
-                      t(signature_roo_it[[2]])))
-})
-
-HMP_res_sigs_nonexo <- lapply(signature_roo, function(signature_roo_it){
-  signature_roo_it <- give_subset_sigs_TMBobj(signature_roo_it, sigs_to_remove = nonexogenous$V1)
-  HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
-                      t(signature_roo_it[[2]])))
-})
-
-
-HMP_res_sigs_pval <- sapply(HMP_res_sigs, `[`, 'p value')
-names(HMP_res_sigs) <- names(signature_roo)
-names(HMP_res_sigs_pval)
-names(pvals_diagRE_DMDL_SP)
-HMP_res_sigs_pval_adj <- p.adjust(HMP_res_sigs_pval[names(HMP_res_sigs_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
-HMP_res_sigs_pval_adj
-
-HMP_res_sigs_nonexo_pval <-  sapply(HMP_res_sigs_nonexo, `[`, 'p value')
-HMP_res_sigs_nonexo_pval_adj <-  p.adjust(HMP_res_sigs_nonexo_pval[names(HMP_res_sigs_nonexo_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
-HMP_res_sigs_nonexo_pval_adj
+# THIS IS NOT DONE FOR SP SIGNATURES! AND WE ALSO NEED IT FOR NONEXOGENOUS SIGNATURES!
+# 
+# all_objects_nonexo_SP
+# HMP_res_sigs <- lapply(signature_roo, function(signature_roo_it){
+#   HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
+#                       t(signature_roo_it[[2]])))
+# })
+# 
+# HMP_res_sigs_nonexo <- lapply(signature_roo, function(signature_roo_it){
+#   signature_roo_it <- give_subset_sigs_TMBobj(signature_roo_it, sigs_to_remove = nonexogenous$V1)
+#   HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),
+#                       t(signature_roo_it[[2]])))
+# })
+# 
+# 
+# HMP_res_sigs_pval <- sapply(HMP_res_sigs, `[`, 'p value')
+# names(HMP_res_sigs) <- names(signature_roo)
+# names(HMP_res_sigs_pval)
+# names(pvals_diagRE_DMDL_SP)
+# HMP_res_sigs_pval_adj <- p.adjust(HMP_res_sigs_pval[names(HMP_res_sigs_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
+# HMP_res_sigs_pval_adj
+# 
+# HMP_res_sigs_nonexo_pval <-  sapply(HMP_res_sigs_nonexo, `[`, 'p value')
+# HMP_res_sigs_nonexo_pval_adj <-  p.adjust(HMP_res_sigs_nonexo_pval[names(HMP_res_sigs_nonexo_pval) %in% paste0(names(pvals_diagRE_DMDL_SP), '.p value')], method='fdr')
+# HMP_res_sigs_nonexo_pval_adj
 # test_HMP_ROOSigs(signature_roo[[1]],  slot='count_matrices_active')
 ```
 
@@ -6966,8 +6975,8 @@ names(pvals_diagRE_DMDL_nonexo_SP_adj)[which((pvals_diagRE_DMDL_nonexo_SP_adj > 
 table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
       fullRE_M_DA=pvals_fullRE_M_nonexo_SP_adj <= 0.05)
 
-table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
-      HMP_DA=HMP_res_sigs_pval_adj <= 0.05)
+# table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj <= 0.05,
+#       HMP_DA=HMP_res_sigs_pval_adj <= 0.05)
 
 
 # table(diagRE_DMDL_DA=pvals_diagRE_DMDL_nonexo_SP_adj < 0.05, HMP_res_sigs_DA=HMP_res_sigs < 0.05)
@@ -7054,13 +7063,20 @@ tracksig = cbind.data.frame(pvals_diagRE_DMDL_SP_adj,
 tracksig$ct = rownames(tracksig)
 tracksig$minpvals = -log2(tracksig$pvals_diagRE_DM)
 
-ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point()+geom_label_repel()+
-  labs(x='-log2 p-value of diagRE DMDL', y='Fraction of TrackSig samples with some changepoint')+
-  # scale_x_continuous(trans = "log2")+
-  theme_bw()
 
 pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", tracksig$ct), scheme = "tumour.subtype")
 names(pcawg_palette) <- tracksig$ct
+
+ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+geom_label_repel(size=3, col='black')+
+  labs(x='-log2 p-value of diagRE DMDL', y='Fraction of TrackSig samples with some changepoint')+
+    scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  # scale_x_continuous(trans = "log2")+
+  theme_bw()+theme(legend.position = "bottom")
+
+ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_nonexo_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+geom_label_repel(size=3, col='black')+
+  labs(x='-log2 p-value of diagRE DMDL (nonexo)', y='Fraction of TrackSig samples with some changepoint')+
+    scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  theme_bw()+theme(legend.position = "bottom")
 
 
 ggplot(tracksig, aes(x=effect_size3_SP, y=tracksig_frac, label=ct, col=ct))+
@@ -7069,6 +7085,38 @@ ggplot(tracksig, aes(x=effect_size3_SP, y=tracksig_frac, label=ct, col=ct))+
   scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=4), size=FALSE)
 
+```
+
+Same plots, but smaller, for images
+```{r, tracksig_comparison_images, fig.height=3, fig.width=3, dev='tikz', dependson=c('tracksig_comparison')}
+
+ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+geom_label_repel(, max.overlaps = 4, size=3, col='black')+
+  labs(x='-log2 p-value of\n diagRE DMDL', y='Fraction of TrackSig samples\n with some changepoint')+
+    scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  # scale_x_continuous(trans = "log2")+
+  theme_bw()+theme(legend.position = "bottom")+guides(col=FALSE)+labs(size='N. obs')
+
+ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_nonexo_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+
+  geom_label_repel(size=3, col='black', max.overlaps = 4)+
+  labs(x='-log2 p-value of\n diagRE DMDL (nonexo)', y='Fraction of TrackSig samples\n with some changepoint')+
+    scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  theme_bw()+theme(legend.position = "bottom")+guides(col=FALSE)+labs(size='N. obs')
+
+```
+
+```{r, legend_ct, dev='tikz', fig.width=9, fig.height=3}
+plot_for_ct_legend <- ggplot(tracksig, aes(x=-log2(pvals_diagRE_DMDL_nonexo_SP_adj), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+
+  geom_label_repel(size=3, col='black', max.overlaps = 2)+
+  labs(x='-log2 p-value of\n diagRE DMDL (nonexo)', y='Fraction of TrackSig samples\n with some changepoint')+
+    scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  theme_bw()+theme(legend.position = "bottom")+labs(size='N. observations')+
+  guides(size=FALSE)+labs(col='')
+
+legend_ct <- (cowplot::get_legend(plot_for_ct_legend))
+# pdf("../../results/results_TMB/pcawg/legend_cts.pdf", height = 1, width = 6.5)
+grid.newpage()
+grid.draw(legend_ct)
+# dev.off()
 ```
 
 Barplots of cancer types with and without differential abundance

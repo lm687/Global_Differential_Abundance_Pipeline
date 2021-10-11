@@ -381,6 +381,14 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     dll_name <- "fullRE_ME_dirichletmultinomial"
     rdm_vec <- "u_large"
     # obj <- MakeADFun(data, parameters, DLL="", random = )
+  }else if(model == "fullREDMnoscaling"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    parameters <- c(parameters, log_lambda = list(matrix(c(2,2))))
+    parameters$logs_sd_RE = NULL
+    print(parameters)
+    dll_name <- "fullRE_ME_dirichletmultinomialnoscaling"
+    rdm_vec <- "u_large"
   }else if(model == "diagRE_DM"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
@@ -808,9 +816,9 @@ give_stderr = function(i, only_slopes=T, only_betas=T){
       }
     }else{
       if(only_slopes){
-        .x = select_slope_2(python_like_select_name(summary.sdreport(i)[,2], "beta"),v=F)
+        .x = select_slope_2(python_like_select_name(TMB::summary.sdreport(i)[,2], "beta"),v=F)
       }else{
-        .x = python_like_select_name(summary.sdreport(i)[,2], "beta")
+        .x = python_like_select_name(TMB::summary.sdreport(i)[,2], "beta")
       }
     }
    .x
