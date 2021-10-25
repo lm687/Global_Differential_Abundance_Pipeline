@@ -70,6 +70,7 @@ dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
 
 library(viridis)
 library(grid)
+library(readxl)
 
 source("../2_inference_TMB/helper_TMB.R")
 source("../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
@@ -6419,6 +6420,16 @@ diagRE_DMDL_nonexo_SP <- sapply(enough_samples, function(ct){
 fullREDMnoscaling_SP_nonexo <- sapply(enough_samples, function(ct){
   try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexo_", ct, "_signaturesPCAWG.RDS")))
 }, simplify = F); names(fullREDMnoscaling_SP_nonexo) <- enough_samples
+
+fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexosubset_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations) <- enough_samples
+
+fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations[give_summary_of_runs2(fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations, long_return = T)$Timeout] <- fullREDMnoscaling_SP_nonexo [give_summary_of_runs2(fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations, long_return = T)$Timeout]
+
+fullREDMonefixedlambdanonexo_SP <- sapply(enough_samples, function(ct){
+  try(readRDS(paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambdanonexo_", ct, "_signaturesPCAWG.RDS")))
+}, simplify = F); names(fullREDMonefixedlambdanonexo_SP) <- enough_samples
 ```
 
 ```{r, p_vals_SP, dependson=c('load_runs_signaturesPCAWG')}
@@ -6427,8 +6438,11 @@ pvals_diagRE_DMDL_SP <- sapply(diagRE_DMDL_SP, function(i) try(wald_TMB_wrapper(
 pvals_diagRE_DMDL_nonexo_SP <- sapply(diagRE_DMDL_nonexo_SP, function(i) try(wald_TMB_wrapper(i)))
 pvals_fullRE_M_nonexo_SP <- sapply(fullRE_M_nonexo_SP, function(i) try(wald_TMB_wrapper(i)))
 pvals_fullRE_DMSL_nonexo_SP <- sapply(fullRE_DMSL_nonexo_SP, function(i) try(wald_TMB_wrapper(i)))
+pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations <- sapply(fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations, function(i) try(wald_TMB_wrapper(i)))
+pvals_fullREDMonefixedlambdanonexo_SP <- sapply(fullREDMonefixedlambdanonexo_SP, function(i) try(wald_TMB_wrapper(i)))
 
-names(pvals_diagRE_DMDL_SP) <- names(pvals_diagRE_DMDL_nonexo_SP) <- names(pvals_fullRE_M_nonexo_SP) <- 
+
+names(pvals_fullREDMonefixedlambdanonexo_SP) <- names(pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations) <- names(pvals_diagRE_DMDL_SP) <- names(pvals_diagRE_DMDL_nonexo_SP) <- names(pvals_fullRE_M_nonexo_SP) <- 
   names(pvals_fullRE_DMSL_nonexo_SP) <- enough_samples
 ```
 
@@ -6437,11 +6451,12 @@ pvals_diagRE_DMDL_SP
 
 ```
 
-```{r, summary_convergence_SP, fig.height=4.2, fig.width=7, echo=FALSE, dependson=c('read_tmb_runs', 'load_runs_signaturesPCAWG')}
+```{r, summary_convergence_SP, fig.height=6.2, fig.width=7, echo=FALSE, dependson=c('read_tmb_runs', 'load_runs_signaturesPCAWG')}
 list_models_SP <- c( 'fullRE_M_SP', 'fullRE_DMSL_SP',
                   'fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP', 
                   'diagRE_DMDL_SP',
-                  'diagRE_DMDL_nonexo_SP', 'fullREDMnoscaling_SP_nonexo')
+                  'diagRE_DMDL_nonexo_SP', 'fullREDMnoscaling_SP_nonexo',
+                  'fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations', 'fullREDMonefixedlambdanonexo_SP')
 
 all_summaries_SP <- lapply(lapply(list_models_SP, get), function(i){
     give_summary_of_runs2(i, long_return = T)})
@@ -6453,6 +6468,20 @@ ggplot(melt(all_summaries_SP), aes(x=factor(L1, levels=list_models_SP), y=value,
   labs(x='')
 ```
 
+```{r}
+## comparison of betas
+# give_betas(get(list_models_SP)[[1]][[1]])
+all_betas_SP <- do.call('cbind', lapply(c( 'fullRE_M_SP', 'fullRE_DMSL_SP',
+                  'diagRE_DMDL_SP'), function(j) do.call('c', sapply(get(j), function(i) as.vector(give_betas(i))))))
+colnames(all_betas_SP) <- c( 'fullRE_M_SP', 'fullRE_DMSL_SP',
+                  'diagRE_DMDL_SP')
+pairs(all_betas_SP)
+all_betas_SP_nonexo <- do.call('cbind', lapply(c('fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP', 
+                  'diagRE_DMDL_nonexo_SP', 'fullREDMnoscaling_SP_nonexo'), function(j) do.call('c', sapply(get(j), function(i) as.vector(give_betas(i))))))
+colnames(all_betas_SP_nonexo) <- c('fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP',
+                                   'diagRE_DMDL_nonexo_SP', 'fullREDMnoscaling_SP_nonexo')
+pairs(all_betas_SP_nonexo)
+```
 
 ```{r, names_logR_SP, dependson=c('load_runs_signaturesPCAWG'), echo=FALSE}
 ## for names of betas
@@ -6958,9 +6987,10 @@ require(HMP)
 ```
 
 
-```{r, comparison_pvals, dependson=c('HMP_pcawg')}
+```{r, comparison_pvals, dependson=c('HMP_pcawg', 'p_vals_SP')}
 pvals_diagRE_DMDL_SP_adj <- p.adjust(pvals_diagRE_DMDL_SP, 'fdr')
 pvals_diagRE_DMDL_nonexo_SP_adj <- p.adjust(pvals_diagRE_DMDL_nonexo_SP, 'fdr')
+pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations_adj <- p.adjust(pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations, 'fdr')
 pvals_fullRE_M_nonexo_SP_adj <- p.adjust(pvals_fullRE_M_nonexo_SP, 'fdr')
 pvals_fullRE_DMSL_nonexo_SP_adj <- p.adjust(pvals_fullRE_DMSL_nonexo_SP, 'fdr')
 names(pvals_diagRE_DMDL_SP_adj) <- names(pvals_diagRE_DMDL_nonexo_SP_adj) <- names(pvals_fullRE_M_nonexo_SP_adj) <- names(pvals_fullRE_DMSL_nonexo_SP_adj) <- names(pvals_diagRE_DMDL_SP)
@@ -7047,6 +7077,39 @@ t.test(log2(average_num_muts_SP)[df_pvals_DMDL_SP$pvals_DMnonexo <= 0.05],
 ```
 
 
+
+```{r, pvals_pcawg_SP_nonscaling_comparison, dependson=c('p_vals_SP', 'comparison_pvals'), dev='tikz', fig.height=4.5, fig.width=5.5}
+
+pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", enough_samples), scheme = "tumour.subtype")
+names(pcawg_palette) <- enough_samples
+
+pvals_diagRE_DMDL_nonexo_SP_adj
+pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations_adj
+
+df_pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations <- cbind.data.frame(pvals_DMnonexo_nonscaling=pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations_adj,
+                                     pvals_DMnonexo=pvals_diagRE_DMDL_nonexo_SP_adj,
+                        num_samples=as.numeric(num_samples_all_SP),
+                        num_sigs_nonexo=as.numeric(num_sigs_nonexo_SP),
+                        ct=enough_samples,
+                        pvals_DM_nonscaling_censored=sapply(-log(pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations_adj),
+                                                 function(i) min(i, 25)),
+                        pvals_DMnonexo_censored=sapply(-log(pvals_diagRE_DMDL_nonexo_SP_adj),
+                                                       function(i) min(i, 25)),
+                        bool_censored=((-log(pvals_diagRE_DMDL_nonexo_SP_adj) > 25 )| (-log(pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations_adj) > 25)))
+ggplot(df_pvals_fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations,
+       aes(x=pvals_DM_nonscaling_censored, y=pvals_DMnonexo_censored,
+           # size=num_samples,
+           label=ct, size=bool_censored))+geom_point(aes (col=ct))+
+  geom_hline(yintercept = -log(0.05), lty='dashed')+geom_vline(xintercept = -log(0.05), lty='dashed')+
+  geom_label_repel(size=3.2, alpha=0.6, max.overlaps = 30)+  theme_bw()+
+  theme(legend.position = "bottom", legend.text=element_text(size=8))+
+  labs(x='- Log p-value all signatures', y='- Log p-value nonexogenous signatures')+
+  guides(size=FALSE, col=FALSE)+ #, col=guide_legend(ncol=4), 
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  lims(x=c(0, 30), y=c(0,30))
+
+```
+
 See script `PCAWG_HMP_and_alternative_methods.R` for the analyses of PCAWG data using alternative models.
 
 \section{Tracksig}
@@ -7117,6 +7180,173 @@ legend_ct <- (cowplot::get_legend(plot_for_ct_legend))
 grid.newpage()
 grid.draw(legend_ct)
 # dev.off()
+```
+
+```{r, gerstung, dev='tikz'}
+
+gerstung_changing_sigs_early_late <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM7_ESM.xlsx", sheet = "Figure4c")
+gerstung_changing_sigs_clonal_subclonal <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM7_ESM.xlsx", sheet = "Figure4d")
+
+# gerstung_changing_sigs <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM9_ESM.xlsx", sheet = "signatures-changing")
+# gerstung_changing_sigs <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM9_ESM.xlsx", sheet = "signatures-changing")
+# gerstung_constant_sigs <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM9_ESM.xlsx", sheet = "signatures-constant")
+# gerstung_changing_sigs
+# gerstung_constant_sigs
+
+gerstung_changing_sigs_earlylate <- gerstung_changing_sigs_early_late #gerstung_changing_sigs[gerstung_changing_sigs$time == "early-late",]
+gerstung_changing_sigs_clonalsubclonal <- gerstung_changing_sigs_clonal_subclonal #gerstung_changing_sigs[gerstung_changing_sigs$time == "clonal-subclonal",]
+
+gerstung_changing_sigs_earlylate$signature[(gerstung_changing_sigs_earlylate$signature == "SBS6.14.15.20.21.26.44")] = "SBS6+"
+gerstung_changing_sigs_clonalsubclonal$signature[(gerstung_changing_sigs_clonalsubclonal$signature == "SBS6.14.15.20.21.26.44")] = "SBS6+"
+gerstung_changing_sigs_earlylate$signature <- gsub("_", ".", gerstung_changing_sigs_earlylate$signature)
+gerstung_changing_sigs_clonalsubclonal$signature <- gsub("_", ".", gerstung_changing_sigs_clonalsubclonal$signature)
+
+# df_changes_el <- gerstung_changing_sigs_earlylate %>% group_by(signature) %>% dplyr::summarise(median(mean_change))
+# df_changes_cs <- gerstung_changing_sigs_clonalsubclonal %>% group_by(signature) %>% dplyr::summarise(median(mean_change))
+df_changes_el <- gerstung_changing_sigs_earlylate %>% group_by(signature) %>% dplyr::summarise(median(log2fc_earlyLate))
+df_changes_cs <- gerstung_changing_sigs_clonalsubclonal %>% group_by(signature) %>% dplyr::summarise(median(log2fc_clonalSubclonal))
+
+
+# grid.arrange(ggplot(gerstung_changing_sigs_earlylate, aes(x=factor(signature, levels=df_changes_el$signature[order(df_changes_el$`median(mean_change)`)]),
+#                                    y=mean_change, group=signature,col=histology_abbreviation))+geom_boxplot()+geom_jitter()+
+#                geom_hline(yintercept = 0, lty='dashed')+
+#                guides(col=FALSE)+theme_bw()+
+#     theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Early vs late'),
+# ggplot(gerstung_changing_sigs_clonalsubclonal, aes(x=factor(signature, levels=df_changes_cs$signature[order(df_changes_cs$`median(mean_change)`)]),
+#                                              y=mean_change, group=signature,col=histology_abbreviation))+geom_hline(yintercept = 0, lty='dashed')+
+#   geom_boxplot()+  geom_jitter()+guides(col=FALSE)+theme_bw()+
+#   theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Clonal vs subclonal'),
+# nrow=2)
+
+## removing cancer types where there aren't many observations
+select_self <- function(i) i[i]
+gerstung_changing_sigs_earlylate <- gerstung_changing_sigs_earlylate %>% dplyr::filter(signature %in% names(select_self(table(gerstung_changing_sigs_earlylate$signature) > 5)))
+gerstung_changing_sigs_clonalsubclonal <- gerstung_changing_sigs_clonalsubclonal %>% dplyr::filter(signature %in% names(select_self(table(gerstung_changing_sigs_clonalsubclonal$signature) > 5)))
+
+pcawg_palette <- pcawg.colour.palette(x = gsub("-", ".", tolower(gsub("\\..*", "", sort(unique(gerstung_changing_sigs_earlylate$tumour_type))))),
+                                      scheme = "tumour.subtype")
+names(pcawg_palette) <- sort(unique(gerstung_changing_sigs_earlylate$tumour_type))
+
+
+unique(gerstung_changing_sigs_clonal_subclonal$signature)
+gerstung_changing_sigs_earlylate$signature <-  factor(gerstung_changing_sigs_earlylate$signature,
+                                                    levels=df_changes_el$signature[order(df_changes_el$`median(log2fc_earlyLate)`)])
+gerstung_changing_sigs_clonalsubclonal$signature <- factor(gerstung_changing_sigs_clonalsubclonal$signature,
+                                                           levels=df_changes_cs$signature[order(df_changes_cs$`median(log2fc_clonalSubclonal)`)])
+
+# grid.arrange(ggplot(gerstung_changing_sigs_earlylate, aes(x=signature,
+#                                                           y=log2fc_earlyLate, group=signature,col=tumour_type))+geom_boxplot()+geom_jitter(alpha=0.2)+
+#                geom_hline(yintercept = 0, lty='dashed')+
+#                guides(col=FALSE)+theme_bw()+
+#                theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Early vs late')+
+#                scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between early and late clonal mutations'),
+#              ggplot(gerstung_changing_sigs_clonalsubclonal, aes(x=signature,
+#                                                                 y=log2fc_clonalSubclonal, group=signature,col=tumour_type))+
+#                geom_hline(yintercept = 0, lty='dashed')+
+#                geom_boxplot()+  geom_jitter(alpha=0.2)+guides(col=FALSE)+theme_bw()+
+#                theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Clonal vs subclonal')+
+#                scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between clonal and subclonal mutation'),
+#              nrow=2)
+ggplot(gerstung_changing_sigs_earlylate, aes(x=signature,
+                                                          y=log2fc_earlyLate, group=signature,col=tumour_type))+geom_boxplot()+geom_jitter(alpha=0.2)+
+               geom_hline(yintercept = 0, lty='dashed')+
+               guides(col=FALSE)+theme_bw()+
+               theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Early vs late')+
+               scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between early and late clonal mutations')
+
+ggplot(gerstung_changing_sigs_clonalsubclonal, aes(x=signature,
+                                                                y=log2fc_clonalSubclonal, group=signature,col=tumour_type))+
+               geom_hline(yintercept = 0, lty='dashed')+
+               geom_boxplot()+  geom_jitter(alpha=0.2)+guides(col=FALSE)+theme_bw()+
+               theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Clonal vs subclonal')+
+               scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between clonal and subclonal mutation')
+
+```
+
+```{r, gerstung2, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=4.5}
+ggplot(gerstung_changing_sigs_earlylate[grepl('SBS', gerstung_changing_sigs_earlylate$signature),], aes(x=signature,
+                                                          y=log2fc_earlyLate, group=signature,col=tumour_type))+geom_boxplot()+geom_jitter(alpha=0.2)+
+               geom_hline(yintercept = 0, lty='dashed')+
+               guides(col=FALSE)+theme_bw()+
+               theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Early vs late')+
+               scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between \nearly and late clonal mutations')
+
+ggplot(gerstung_changing_sigs_clonalsubclonal[grepl('SBS', gerstung_changing_sigs_clonalsubclonal$signature),], aes(x=signature,
+                                                                y=log2fc_clonalSubclonal, group=signature,col=tumour_type))+
+               geom_hline(yintercept = 0, lty='dashed')+
+               geom_boxplot()+  geom_jitter(alpha=0.2)+guides(col=FALSE)+theme_bw()+
+               theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Clonal vs subclonal')+
+               scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between \nclonal and subclonal mutation')
+
+```
+
+```{r, gerstung3, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=4.5}
+
+df_changes_el_persample <- gerstung_changing_sigs_earlylate %>% group_by(samplename) %>% dplyr::summarise(median(log2fc_earlyLate))
+df_changes_cs_persample <- gerstung_changing_sigs_clonalsubclonal %>% group_by(samplename) %>% dplyr::summarise(median(log2fc_clonalSubclonal))
+gerstung_changing_sigs_earlylate$samplename <-  factor(gerstung_changing_sigs_earlylate$samplename,
+                                                             levels=df_changes_el_persample$samplename[order(df_changes_el_persample$`median(log2fc_earlyLate)`)])
+gerstung_changing_sigs_clonalsubclonal$samplename <-  factor(gerstung_changing_sigs_clonalsubclonal$samplename,
+                                                             levels=df_changes_cs_persample$samplename[order(df_changes_cs_persample$`median(log2fc_clonalSubclonal)`)])
+table(is.na(gerstung_changing_sigs_earlylate$samplename))
+table(is.na(gerstung_changing_sigs_clonalsubclonal$samplename))
+
+ggplot(gerstung_changing_sigs_earlylate, aes(x=samplename,
+                                             y=log2fc_earlyLate, group=samplename,col=tumour_type))+geom_boxplot()+geom_jitter(alpha=0.05)+
+  geom_hline(yintercept = 0, lty='dashed')+
+  guides(col=FALSE)+theme_bw()+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between\nearly and late clonal mutations')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+ggplot(gerstung_changing_sigs_clonalsubclonal, aes(x=samplename,
+                                                   y=log2fc_clonalSubclonal, group=samplename,col=tumour_type))+
+  geom_hline(yintercept = 0, lty='dashed')+
+  geom_boxplot()+  geom_jitter(alpha=0.05)+guides(col=FALSE)+theme_bw()+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+ggtitle('Clonal vs subclonal')+
+  scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between\nclonal and subclonal mutation')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+ggplot(gerstung_changing_sigs_clonalsubclonal, aes(x=tumour_type,
+                                                   y=log2fc_clonalSubclonal, group=tumour_type,col=tumour_type))+
+  geom_hline(yintercept = 0, lty='dashed')+
+  geom_boxplot()+  geom_jitter(alpha=0.2)+guides(col=FALSE)+theme_bw()+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+ggtitle('Early vs late')+
+  ggtitle('Clonal vs subclonal')+
+  scale_color_manual(values = pcawg_palette)+labs(x='', y='Log 2 fold-change between clonal and subclonal mutation')
+
+```
+
+```{r, gerstung4, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=4.5}
+
+gerstung_changing_sigs_clonalsubclonal_var <- gerstung_changing_sigs_clonalsubclonal %>%
+  dplyr::group_by(tumour_type) %>% summarise(varlog2=var(log2fc_clonalSubclonal), count=n())
+ggplot(gerstung_changing_sigs_clonalsubclonal_var,
+       aes(x=varlog2, y=count, label=tumour_type, col=tumour_type))+geom_point()+
+  scale_color_manual(values = pcawg_palette)+guides(col=FALSE)+theme_bw()+geom_label_repel(max.overlaps = 5)
+  labs(x='Variance of log2 fold change in cancer type', y='Number of observations')
+```
+
+```{r, gerstung5, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=4.5}
+
+perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary <- perturbed_betas_diagRE_DMDL_nonexo_SP_df %>% dplyr::group_by(sig) %>%
+  summarise(meanperturbed=mean( !(perturbed == 'FALSE')))
+
+perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary
+comparison_with_gerstung_earlylate <- cbind.data.frame(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary,
+                                                            df_changes_el[match(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary$sig,
+                                                                                df_changes_el$signature),])
+comparison_with_gerstung_earlylate
+comparison_with_gerstung_earlylate$medianlog2fcearlylate = comparison_with_gerstung_earlylate$`median(log2fc_earlyLate)`
+ggplot(comparison_with_gerstung_earlylate, aes(x=medianlog2fcearlylate, y=meanperturbed, label=signature))+geom_point()+geom_label_repel()+theme_bw()+
+  labs(x='Median of log2-fold change of\nsignatures in cancer type', y='Fraction of cancer types with\nsignature perturbed (minimal p.)')
+
 ```
 
 Barplots of cancer types with and without differential abundance
