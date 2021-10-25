@@ -1,4 +1,5 @@
 import numpy as np
+from os import listdir
 
 configfile: "config_PCAWG_do_not_modify.yaml"
 cancer_types = config["sample_groups"]
@@ -33,7 +34,10 @@ rule all:
       ## [Inference] Running TMB on PCAWG
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG",
       #   cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'fullREDMnoscaling'])
-      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagREDM', 'fullREDMnoscaling'])
+      expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])], model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagREDM', 'fullREDMnoscaling', 'fullREDMonefixedlambda', 'fullREDMonefixedlambda2'])
+      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWGSaA",\
+      #  cancer_type=[x.split('_')[0] for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/roo/') if "signaturesPCAWGSaA" in x],\
+      #  model=['fullREDMonefixedlambda'])
 ## [Benchmarking] Creating synthetic datasets
       # expand("../data/assessing_models_simulation/datasets/{datasetgeneration}_{n}_{nlambda}_{d}_{beta_intensity}_dataset.RDS", datasetgeneration="20200625",  n=config["simulation_n"], nlambda=config["simulation_nlambda"], d=config["simulation_d"], beta_intensity = config["beta_gamma_shape"])
 ## [Benchmarking] Performing inference on the simulated datasets
@@ -152,8 +156,8 @@ rule all:
         # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
         #  datasetgeneration=[ 'GenerationCnorm', 'GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3', 'GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas',\
         #   'generationHnormtwolambdas'])
-        expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
-         datasetgeneration=['GenerationMixture1'])
+        # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+        #  datasetgeneration=['GenerationMixture1'])
 
 rule index_vcf:
     input:

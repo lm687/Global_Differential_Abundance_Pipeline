@@ -17,6 +17,8 @@ source("../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySigna
 
 opt = list()
 
+re_run <- F
+
 opt$output = NA
 opt$model = "fullREDMnoscalingnonexo" 
 opt$feature_type = "signaturesPCAWG" 
@@ -84,8 +86,14 @@ flder <- "../data/roo/"
 fles <- list.files(flder)
 fles <- fles[grepl('signaturesPCAWG', fles)]
 fles <- fles[gsub("_signaturesPCAWG_ROO.RDS", "", fles) %in% enough_samples]
-# opt$input = "../data/roo/Uterus-AdenoCA_signaturesPCAWG_ROO.RDS" 
+# opt$input = "../data/roo/Uterus-AdenoCA_signaturesPCAWG_ROO.RDS"
+
 for(xx in fles){
+  
+  try(rm(dataset_amalgamated))
+  try(rm(dataset_subset))
+  try(rm(results_inference0))
+  
   opt$input <- paste0(flder, xx)
   name_plots <- gsub("_ROO.RDS", "", basename(opt$input))
     
@@ -93,8 +101,8 @@ for(xx in fles){
   dataset = load_PCAWG(ct = opt$input, typedata = opt$feature_type, simulation = simulation_bool,
                        path_to_data = NA, read_directly=opt$read_directly)
   
-  dataset
-  
+  dataset_roo <- readRDS(opt$input)
+  dataset_roo_new <- dataset_roo
   # give_barplot_from_obj(dataset)
   
   if(opt$nonexo_bool | grepl('nonexo', opt$output)){
@@ -106,7 +114,10 @@ for(xx in fles){
   
   # give_barplot_from_obj(dataset)
   
+  
+  
   results_inference <- readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexo_", name_plots, ".RDS" ))
+  plot_betas(results_inference)
   # results_inference0 = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb))
   # saveRDS(paste0("../../../../data/pcawg_robjects_cache/fullREDMnoscalingnonexo_convergence/", name_plots, '_', mod_model_name, '.RDS'))
   
@@ -162,12 +173,235 @@ for(xx in fles){
   
     ## -------- subset of signatures  
     results_inference$pdHess
-    dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(c('SBS17a', 'SBS17b')),
-                                                                             as.list(colnames(dataset$Y)[!grepl('SBS17', colnames(dataset$Y))])))
-    results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
-    results_inference0$pdHess
-    saveRDS(results_inference0, paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexosubset_", name_plots, ".RDS" ))
     
+    if(xx == "Bone-Osteosarc_signaturesPCAWG_ROO.RDS"){
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(c('SBS17a', 'SBS17b')),
+                                                                               as.list(colnames(dataset$Y)[!grepl('SBS17', colnames(dataset$Y))])))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+      
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                            dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))
+      
+    }else if (xx == "ColoRect-AdenoCA_signaturesPCAWG_ROO.RDS"){
+      
+      colMeans(normalise_rw(dataset$Y))
+      
+      dataset_subset <- give_subset_sigs_TMBobj(sig_obj = dataset,  sigs_to_remove = c('SBS17a'))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_subset, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+      
+      dataset_roo_new@count_matrices_all = list(dataset_subset$Y[dataset_subset$x[,2] == 0,],
+                                                dataset_subset$Y[dataset_subset$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))      
+      
+    }else if(xx == "Head-SCC_signaturesPCAWG_ROO.RDS"){
+      
+      colMeans(normalise_rw(dataset$Y))
+      
+      amalgamation_vector <- c('SBS17a', 'SBS17b')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) grep(i, colnames(dataset$Y)))])))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))      
+      
+      
+    }else if(xx == "Kidney-ChRCC_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+      amalgamation_vector <- c('SBS17a', 'SBS17b')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) grep(i, colnames(dataset$Y)))])))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+    }else if(xx == "Kidney-RCC.papillary_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+      amalgamation_vector <- c('SBS40', 'SBS41')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) grep(i, colnames(dataset$Y)))])))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+      
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+    }else if(xx == "Lymph-BNHL_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+      pairs(normalise_rw(dataset$Y))
+      
+      dataset_subset <- give_subset_sigs_TMBobj(sig_obj = dataset,  sigs_to_remove = c('SBS13'))
+      # results_inference0 = try(wrapper_run_TMB(object = dataset_subset, model = mod_model_name, use_nlminb=use_nlminb))
+      # results_inference0$pdHess
+
+      amalgamation_vector <- c('SBS17a', 'SBS17b')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset_subset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset_subset$Y)[-sapply(amalgamation_vector, function(i) grep(i, colnames(dataset_subset$Y)))])))
+      amalgamation_vector <- c('SBS6', 'SBS34', 'SBS40')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset_amalgamated,  list_groupings = c(list(amalgamation_vector),
+                                                                                                             as.list(colnames(dataset_amalgamated$Y)[-sapply(amalgamation_vector, function(i) grep(i, colnames(dataset_amalgamated$Y)))])))
+      pairs(dataset_amalgamated$Y)
+      
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+      
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+    }else if(xx == "Ovary-AdenoCA_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+
+      amalgamation_vector <- c('SBS2', 'SBS40')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset$Y) == i))])))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+      
+    }else if(xx == "Panc-Endocrine_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+      # pairs(normalise_rw(dataset$Y))
+      amalgamation_vector <- c('SBS26', 'SBS30', 'SBS36', 'SBS39')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset$Y) == i))])))
+      pairs(normalise_rw(dataset_amalgamated$Y))
+      # amalgamation_vector <- c('SBS2', 'SBS13')
+      # dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset_amalgamated,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      # as.list(colnames(dataset_amalgamated$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset_amalgamated$Y) == i))])))
+      pairs(normalise_rw(dataset_amalgamated$Y))
+      # dataset_subset <- give_subset_sigs_TMBobj(sig_obj = dataset,  sigs_to_remove = c('SBS2'))
+
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+    }else if(xx == "Prost-AdenoCA_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+      amalgamation_vector <- c('SBS2', 'SBS40')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                       as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset$Y) == i))])))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_amalgamated, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+      
+    }else if(xx == "Stomach-AdenoCA_signaturesPCAWG_ROO.RDS"){
+      colMeans(normalise_rw(dataset$Y))
+      pairs(normalise_rw(dataset$Y))
+      amalgamation_vector <- c('SBS17a', 'SBS17b')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset$Y) == i))])))
+      amalgamation_vector <- c('SBS2', 'SBS13', 'SBS40', 'SBS41')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset_amalgamated,  list_groupings = c(list(amalgamation_vector),
+                                                                                                      as.list(colnames(dataset_amalgamated$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset_amalgamated$Y) == i))])))
+      # pairs(normalise_rw(dataset_amalgamated$Y))
+      dataset_subset <- give_subset_sigs_TMBobj(sig_obj = dataset_amalgamated,  sigs_to_remove = c('SBS28'))
+
+
+      pairs(normalise_rw(dataset_subset$Y))
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = dataset_subset, model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+      dataset_roo_new@count_matrices_all = list(dataset_subset$Y[dataset_subset$x[,2] == 0,],
+                                                dataset_subset$Y[dataset_subset$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+    }else if(xx == "Uterus-AdenoCA_signaturesPCAWG_ROO.RDS" ){
+      colMeans(normalise_rw(dataset$Y))
+      dataset_subset <- give_subset_sigs_TMBobj(sig_obj = dataset,  sigs_to_remove = c('SBS28'))
+      pairs(normalise_rw(dataset_subset$Y))
+      
+      ## interestingly, SBS6 did not seem to be problematic but it was
+      amalgamation_vector <- c('SBS2', 'SBS13', 'SBS6')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset_subset,  list_groupings = c(list(amalgamation_vector),
+                      as.list(colnames(dataset_subset$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset_subset$Y) == i))])))
+      amalgamation_vector <- c('SBS10a', 'SBS10b')
+      dataset_amalgamated <- give_amalgamated_exposures_TMBobj(sig_obj = dataset_amalgamated,  list_groupings = c(list(amalgamation_vector),
+                      as.list(colnames(dataset_amalgamated$Y)[-sapply(amalgamation_vector, function(i) which(colnames(dataset_amalgamated$Y) == i))])))
+      pairs(normalise_rw(dataset_amalgamated$Y))
+      
+      if(re_run){
+        results_inference0 = try(wrapper_run_TMB(object = sort_columns_TMB(dataset_amalgamated), model = mod_model_name, use_nlminb=use_nlminb))
+        results_inference0$pdHess
+      }
+
+      dataset_roo_new@count_matrices_all = list(dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 0,],
+                                                dataset_amalgamated$Y[dataset_amalgamated$x[,2] == 1,])
+      dataset_roo_new@count_matrices_active <- dataset_roo_new@count_matrices_all
+      dataset_roo_new@sample_names <- rownames(dataset_roo_new@count_matrices_all[[1]])
+      saveRDS(dataset_roo_new, gsub("signaturesPCAWG", "signaturesPCAWGSaA", opt$input))   
+      
+    }
+    
+    list.files("../data/pcawg_robjects_cache/tmb_results/nlminb/")[grepl('fullREDMnoscalingnonexosubset_', list.files("../data/pcawg_robjects_cache/tmb_results/nlminb/"))]
+    
+    if(re_run)  saveRDS(results_inference0, paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexosubset_", name_plots, ".RDS" ))
+    # results_inference00 <- readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexosubset_", name_plots, ".RDS" ))
+    # results_inference00
+    # 
+    # ## compare betas
+    # betas1 <- plot_betas(results_inference)
+    # betas2 <- plot_betas(results_inference00)
+    # grid.arrange(betas1, betas2, nrow=1)
     
   }else{
     pdf(paste0("../results/models_explanatory/fullREDMnoscalingnonexo_convergence/", name_plots, '_only_two_cats.pdf'), width = 10, height = 10)
@@ -176,3 +410,32 @@ for(xx in fles){
   }
   
 }
+
+xx
+name_plots = "Uterus-AdenoCA_signaturesPCAWG"
+results_inference_diagDMDL = readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDMnonexo_", name_plots, ".RDS" ))
+results_inference_fullDMDLnoscaling =     readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexosubset_", name_plots, ".RDS" ))
+results_inference_diagDMDL$pdHess
+results_inference_fullDMDLnoscaling$pdHess
+
+colnames_nonexo_notsorted_SP <- colnames(give_subset_sigs_TMBobj(load_PCAWG(ct = gsub("_signaturesPCAWG", "", name_plots),
+                                                                            typedata = "signaturesPCAWG",
+                                                                                  path_to_data = "../data/"), nonexogenous$V1)$Y)
+logR_nonexo_notsorted_SP <- vector_cats_to_logR(colnames_nonexo_notsorted_SP)
+
+colnames_nonexo_notsorted_SP_subset_and_amalgamation <- colnames(dataset_amalgamated$Y)
+logR_nonexo_notsorted_SP_subset_and_amalgamation <- vector_cats_to_logR(colnames_nonexo_notsorted_SP_subset_and_amalgamation)
+
+length(python_like_select_name(results_inference_fullDMDLnoscaling$par.fixed, 'beta'))/2
+length(logR_nonexo_notsorted_SP_subset)
+results_inference0
+pdf("../results/results_TMB/pcawg/uterus_betas_two_models.pdf")
+grid.arrange(plot_betas(results_inference_diagDMDL, names_cats = logR_nonexo_notsorted_SP)+ggtitle('diagDMDL'),
+             plot_betas(results_inference_fullDMDLnoscaling, names_cats = logR_nonexo_notsorted_SP_subset_and_amalgamation)+ggtitle('fullDMDLnoscaling with amalgamation'))
+dev.off()
+
+wald_TMB_wrapper(results_inference_diagDMDL)
+wald_TMB_wrapper(results_inference_fullDMDLnoscaling)
+
+
+
