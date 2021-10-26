@@ -326,6 +326,20 @@ for(ct in enough_samples){
 
 ```
 
+```{r, plot_betas_signaturesPCAWG2, echo=F, fig.height=2, warning=FALSE, dependson=c('load_runs_signaturesPCAWG')}
+
+# pdf("../../results/results_TMB/pcawg/betas_diagREDMDL_pancancer.pdf")
+# for(ct in enough_samples){
+#   grid.arrange(plot_betas(diagRE_DMDL_nonexo_SP[[ct]], only_slope=T, plot=F,
+#                           names_cats=logR_nonexo_notsorted_SP[[ct]], title = 'fullRE DMSL\nnonexo'),
+#                top=ct, nrow=1)
+# }
+# dev.off()
+
+```
+
+
+
 \section{Overdispersion parameters in double-lambda DM}
 ```{r, overdispersion_params_groups, dependson=c('load_runs_signaturesPCAWG'), fig.width=8.5, fig.height=7}
 ovrdisp <- do.call('rbind.data.frame', lapply(1:length(diagRE_DMDL_nonexo_SP), try(function(idx){
@@ -1174,4 +1188,9 @@ dev.off()
 pdf("../../results/results_TMB/pcawg/correlation_signatures_from_betaslopes.pdf")
 print(pheatmap::pheatmap(cors_sigs, color = viridis::cividis(10)))
 dev.off()
+```
+
+
+```{r, correlations_from_beta_slopes_2, dependson=c('correlations_from_beta_slopes'), fig.height=6, echo=F}
+aaa_dcast
 ```
