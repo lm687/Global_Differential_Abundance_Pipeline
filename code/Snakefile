@@ -4,8 +4,8 @@ cancer_types = config["sample_groups"]
 grouped_samples = config["grouped_samples"]
 
 samples_list = dict(zip(cancer_types, [grouped_samples[ct].split() for ct in cancer_types]))
-models = ['M', 'DM', 'LNM']
-models = ['LNM']
+# models = ['M', 'DM', 'LNM']
+# models = ['LNM']
 # models = ['DM']
 # models = ['M']
 num_iterations = 15000
@@ -20,6 +20,8 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
  'GenerationJnormTwoLambdas': 'generationG', 'GenerationInoREtwolambdas': 'generationG',\
  'generationHnormtwolambdas': 'generationG'}
  ## just added the GenerationHnorm, I don't really know if it's correct
+
+numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3': 4}
 
 rule all:
     input:
@@ -140,9 +142,11 @@ rule all:
     	# 	fixed_beta_slope="betaslope1d4", optimiser='nlminb')
         # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
         # datasetgeneration=['GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas', 'generationHnormtwolambdas'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+#        expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+#         datasetgeneration=[ 'GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'])
         expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
-         datasetgeneration=[ 'GenerationCnorm', 'GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3', 'GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas',\
-          'generationHnormtwolambdas'])
+         datasetgeneration=[ 'GenerationJnorm'])
+
 
 rule index_vcf:
     input:
@@ -175,20 +179,20 @@ rule make_roo_files:
     shell:
         "Rscript 1_create_ROO/create_ROO_split.R --input_files '{input}' --cancer_type {params.ct} --feature_type {params.f} --output {output}"
 
-rule inference:
-    input:
-        "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
-    log:
-        "logs/inference/{cancer_type}_{feature_type}_{nits}_{model}.log"
-    params:
-       cancer_type="{cancer_type}",
-       feature_type="{feature_type}",
-       model=expand("{model}", model = models),
-       nits=expand("{nits}", nits = num_iterations)
-    output:
-       "../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData"
-    shell:
-       "~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}"
+#rule inference:
+#    input:
+#        "../data/roo/{cancer_type}_{feature_type}_ROO.RDS"
+#    log:
+#        "logs/inference/{cancer_type}_{feature_type}_{nits}_{model}.log"
+#    params:
+#       cancer_type="{cancer_type}",
+#       feature_type="{feature_type}",
+#       model=expand("{model}", model = models),
+#       nits=expand("{nits}", nits = num_iterations)
+#    output:
+#       "../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData"
+#    shell:
+#       "~/.conda/envs/rstan_env/bin/Rscript --vanilla 2_inference/fit_PCAWG.R --cancertype {params.cancer_type} --typedata {params.feature_type} --infile '{input}' --output '{output}' --niterations {params.nits} --model {params.model}"
 
 #    shell:
 #        """module load miniconda3-4.5.4-gcc-5.4.0-hivczbz
@@ -328,11 +332,7 @@ rule analyse_simulation_TMB_multiple:
         fixed_beta_slope = 'NA',
         sdRE_input = 'NA',
         model = "{model}",
-<<<<<<< HEAD
-        itnum= range(4))
-=======
-        itnum= range(3))
->>>>>>> 0e79d9d627c98691d22abede410a2d9e060b8d0b
+        itnum= range(numreplicates[wildcards.datasetgeneration]))
     output:
         "../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"
     run:
