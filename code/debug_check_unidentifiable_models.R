@@ -111,6 +111,8 @@ for(xx in fles){
   }
   results_inference_fullDMSL =     readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMsinglelambdanonexo_", name_plots, ".RDS" ))
   results_inference_fullDMDLonefixedslambda =     readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambdanonexo_", name_plots, ".RDS" ))
+  results_inference_fullDMDLonefixedslambda2 =     try(readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambda2nonexo_", name_plots, ".RDS" )))
+  if(typeof(results_inference_fullDMDLonefixedslambda2) == "character") results_inference_fullDMDLonefixedslambda2 = results_inference_fullDMDLonefixedslambda
   results_inference_fullDMDLonefixedslambda_SaA =     try(readRDS(paste0("../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambdanonexo_",
                                                                          gsub("PCAWG", "PCAWGSaA", name_plots), ".RDS" )))
   if(typeof(results_inference_fullDMDLonefixedslambda_SaA) == "character") results_inference_fullDMDLonefixedslambda_SaA = results_inference_fullDMDLonefixedslambda
@@ -148,12 +150,13 @@ for(xx in fles){
                                         title = paste0('diagDMDL\npval=', wald_TMB_wrapper(results_inference_diagDMDL))),
                              plot_betas(results_inference_fullDMSL, names_cats = logR_nonexo_notsorted_SP, plot =F, return_plot=T,
                                         title=paste0('fullDMSL\npval= ', wald_TMB_wrapper(results_inference_fullDMDLnoscaling))),
-                             plot_betas(results_inference_fullDMDLonefixedslambda, names_cats = logR_nonexo_notsorted_SP, plot =F, return_plot=T,
+                             plot_betas(results_inference_fullDMDLonefixedslambda_SaA, plot =F, return_plot=T,
+                                        title=paste0('fullDMDLonefixedslambda SaA\npval=', wald_TMB_wrapper(results_inference_fullDMDLonefixedslambda_SaA))),                             plot_betas(results_inference_fullDMDLonefixedslambda, names_cats = logR_nonexo_notsorted_SP, plot =F, return_plot=T,
                                         title=paste0('fullDMDLonefixedslambda\npval= ', wald_TMB_wrapper(results_inference_fullDMDLonefixedslambda))),
+                             plot_betas(results_inference_fullDMDLonefixedslambda2, names_cats = logR_nonexo_notsorted_SP, plot =F, return_plot=T,
+                                        title=paste0('fullDMDLonefixedslambda2\npval= ', wald_TMB_wrapper(results_inference_fullDMDLonefixedslambda2))),
                              plot_betas(results_inference_fullDMDLnoscaling, plot =F, return_plot=T,
                                         title=paste0('fullDMDLnoscaling SaA\npval=', wald_TMB_wrapper(results_inference_fullDMDLnoscaling))),
-                             plot_betas(results_inference_fullDMDLonefixedslambda_SaA, plot =F, return_plot=T,
-                                        title=paste0('fullDMDLonefixedslambda SaA\npval=', wald_TMB_wrapper(results_inference_fullDMDLonefixedslambda_SaA))),
                              nrow=2)
   
   add_fixed_lambda <- function(df){
@@ -174,12 +177,12 @@ for(xx in fles){
   
   logSDRE_plots <- ggplot(melt(list(diagDMDL=plot_estimates_TMB(results_inference_diagDMDL, return_df = T, pl=F, parameter_name="logs_sd_RE", verb=F),
                                     fullDMSL=plot_estimates_TMB(results_inference_fullDMSL, return_df = T, pl=F, parameter_name="logs_sd_RE", verb=F),
+                                    fullDMDLnoscaling=plot_estimates_TMB(results_inference_fullDMDLnoscaling,
+                                                                         return_df = T, pl=F, parameter_name="logs_sd_RE", verb=F),
                                     fullDMDLonefixedslambda=plot_estimates_TMB(results_inference_fullDMDLonefixedslambda, return_df = T, pl=F,
                                                                                parameter_name="logs_sd_RE", verb=F),
                                     fullDMDLonefixedslambdaSaA=plot_estimates_TMB(results_inference_fullDMDLonefixedslambda_SaA, return_df = T,
-                                                                               pl=F, parameter_name="logs_sd_RE", verb=F),
-                                    fullDMDLnoscaling=plot_estimates_TMB(results_inference_fullDMDLnoscaling,
-                                                                         return_df = T, pl=F, parameter_name="logs_sd_RE", verb=F)),
+                                                                               pl=F, parameter_name="logs_sd_RE", verb=F)),
                                       id.vars=c('Estimate', 'Std..Error', 'name')),
                                  aes(x=name, y=`Estimate`))+
     geom_point()+
