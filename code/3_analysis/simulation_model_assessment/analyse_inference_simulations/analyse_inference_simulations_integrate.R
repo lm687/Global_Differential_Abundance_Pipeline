@@ -10,7 +10,7 @@ if(local){
   ## multiple runs
   # generation = "GenerationJnorm"
   # generation = "GenerationK"
-  generation = "GenerationK2"
+  # generation = "GenerationK2"
   # generation = "generationFnorm"
   # generation = "GenerationCnorm"
   # generation = "GenerationJnorm2"
@@ -18,6 +18,7 @@ if(local){
   # generation = "GenerationJnormTwoLambdas"
   # generation = "GenerationInoREtwolambdas"
   # generation = "generationHnormtwolambdas"
+  generation = "GenerationMixture1"
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -385,9 +386,10 @@ varying_n_all_converged <-give_accuracies_with_varying_var('n', datasets_arg = d
 varying_betashape <-give_accuracies_with_varying_var('beta_gamma_shape')
 varying_betashape_all_converged <-give_accuracies_with_varying_var('beta_gamma_shape', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
                                                                    pvals_data_frame_arg = pvals_data_frame_all_converged)
-# varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)
-varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)
-varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)
+
+try({varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)})
+try({varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)})
+try({varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)})
 
 ggplot(varying_d, aes(x=d, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~mod, noel)
 ggplot(varying_n, aes(x=n, y = FPR, col=model, group=model))+geom_point()+geom_line()+theme_bw()#+facet_wrap(.~model)
@@ -468,12 +470,12 @@ ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=
 ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2.pdf"),
        height = 3.0, width = 4.0)
 
-ggplot(varying_n_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=n))+
-  geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
-ggplot(varying_n_betashape, aes(x=n, y = Accuracy, group=model, col=beta_gamma_shape))+
-  geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
-ggplot(varying_d_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=d))+
-  geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
+# ggplot(varying_n_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=n))+
+#   geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
+# ggplot(varying_n_betashape, aes(x=n, y = Accuracy, group=model, col=beta_gamma_shape))+
+#   geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
+# ggplot(varying_d_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=d))+
+  # geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")
 
 varying_n[varying_n$n == 100,]
 
@@ -489,6 +491,8 @@ ggplot(varying_betashape[varying_betashape$beta_gamma_shape == 0,],
   theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
 ggsave(paste0(flder_out, generation, "/summaries/FDR_nonDA.pdf"),
        height = 3.0, width = 4.0)
+
+try({
 ggplot(varying_n_betashape[varying_n_betashape$beta_gamma_shape == 0,],
        aes(y=FPR, x=factor(model, levels=c("fullREM", "fullREDMSL", "diagREDMSL", "diagREDM", "HMP", "HMP2",
                                            "pvals_chi_Harris",  "permutation", "perturbation", "ttest", "ILR")),
@@ -497,6 +501,7 @@ ggplot(varying_n_betashape[varying_n_betashape$beta_gamma_shape == 0,],
   theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
 ggsave(paste0(flder_out, generation, "/summaries/FDR_nonDA_varyingn.pdf"),
        height = 3.0, width = 4.0)
+})
 
 ##-----------------------------------------------------------------##
 
@@ -637,11 +642,11 @@ ggplot(droplevels(joint_df_grouping_by_n), aes(x=fullRE_M.n, y=sensitivity_DM,
   geom_point()+geom_line()+facet_wrap(.~fullRE_M.beta_gamma_shape)
 ggsave(paste0(flder_out, generation, "/summaries/fullRE_M.beta_gamma_shape_sensitivity.pdf"))
 
-head(melt(joint_df_grouping_by_n, id.vars = c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "M_type", "fullRE_M.DA_bool", "sensitivity_M", "specificity_DM")))
-plot(joint_df_grouping_by_n$sensitivity_M, 1-joint_df_grouping_by_n$specificity_M)
-
-head(melt(joint_df_grouping_by_n[,c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "M_type", "fullRE_M.DA_bool", "sensitivity_M", "specificity_DM")],
-          id.vars = c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape")))
+# head(melt(joint_df_grouping_by_n, id.vars = c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "M_type", "fullRE_M.DA_bool", "sensitivity_M", "specificity_DM")))
+# plot(joint_df_grouping_by_n$sensitivity_M, 1-joint_df_grouping_by_n$specificity_M)
+# 
+# head(melt(joint_df_grouping_by_n[,c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "M_type", "fullRE_M.DA_bool", "sensitivity_M", "specificity_DM")],
+#           id.vars = c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape")))
 
 modify_colnames = function(i){
   colnames(i) = gsub("fullREDMSL.", "", colnames(i))
@@ -657,6 +662,7 @@ joint_df_grouping_by_n_alt = rbind(modify_colnames(cbind(joint_df_grouping_by_n[
 joint_df_grouping_by_d_alt = rbind(modify_colnames(cbind(joint_df_grouping_by_d[,c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "M_type", "fullRE_M.DA_bool", "sensitivity_M", "specificity_M")], model="M")),
                                    modify_colnames(cbind(joint_df_grouping_by_d[,c("fullRE_M.d", "fullRE_M.n", "fullRE_M.beta_gamma_shape", "fullRE_M.pvals_adj", "DM_type", "fullRE_M.DA_bool", "sensitivity_DM", "specificity_DM")], model="DM")))
 
+try({
 ggplot(droplevels(joint_df_grouping_by_n_alt), aes(x=d, y=sensitivity, group=interaction(n, model), col=n, shape=model))+
   geom_point()+geom_line()+facet_wrap(.~beta_gamma_shape)
 
@@ -670,9 +676,11 @@ ggplot(droplevels(joint_df_grouping_by_d_alt), aes(x=beta_gamma_shape, y=sensiti
 
 ggplot(droplevels(joint_df_grouping_by_d_alt), aes(x=beta_gamma_shape, y=specificity, group=interaction(beta_gamma_shape, model), col=model))+
   geom_point()+geom_line()+geom_boxplot()+scale_x_continuous(trans = "log2")
+})
 
 ## What hasn't run?
-cat(paste0(sapply(rownames(joint_df[is.na(joint_df$DM.beta_est),]), function(i) substr(i, start = 1, stop = nchar(i)-1)) %>% unique, sep='" "', collapse=''))
+try({
+  cat(paste0(sapply(rownames(joint_df[is.na(joint_df$DM.beta_est),]), function(i) substr(i, start = 1, stop = nchar(i)-1)) %>% unique, sep='" "', collapse=''))
 
 sapply(rownames(joint_df[is.na(joint_df$DM.beta_est),]), function(i) gsub("_dataset", "", substr(i, start = 1, stop = nchar(i)-1))) %>% unique
 
@@ -688,6 +696,7 @@ ggplot(joint_df, aes(x=fullRE_DMSL.d, y=as.numeric(fullRE_DMSL.converged),
   theme_bw()+labs(x='Number of categories (d)', y='Number of successful (1) or unsuccessful (0) convergences')+
   ggtitle('Success in convergence of Dirichlet-Multinomial runs')
 ggsave(paste0(flder_out, generation, "/summaries/DM_d_n_convergence.pdf"))
+})
 
 # ggplot(joint_df, aes(x=M.d, y=as.numeric(M.converged), group=interaction(M.n, M.d), col=fullRE_M.beta_gamma_shape))+
 #   geom_jitter(height = 0.1, alpha=0.8)+geom_violin()+facet_wrap(.~M.n)+
@@ -724,6 +733,8 @@ joint_df_grouping_convergence_2_d = joint_df[sapply(unique(joint_df$fullRE_DMSL.
   mutate(convergence_M=sum(fullRE_M.converged)/(sum(fullRE_M.converged)+sum(!fullRE_M.converged)),
          convergence_DM=sum(fullRE_DMSL.converged)/length(fullRE_DMSL.converged))
 
+try({
+  
 pdf(paste0(flder_out, generation, "/summaries/M_DM_convergence.pdf"))
 grid.arrange(ggplot(joint_df_grouping_convergence, aes(x=fullRE_M.d, y=convergence_M, col=fullRE_M.n, group=fullRE_M.n))+geom_line()+geom_point()+ggtitle('Convergence Multinomial'),
 ggplot(joint_df_grouping_convergence, aes(x=fullRE_M.d, y=convergence_DM, col=fullRE_M.n, group=fullRE_M.n))+geom_line()+geom_point()+ggtitle('Convergence Dirichlet-Multinomial'))
@@ -756,7 +767,7 @@ ggplot(varying_n_betashape %>% dplyr::select(Power, model, n, beta_gamma_shape),
   theme_bw()+scale_x_continuous(trans = "log10")+theme(legend.position = "bottom")+
   scale_color_jcolors(palette = "pal8")
 ggsave(paste0(flder_out, generation, "/summaries/power_facet.pdf"), width = 6.5, height = 3)
-
+})
 
 ggplot(varying_n, aes(x=Sensitivity, y=1-Specificity, group=model, col=model))+geom_step()+theme_bw()
 
@@ -764,6 +775,8 @@ plot(varying_n$Sensitivity, varying_n$Specificity)
 
 
 ## comparison of ilr and test of  propportions when removcing the first column
+
+try({
 small_num <- 0.0001
 ggplot(pvals_data_frame, aes(x=ttest_props+small_num,
                              y=ttest_ilr_adj+small_num))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")+
@@ -772,6 +785,7 @@ ggplot(pvals_data_frame, aes(x=ttest_props+small_num,
   geom_hline(yintercept = (0.05+small_num), lty='dashed', col='blue')
 
 runs_ttest_props
+})
 
 
 ## looking at results that have been created using the same set of parameters
@@ -792,9 +806,12 @@ rownames(runs_fullREM)
 table(gsub('.{0,1}$', '', gsub("^.*\\_","", rownames(runs_fullREM))))
 
 ## if there are multiple runs
+
+try({
+  
 ggplot(runs_fullREM0[grepl(sub("_[^_]+$", "", rownames(runs_fullREM0)[grep("_dataset1", rownames(runs_fullREM0))][1]),
       rownames(runs_fullREM0)),], aes(x=idx, y=beta_est))+geom_point()+facet_wrap(.~idx_within_dataset)
-
+})
 
 a <- ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+
   geom_point()+geom_line()+theme_bw()+

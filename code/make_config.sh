@@ -259,4 +259,29 @@ echo "simulation_lambda_generationG:
 " >> $name_config
 
 
+## Generation Mixture1 of simulations
+echo "\nsimulation_n_generationMixture1:
+- 30
+- 50
+- 100
+" >> $name_config
 
+echo "beta_gamma_shape_generationMixture1:
+- 0
+- 0.1
+- 0.3
+" >> $name_config
+
+echo "simulation_d_generationMixture1:
+- 3
+- 4
+- 5
+" >> $name_config
+
+echo "simulation_nlambda_generationMixture1:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationMixture1:
+- 0
+" >> $name_config

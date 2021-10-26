@@ -8,6 +8,7 @@ if(debugging){
   getwd()
   setwd("../../../")
   getwd()
+  try(library(TMB))
   library(TMB, lib.loc = "/mnt/scratcha/fmlab/morril01/software/miniconda3/lib/R/library/")
 }
 
@@ -122,12 +123,15 @@ names(datasets) = gsub(".RDS", "", basename(datasets_files))
 DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
 runs = lapply(opt$input_list, readRDS)
+names(runs) <- opt$input_list
+# sapply(runs, function(i) i$pdHess)
 
 #' ## assess if there was good convergence
 # sapply(runs, typeof)
 
 #' Convert betas to NA whenever the convergence was not successful
-runs[sapply(runs, function(i) try(give_summary_per_sample(i))) != "Good"] = NA
+bool_has_not_converged <- sapply(runs, function(i) try(give_summary_per_sample(i))) != "Good"
+runs[bool_has_not_converged] = NA
 for(j in which(sapply(runs, typeof) %in% c("logical", "character"))){
   runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
 }
@@ -159,6 +163,37 @@ if(!is.null(dim(datasets[[1]]$beta))){
 }else{
   ## if they are created with perturbation, or similar methods
   cat('Model simulated non-parametrically\n')
+# 
+#   cat('Length of cbind elements\n')  
+#   print(unlist(sapply(datasets, function(i) rep(NA, i$d-1))) %>% length)
+#   print(rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1) %>% length)
+#   print(rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1) %>% length)
+#   print(rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1) %>% length)
+#   print(rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1) %>% length)
+#   print(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))) %>% length)
+#   print(unlist(sapply(runs, give_stderr)) %>% length)
+#   print(rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1) %>% length)
+#   print(rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1) %>% length)
+#   print(unlist(sapply(datasets, function(i) 1:(i$d-1))) %>% length)
+  
+  # cat('Length of datasets and runs\n')
+  # print(length(datasets))
+  # print(length(runs))
+  
+  cat('d-1\n')
+  print(as.vector(sapply(datasets, function(i) length(rep(NA, i$d-1)))))
+  cat('give_stderr\n')
+  # print(give_stderr(runs[[1]]))
+  print(as.vector(sapply(runs, function(i) length(give_stderr(i)))))
+  print(names(runs)[(as.vector(sapply(datasets, function(i) length(rep(NA, i$d-1))))) != (as.vector(sapply(runs, function(i) length(give_stderr(i)))))])
+  # print(as.vector(sapply(runs[1:4], function(i) length(give_stderr(i)))))
+  # print(cbind(sapply(datasets, function(i) length(rep(NA, i$d-1))),
+  #             sapply(datasets, function(i) length(give_stderr(i)))))
+  
+  # print(rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1))
+  # print(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))))
+  
+  
   df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function(i) rep(NA, i$d-1))),
                                       idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1),
                                       d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1),
@@ -191,11 +226,12 @@ if(opt$dataset_generation == 'GenerationCnorm' & opt$model == 'fullREM'){
 }
 
 #' ## zero slopes are not well detected
+try({
 ggplot(df_beta_recovery,
        aes(x=(beta_true), y=(beta_est), col=beta_gamma_shape))+geom_point()+
   geom_abline(intercept = 0, slope = 1)
 ggsave(paste0(folder_output, "recovery_betaslope_scatter.pdf"))
-
+})
 # ggplot(df_beta_recovery,
 #        aes(x=(beta_true), y=(beta_est), col=beta_gamma_shape))+geom_point()+
 #   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~idx,scales = "free")
@@ -203,26 +239,31 @@ ggsave(paste0(folder_output, "recovery_betaslope_scatter.pdf"))
 
 
 ## plotting separately the differentially abundant (right) and non-differentially abundant (left) datasets
-ggplot(df_beta_recovery,
+try({ggplot(df_beta_recovery,
        aes(x=(beta_true), y=(beta_est), col=n))+geom_point()+
   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~bool_zero_true_beta, scales = "free_x")
 ggsave(paste0(folder_output, "recovery_betaslope_scatter_sepDA.pdf"))
+})
 
 #' ## Multinomial
-p <- ggplot(df_beta_recovery,
+try({
+  p <- ggplot(df_beta_recovery,
             aes(x=(beta_true), y=(beta_est), col=(pvals_adj<0.05)))+geom_point()+
   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~bool_zero_true_beta, scales = "free_x")
 gp <- ggplotGrob(p); facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]; gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1,4); grid::grid.draw(gp)
 filename_betarecovery1 = paste0(folder_output, "recovery_betaslope2.pdf")
 ggsave(filename_betarecovery1)
+})
 
 #' ## Looking at true zeros
 #' ## i.e. runs where all beta slopes are zero
-ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
+try({
+  ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
        aes(x=(beta_true), y=(beta_est), col=(pvals_adj<0.05)))+geom_point()+
   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~(pvals_adj<0.05), scales = "free_x")
 filename_betarecovery2 = paste0(folder_output, "betaslopes_nonDA.pdf")
 ggsave(filename_betarecovery2, height = 3, width = 8)
+})
 
 # ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
 #        aes(x=idx_within_dataset, y=(beta_est), col=(pvals_adj<0.05)))+
@@ -255,6 +296,7 @@ table(df_beta_recovery$beta_true)
 ## The correlation between the parameters
 ## This should be corrected somehow as larger beta_gamma_shape leads to higher betas
 
+try({
 pdf(paste0(opt$output_folder_name, "/", opt$output_string, "_facets_distance_estimates.pdf"), width = 7, height = 2)
 grid.arrange(ggplot(df_beta_recovery %>% group_by(idx) %>% mutate(dist=dist(rbind(beta_est, beta_true)), .groups="drop"),
        aes(x=log(beta_gamma_shape), y=dist))+geom_point()+geom_smooth()+labs(y='Distance of estimates to true values'),
@@ -264,6 +306,7 @@ ggplot(df_beta_recovery %>% group_by(idx) %>% mutate(dist=dist(rbind(beta_est, b
        aes(x=n, y=dist))+geom_point()+geom_smooth()+labs(y='Distance of estimates to true values'),
 ncol=3)
 dev.off()
+})
 
 ## Compute FP, FN, for each beta
 sum(is.na(pvals))

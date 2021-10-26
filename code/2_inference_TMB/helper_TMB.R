@@ -370,7 +370,7 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
     
-    parameters <- list(parameters,log_lambda = matrix(c(2,2)))
+    parameters <- c(parameters,list(log_lambda = matrix(c(2,2))))
     # parameters <- list(
     #   beta = beta_init,
     #   u_large = matrix(rep(1, (d-1)*n), nrow=n),
@@ -381,6 +381,28 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     dll_name <- "fullRE_ME_dirichletmultinomial"
     rdm_vec <- "u_large"
     # obj <- MakeADFun(data, parameters, DLL="", random = )
+  }else if(model == "fullRE_DMonefixedlambda"){
+    ## fixing one of the overdispersion parameters
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    parameters <- c(parameters,list(log_lambda = matrix(c(2))))
+    dll_name <- "fullRE_ME_dirichletmultinomial_onefixedlambda"
+    rdm_vec <- "u_large"
+  }else if(model == "fullRE_DMonefixedlambda2"){
+    ## fixing one of the overdispersion parameters
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    parameters <- c(parameters,list(log_lambda = matrix(c(2))))
+    dll_name <- "fullRE_ME_dirichletmultinomial_onefixedlambda2"
+    rdm_vec <- "u_large"
+  }else if(model == "fullREDMnoscaling"){
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    parameters <- c(parameters, log_lambda = list(matrix(c(2,2))))
+    parameters$logs_sd_RE = NULL
+    print(parameters)
+    dll_name <- "fullRE_ME_dirichletmultinomialnoscaling"
+    rdm_vec <- "u_large"
   }else if(model == "diagRE_DM"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
@@ -683,7 +705,7 @@ wald_TMB_wrapper = function(i, verbatim=TRUE){
         if(is.na(idx_beta)){
           NA
         }else{
-          if(verbatim) cat('Check data - slope appears to be of lentgh one (binomial)')
+          if(verbatim) cat('Check data - slope appears to be of length one (binomial)\n')
           wald_generalised(v = i$par.fixed[idx_beta], sigma = i$cov.fixed[idx_beta,idx_beta])
         }
       }else{
@@ -808,9 +830,9 @@ give_stderr = function(i, only_slopes=T, only_betas=T){
       }
     }else{
       if(only_slopes){
-        .x = select_slope_2(python_like_select_name(summary.sdreport(i)[,2], "beta"),v=F)
+        .x = select_slope_2(python_like_select_name(TMB::summary.sdreport(i)[,2], "beta"),v=F)
       }else{
-        .x = python_like_select_name(summary.sdreport(i)[,2], "beta")
+        .x = python_like_select_name(TMB::summary.sdreport(i)[,2], "beta")
       }
     }
    .x
@@ -1340,24 +1362,10 @@ give_betas <- function(TMB_obj){
   matrix(python_like_select_name(TMB_obj$par.fixed, 'beta'), nrow=2)
 }
 
-plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
 
-  .summary_lambda <- cbind.data.frame(data.frame(python_like_select_rownames(summary(TMB_obj), 'log_lambda')),
-                                      name=c('Lambda 1', 'Lambda 2'))
-  
-  if(plot){
-    print(ggplot(.summary_lambda, aes(x=name, y=`Estimate`))+
-      geom_point()+
-      geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
-  }
-  
-  if(return_df){
-    return(.summary_lambda)
-  }
-}
 
 plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
-                       line_zero=T, add_confint=F){
+                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL){
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1409,8 +1417,13 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
     }
     
+    if(!is.null(title)){
+      plt <- plt + ggtitle(title)
+    }
+    
     if(!TMB_obj$pdHess){
-      if(plot) print(plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red'))
+      plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
+      if(plot) print(plt)
     }else{
       if(plot) print(plt)
     }
@@ -1419,7 +1432,73 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
   if(return_df){
     .summary_betas
   }else{
+    if(return_plot & return_df){stop('<return_plot=T> and <return_df=T> are incompatible')}
+    plot_list <- list(plt)
+    class(plot_list) <- c("quiet_list", class(plot_list))
+    if(return_plot){
+      return(cowplot::as_grob(plt))
+    }else if(return_ggplot){
+      return(plt)
+    }
+  }
+}
+
+
+plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
+  
+  lambdas_df <- python_like_select_rownames(summary(TMB_obj), 'log_lambda')
+  if(!is.null(dim(lambdas_df))){
+    .summary_lambda <- cbind.data.frame(data.frame(lambdas_df),
+                                        name=c('Lambda 1', 'Lambda 2'))
+  }else{
+    .summary_lambda <- cbind.data.frame(t(lambdas_df), name='Lambda 1')
+    colnames(.summary_lambda) <- make.names(colnames(.summary_lambda))
+  }
+  
+  plt <- (ggplot(.summary_lambda, aes(x=name, y=`Estimate`))+
+            geom_point()+
+            geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
+  if(plot){
+    print(plt)
+  }
+  
+  if(return_df){
+    return(.summary_lambda)
+  }else{
     return(plt)
+  }
+}
+
+plot_estimates_TMB <- function(TMB_obj, parameter_name, return_df=F, plot=T, verbatim=T){
+  if(verbatim) cat('Consider the other functions <plot_betas> and <plot_lambdas>\n')
+  
+  
+  parameter_df <- python_like_select_rownames(summary(TMB_obj), parameter_name)
+  if(length(parameter_df) == 0){
+    ## there is no parameter
+    return(cbind.data.frame(Estimate=NA, `Std..Error`=NA, name=NA))
+  }else{
+    if(!is.null(dim(parameter_df))){
+      .summary_param <- cbind.data.frame(data.frame(parameter_df),
+                                          name=paste0(parameter_name, 1:nrow(parameter_df)))
+    }else{
+      ## single parameter
+      .summary_param <- cbind.data.frame(t(parameter_df), name=paste0(parameter_name, '1'))
+      colnames(.summary_param) <- make.names(colnames(.summary_param))
+    }
+  
+    plt <- (ggplot(.summary_param, aes(x=name, y=`Estimate`))+
+              geom_point()+
+              geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
+    if(plot){
+      print(plt)
+    }
+  
+    if(return_df){
+      return(.summary_param)
+    }else{
+      return(plt)
+    }
   }
 }
 
@@ -1605,3 +1684,30 @@ wrapper_run_HMP_Xmcupo.sevsample <- function(i){
   x = x[[1]]@count_matrices_all
   return(HMP::Xmcupo.sevsample(x)$`p value`)
 }
+
+plot_ternary <- function(x, legend_on=T, plot_points=T, ...){
+  require(Ternary)
+  
+  if(ncol(x) != 3){stop('Number of columns must be three. Create a subcomposition or amalgamation if needed.')}
+  TernaryPlot(atip = colnames(x)[1], btip = colnames(x)[2], ctip = colnames(x)[3],
+              grid.lines = 0, grid.col = NULL, ...)
+  dens <- TernaryDensity(x, resolution = 10L)
+  
+  cls_legend = rbind(viridisLite::viridis(48L, alpha = 0.6),
+                     seq(from = 0, to = 47, by=1))
+  if(legend_on){
+    legend(x=-0.4,y=1.08,
+           fill = cls_legend[1,][c(T,F,F,F,F)],
+           legend = round(as.numeric(cls_legend[2,][c(T,F,F,F,F)])/sum(dens['z',]), 2), ncol=5,
+           y.intersp=0.8,x.intersp=0.5,text.width=0.1, cex=0.9, bty = "n")
+  }
+  ColourTernary(dens)
+  if(plot_points)  TernaryPoints(x, col = 'red', pch = '.', cex=5)
+  TernaryDensityContour(x, resolution = 30L)
+}
+
+split_matrix_in_half <- function(x){
+  list(x[1:(nrow(x)/2),],
+       x[(1+(nrow(x)/2)):nrow(x),])
+}
+
