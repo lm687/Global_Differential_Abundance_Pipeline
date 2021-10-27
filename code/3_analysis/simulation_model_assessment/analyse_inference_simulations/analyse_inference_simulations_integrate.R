@@ -14,11 +14,11 @@ if(local){
   # generation = "generationFnorm"
   # generation = "GenerationCnorm"
   # generation = "GenerationJnorm2"
-  # generation = "GenerationJnorm3"
+  generation = "GenerationJnorm3"
   # generation = "GenerationJnormTwoLambdas"
   # generation = "GenerationInoREtwolambdas"
   # generation = "generationHnormtwolambdas"
-  generation = "GenerationMixture1"
+  # generation = "GenerationMixture1"
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -95,6 +95,19 @@ table((runs_fullREM0$converged))
 table((runs_fullREDMSL0$converged))
 table((runs_diagREDMSL0$converged))
 table((runs_diagREDM0$converged))
+
+barplot(c(runs_fullREM0=sum((runs_fullREM0$converged)),
+             runs_fullREDMSL0=sum((runs_fullREDMSL0$converged)),
+             runs_diagREDMSL0=sum((runs_diagREDMSL0$converged)),
+             runs_diagREDM0=sum((runs_diagREDM0$converged))))
+image(cbind(runs_fullREM0=((runs_fullREM0$converged)),
+          runs_fullREDMSL0=((runs_fullREDMSL0$converged)),
+          runs_diagREDMSL0=((runs_diagREDMSL0$converged)),
+          runs_diagREDM0=((runs_diagREDM0$converged))))
+# pheatmap(cor(cbind(runs_fullREM0=((runs_fullREM0$converged)),
+#           runs_fullREDMSL0=((runs_fullREDMSL0$converged)),
+#           runs_diagREDMSL0=((runs_diagREDMSL0$converged)),
+#           runs_diagREDM0=((runs_diagREDM0$converged)))))
 
 runs_fullREM <- runs_fullREM0[runs_fullREM0$converged,]
 runs_fullREDMSL <- runs_fullREDMSL0[runs_fullREDMSL0$converged,]
