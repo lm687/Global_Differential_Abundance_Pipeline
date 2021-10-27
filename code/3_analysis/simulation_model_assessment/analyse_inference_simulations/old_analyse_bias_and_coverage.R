@@ -1,5 +1,3 @@
-## NEED TO IMPLEMEMENT THE GOOD WAY OF GETTING COV, I.E. GOING FROM L TO SIGMA
-
 rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 require(TMB)
@@ -7,27 +5,34 @@ require(reshape2)
 require(ggplot2)
 source("../../../2_inference_TMB/helper_TMB.R")
 
-dataset <- "multiple_GenerationHnorm_80_180_9_6_0_fullREDMsinglelambda_betaintercept2_betaslope2_covmat2"
-dataset <- "multiple_GenerationMGnorm_80_180_100_6_0_fullREDMonefixedlambda_betaintercept3_betaslope3_sdRE1"
-# dataset <- "multiple_GenerationCnormdiagRE_80_180_9_6_0_betaintercept2_betaslope2"
-
-dataset_name_split <- strsplit(dataset, '_')[[1]]
-dataset_name_split2 <- dataset_name_split[(length(dataset_name_split)-2):length(dataset_name_split)]
-idx_dataset_betaintercept = dataset_name_split2[1] ## idx for beta intercept true parameters
-idx_dataset_betaslope = dataset_name_split2[2] ## idx for beta slope true parameters
-idx_dataset_cov = dataset_name_split2[3] ## idx for beta slope true parameters
+# idx_dataset_betaintercept = 1 ## idx for beta intercept true parameters
+# idx_dataset_betaslope = 2 ## idx for beta slope true parameters
+# idx_dataset_cov = 1 ## idx for beta slope true parameters
+idx_dataset_betaintercept = "1d4" ## idx for beta intercept true parameters
+idx_dataset_betaslope = "1d4" ## idx for beta slope true parameters
+idx_dataset_cov = "1d4" ## idx for beta slope true parameters
 
 plot_only_converged <- TRUE
-plot_only_converged <- FALSE
 if(plot_only_converged){
   add_convergence <- '_onlyconverged_'
 }else{
   add_convergence <- 'withnonconverged_'
 }
 
-model <- paste0(dataset_name_split[8], sep='_', collapse = '')
-name_dataset <-paste0(dataset_name_split[1:2], sep='_', collapse = '')
+model <- 'fullREDMsinglelambda_'
+name_dataset <- "multiple_GenerationHnorm_"
 
+# model <- "fullREM_"
+# name_dataset <- "multiple_generationMGnorm_"
+
+
+# model <- 'diagREDMsinglelambda'
+# model <- 'fullREDMsinglelambda_'
+# model <- 'diagREDM'
+# model <- "fullREM"
+# model <- "fullREDM_"
+# model <- "diagREM"
+# model <- "FEDMsinglelambda"
 optimiser <- 'nlminb'
 
 # name_dataset <- "multiple_GenerationHnorm_"
@@ -41,18 +46,14 @@ optimiser <- 'nlminb'
 name_dataset0 <- paste0(strsplit(name_dataset, '_')[[1]][1:2], sep = '_', collapse = '')
 
 
-fles = list.files("../../../../data/assessing_models_simulation/datasets/", full.names = T, include.dirs = F)
-fles <- fles[grep(paste0(name_dataset, "*"), fles, ignore.case = T)]
-fles <- fles[grep(paste0(idx_dataset_betaintercept, "_", idx_dataset_betaslope,
-                         "_", idx_dataset_cov, "*"), fles, ignore.case = T)]
-fles[grep('OLD', fles)]
-
+fles = list.files("../../../../data/assessing_models_simulation/datasets/", full.names = T)
+fles <- fles[grep(paste0(name_dataset, "*"), fles)]
+fles <- fles[grep(paste0("betaintercept", idx_dataset_betaintercept, "_betaslope", idx_dataset_betaslope, "_covmat", idx_dataset_cov, "*"), fles)]
 x <- lapply(fles, readRDS)
 lst <- list.files(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/", optimiser, "/"), full.names = T)
 lst <- lst[grepl(name_dataset, lst)]
 lst <- lst[grepl(model, lst)]
-lst <- lst[grep(paste0(idx_dataset_betaintercept, "_", idx_dataset_betaslope, "_", idx_dataset_cov, "*"), lst)]
-length(lst)
+lst <- lst[grep(paste0("betaintercept", idx_dataset_betaintercept, "_betaslope", idx_dataset_betaslope, "_covmat", idx_dataset_cov, "*"), lst)]
 
 all_pd <- lapply(lst, function(i){x <- readRDS(i); try(x$pdHess)})
 all_pd[sapply(all_pd, typeof) == 'character'] = FALSE
@@ -62,9 +63,6 @@ table(all_pd_list)
 lst0 <- lst
 if(plot_only_converged) lst = lst[all_pd_list]
 runs <- lapply(lst, readRDS)
-tryerror <- sapply(runs, typeof) == "list"
-runs <- runs[tryerror]
-lst <- lst[tryerror]
 
 summaries = lapply(runs, function(i){
   summary <- summary.sdreport(i)
@@ -88,7 +86,7 @@ summaries = lapply(runs, function(i){
 #   
 #   summaries[[it_runs]]
 # }
-
+  
 summaries2 = sapply(summaries, function(j) j[,1])
 # if(typeof(summaries2) == "list"){
 #   summaries2 <- do.call('cbind', summaries2)
@@ -100,26 +98,25 @@ summaries_melt[summaries_melt$Var1 == "log_lambda", "value"] = exp(summaries_mel
 if(model %in% c("fullREM_")){
   # summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])
   summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = (exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"]))
-}else if(model %in% c("fullREDMsinglelambda_", "fullREDMonefixedlambda_")){
+}else if(model %in% c("fullREDMsinglelambda_")){
   summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])**2
 }else{
-  stop('Specify correct model\n')
+  stop()
 }
 
 summaries_melt[summaries_melt$Var1 == "log_lambda", "Var1"] = "lambda"
 summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "Var1"] = "sd_RE"
 
+
 if(name_dataset0 %in% c("multiple_GenerationCnormdiagRE_", "multiple_GenerationCnorm_")){
   sds = rep(x[[1]]$sd_RE, x[[1]]$d-1)
 }else if(name_dataset0 %in% c("multiple_GenerationMGnorm_", "multiple_generationMGnorm_")){
   sds = x[[1]]$sd_RE
-}else if(name_dataset0 %in% c("multiple_GenerationHnorm_", "fullREDMonefixedlambda_")){
-  cov_mat_true = readRDS(paste0("../../../../data/assessing_models_simulation/additional_files/multiple_fixed_", idx_dataset_cov, ".RDS"))
+}else if(name_dataset0 %in% c("multiple_GenerationHnorm_")){
+  cov_mat_true = readRDS(paste0("../../../../data/assessing_models_simulation/additional_files/multiple_fixed_covmat", idx_dataset_cov, ".RDS"))
   sds <- diag(cov_mat_true)
   covs <- cov_mat_true[upper.tri(cov_mat_true)]
   covs_true <- TRUE
-}else{
-  stop('Specify correct model\n')
 }
 
 if(model %in% c("fullREM_")){
@@ -156,7 +153,7 @@ if(model %in% c("fullREM_")){
   if(model == "diagREDM_"){
     if(name_dataset0 %in% c("multiple_GenerationMGnorm_", "multiple_generationMGnorm_")){
       overdisp = c(NA, NA)
-    }else{
+      }else{
       overdisp <- x[[1]]$lambda
     }
   }else if(model=="diagREDMsinglelambda_"){
@@ -170,26 +167,17 @@ if(model %in% c("fullREM_")){
   overdisp <- x[[1]]$lambda
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 overdisp)
-}else if(model == "fullREDMonefixedlambda_"){
-  true_vals <- c(as.vector((x[[1]]$beta)),
-                 rep(NA, length(python_like_select_name(runs[[1]]$par.fixed, 'cov_par_RE'))),
-                 sds, c((x[[1]]$lambda)))
 }else{
   stop('<Specify correct model>')
 }
-
-summaries_melt$true = rep(true_vals, length(lst))
-summaries_melt$subtract = summaries_melt$value - summaries_melt$true
-
-plot(summaries_melt$value[summaries_melt$Var1 == 'beta'],
-summaries_melt$true[summaries_melt$Var1 == 'beta']) ### very weird
+summaries_melt$subtract = summaries_melt$value - rep(true_vals, length(lst))
 
 ggplot(summaries_melt, aes(x=idx_param, y=subtract, group=idx_param))+
   geom_abline(slope = 0, intercept = 0, lty='dashed', col='blue')+
   geom_boxplot()+facet_wrap(~Var1, scales = "free", nrow=1)+labs(x="Parameter", y="Bias")
 ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_", 
-              name_dataset, optimiser, '_', model, idx_dataset_betaintercept, '_',
-              idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence, "bias.pdf"), width = 10, height = 3.5)
+            name_dataset, optimiser, '_', model, idx_dataset_betaintercept, '_',
+            idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence, "bias.pdf"), width = 10, height = 3.5)
 # summaries_mat = matrix(summaries_melt$value, nrow=sum(summaries_melt$Var2 == 1))
 
 
@@ -213,9 +201,9 @@ exp(sapply(summaries, function(j) j[rownames(j) == "log_lambda",1]))
 summaries[[1]]
 true_vals
 confints <- sapply(summaries, function(it_run){
-  sapply(1:length(true_vals), function(i){
-    confintint = c(it_run[i,1]-1.96*it_run[i,2],it_run[i,1]+1.96*it_run[i,2])
-    (true_vals[i] > confintint[1]) & (true_vals[i] < confintint[2])
+sapply(1:length(true_vals), function(i){
+  confintint = c(it_run[i,1]-1.96*it_run[i,2],it_run[i,1]+1.96*it_run[i,2])
+  (true_vals[i] > confintint[1]) & (true_vals[i] < confintint[2])
   } )
 })
 rownames(confints) = rownames(summaries[[1]])
@@ -252,7 +240,7 @@ runs_nonconverged_list <- lapply(runs_nonconverged, function(j) try(j$par.fixed)
 runs_nonconverged_list <- runs_nonconverged_list[sapply(runs_nonconverged_list, typeof) == "double"]
 
 comparison_conv_notconv <- rbind(cbind.data.frame(melt(runs_nonconverged_list), conv='not_conv'),
-                                 cbind.data.frame(melt(lapply(runs, function(j) try(j$par.fixed))), conv='converged'))
+      cbind.data.frame(melt(lapply(runs, function(j) try(j$par.fixed))), conv='converged'))
 comparison_conv_notconv$param_name = make.names(names(runs[[1]]$par.fixed), unique = T)
 
 comparison_conv_notconv$param_type <- gsub("\\..*", "", comparison_conv_notconv$param_name)
@@ -288,22 +276,3 @@ ggplot(comparison_conv_notconv, aes(x=interaction(conv, param_name), y=value, co
 ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset,
               optimiser,'_',  model, idx_dataset_betaintercept, '_', idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence,
               "comparison_nonconv2.pdf"), width = 15, height = 5.5)
-
-
-true_beta_intercept <- readRDS(paste0("../../../../data/assessing_models_simulation/additional_files/multiple_fixed_", idx_dataset_betaintercept, ".RDS"))
-true_beta_slope <- readRDS(paste0("../../../../data/assessing_models_simulation/additional_files/multiple_fixed_", idx_dataset_betaslope, ".RDS"))
-boxplot(python_like_select_rownames(sapply(runs, function(i) i$par.fixed), 'beta')) ## THIS IS NOT THE BIAS!
-boxplot(t(python_like_select_rownames(sapply(runs, function(i) i$par.fixed), 'beta')))
-
-betas <- python_like_select_rownames(sapply(runs, function(i) i$par.fixed), 'beta')
-
-betas_subtract <- sweep(betas, 1, as.vector(rbind(true_beta_intercept, true_beta_slope)), '-')
-boxplot(betas_subtract)
-
-true_beta_intercept
-true_beta_slope
-
-x[[1]]$beta
-matrix(python_like_select_name(runs[[1]]$par.fixed, 'beta'), nrow=2)
-
-summaries_melt[summaries_melt$idx_param == 1,]
