@@ -395,6 +395,13 @@ wrapper_run_TMB = function(model, object=NULL, smart_init_vals=T, use_nlminb=F, 
     parameters <- c(parameters,list(log_lambda = matrix(c(2))))
     dll_name <- "fullRE_ME_dirichletmultinomial_onefixedlambda2"
     rdm_vec <- "u_large"
+  }else if(model == "fullRE_DMonefixedlambda3"){
+    ## fixing one of the overdispersion parameters
+    data$num_individuals = n
+    data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))
+    parameters <- c(parameters,list(log_lambda = matrix(c(2))))
+    dll_name <- "fullRE_ME_dirichletmultinomial_onefixedlambda3"
+    rdm_vec <- "u_large"
   }else if(model == "fullREDMnoscaling"){
     data$num_individuals = n
     data$lambda_accessory_mat = (cbind(c(rep(1,n),rep(0,n)), c(rep(0,n),rep(1,n))))

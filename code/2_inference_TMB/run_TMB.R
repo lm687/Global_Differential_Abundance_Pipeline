@@ -94,6 +94,10 @@ if(opt$model == "fullREM"){
   TMB::compile("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial_onefixedlambda2.cpp",  "-std=gnu++17")
   dyn.load(dynlib("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial_onefixedlambda2"))
   mod_model_name = "fullRE_DMonefixedlambda2"
+}else if(opt$model =="fullREDMonefixedlambda3"){
+  TMB::compile("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial_onefixedlambda3.cpp",  "-std=gnu++17")
+  dyn.load(dynlib("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial_onefixedlambda3"))
+  mod_model_name = "fullRE_DMonefixedlambda3"
 }else{
   stop('Specifiy a valid <model>')
 }
@@ -186,7 +190,7 @@ if(opt$use_previous_run_startingvals){
           cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'),
           log_lambda = 2,2)
         stop('Check log_lambda = 2,2. It should not affect results; it has simply added a "2" in the list')
-    }else if(opt$model %in% c("fullREDMonefixedlambda", "fullREDMonefixedlambda2")){
+    }else if(opt$model %in% c("fullREDMonefixedlambda", "fullREDMonefixedlambda2", "fullREDMonefixedlambda3")){
       list_initial_params <- list(
         beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
         u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
