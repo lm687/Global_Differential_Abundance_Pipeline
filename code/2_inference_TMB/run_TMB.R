@@ -130,6 +130,7 @@ if(opt$use_previous_run_startingvals){
   
   ## check if there is an entry for the dataset under consideration
   which_num_tries <- which(num_tries_for_convergence$V1 == opt$output)
+  cat('The current number of tries for this run is ', num_tries_for_convergence[which_num_tries, 2], '\n')
   if(length(which_num_tries)>0){
     num_tries_for_convergence[which_num_tries,2] = num_tries_for_convergence[which_num_tries,2] + 1
   }else{
@@ -142,8 +143,17 @@ if(opt$use_previous_run_startingvals){
   write.table(num_tries_for_convergence, quote = F, sep = "\t", file = file_num_tries, append = T, col.names = FALSE, row.names = FALSE)
 
   
+  good_previous_nonconvergedf_file1 <- file.exists(outfile_not_converged)
+  if(good_previous_nonconvergedf_file1){
+    good_previous_nonconvergedf_file2 = typeof(readRDS(outfile_not_converged)) != "character"
+  }else{
+    good_previous_nonconvergedf_file2 = F
+  }
+  cat(' Previous file exists? (bool): ', good_previous_nonconvergedf_file1, '\n',
+      'Was it a non-error run? (bool)', good_previous_nonconvergedf_file2, '\n')
+  good_previous_nonconvergedf_file = good_previous_nonconvergedf_file1 & good_previous_nonconvergedf_file2
   ## use previous values as initial values
-  if(file.exists(outfile_not_converged)){
+  if(good_previous_nonconvergedf_file){
     ## run with given initial parameters
     results_inference_previous <- readRDS(outfile_not_converged)
     
@@ -215,8 +225,22 @@ if(opt$use_previous_run_startingvals){
     ## if there is no previous file, run without specified starting values
     results_inference = try(wrapper_run_TMB(object = dataset, model = mod_model_name, use_nlminb=use_nlminb))
   }
-  if(!results_inference$pdHess){
+  
+  if( typeof(results_inference) == "character"){
+    not_converged = T
+    error_run = T
+  }else{
+    error_run = F
+    if(!results_inference$pdHess){
+      not_converged = T
+    }else{
+      not_converged = F
+    }
+  }
+  if(not_converged){
     ## if it still doesn't converge, save it as _NC
+    cat('The current number of tries for this run is ', num_tries_for_convergence[which_num_tries, 2], '\n')
+    
     if(num_tries_for_convergence[which_num_tries,2] > threshold_num_tries){
       saveRDS(object = results_inference, file = opt$output)
     }else{

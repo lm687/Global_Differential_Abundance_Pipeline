@@ -5,10 +5,13 @@ setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 require(TMB)
 require(reshape2)
 require(ggplot2)
+library(GGally)
 source("../../../2_inference_TMB/helper_TMB.R")
 
 dataset <- "multiple_GenerationHnorm_80_180_9_6_0_fullREDMsinglelambda_betaintercept2_betaslope2_covmat2"
 dataset <- "multiple_GenerationMGnorm_80_180_100_6_0_fullREDMonefixedlambda_betaintercept3_betaslope3_sdRE1"
+dataset <- "multiple_GenerationMGnorm_80_180_100_6_0_fullREDMonefixedlambda3_betaintercept3_betaslope3_sdRE1"
+dataset <- "multiple_GenerationMGnorm_80_180_100_6_0_diagREDM_betaintercept3_betaslope3_sdRE1"
 # dataset <- "multiple_GenerationCnormdiagRE_80_180_9_6_0_betaintercept2_betaslope2"
 
 dataset_name_split <- strsplit(dataset, '_')[[1]]
@@ -100,7 +103,7 @@ summaries_melt[summaries_melt$Var1 == "log_lambda", "value"] = exp(summaries_mel
 if(model %in% c("fullREM_")){
   # summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])
   summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = (exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"]))
-}else if(model %in% c("fullREDMsinglelambda_", "fullREDMonefixedlambda_")){
+}else if(model %in% c("fullREDMsinglelambda_", "fullREDMonefixedlambda_", "fullREDMonefixedlambda3_")){
   summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"] = exp(summaries_melt[summaries_melt$Var1 == "logs_sd_RE", "value"])**2
 }else{
   stop('Specify correct model\n')
@@ -113,7 +116,7 @@ if(name_dataset0 %in% c("multiple_GenerationCnormdiagRE_", "multiple_GenerationC
   sds = rep(x[[1]]$sd_RE, x[[1]]$d-1)
 }else if(name_dataset0 %in% c("multiple_GenerationMGnorm_", "multiple_generationMGnorm_")){
   sds = x[[1]]$sd_RE
-}else if(name_dataset0 %in% c("multiple_GenerationHnorm_", "fullREDMonefixedlambda_")){
+}else if(name_dataset0 %in% c("multiple_GenerationHnorm_")){
   cov_mat_true = readRDS(paste0("../../../../data/assessing_models_simulation/additional_files/multiple_fixed_", idx_dataset_cov, ".RDS"))
   sds <- diag(cov_mat_true)
   covs <- cov_mat_true[upper.tri(cov_mat_true)]
@@ -171,6 +174,10 @@ if(model %in% c("fullREM_")){
   true_vals = c(as.vector(x[[1]]$beta), ## betas
                 overdisp)
 }else if(model == "fullREDMonefixedlambda_"){
+  true_vals <- c(as.vector((x[[1]]$beta)),
+                 rep(NA, length(python_like_select_name(runs[[1]]$par.fixed, 'cov_par_RE'))),
+                 sds, c((x[[1]]$lambda)))
+}else if(model == "fullREDMonefixedlambda3_"){
   true_vals <- c(as.vector((x[[1]]$beta)),
                  rep(NA, length(python_like_select_name(runs[[1]]$par.fixed, 'cov_par_RE'))),
                  sds, c((x[[1]]$lambda)))
@@ -307,3 +314,13 @@ x[[1]]$beta
 matrix(python_like_select_name(runs[[1]]$par.fixed, 'beta'), nrow=2)
 
 summaries_melt[summaries_melt$idx_param == 1,]
+
+## check any potential correlations between estimates, for identifiability
+
+all_pars <- do.call('cbind', sapply(runs, `[`, 'par.fixed'))
+pairs(t(all_pars))
+ggpairs(data.frame(t(all_pars)), aes(alpha = 0.4))
+ggsave(paste0("../../../../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_",name_dataset,
+              optimiser,'_',  model, idx_dataset_betaintercept, '_', idx_dataset_betaslope, '_', idx_dataset_cov, add_convergence,
+              "correlationestimates.pdf"), width = 15, height = 15)
+

@@ -19,6 +19,7 @@ if(local){
   # generation = "GenerationInoREtwolambdas"
   # generation = "generationHnormtwolambdas"
   # generation = "GenerationMixture1"
+  generation = "GenerationJnormTwoLambdasOneChangingBeta"
   ##########################################
   # multiple_runs = F
   ## single replicate
