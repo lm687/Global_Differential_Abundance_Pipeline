@@ -135,10 +135,12 @@ rule all:
       #  fixed_beta_intercept="betaintercept1", sdRE_input=1,\
       # fixed_beta_slope="betaslope1", optimiser='nlminb')
       expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
-      datasetgeneration="generationMGnorm",  n=80, nlambda=180,\
+      datasetgeneration="GenerationMGnorm",  n=80, nlambda=180,\
       d=6, lmbda=100,\
-      beta_intensity = 0, model=["fullREDMsinglelambda", "fullREDMonefixedlambda"], itnum=range(10),\
-      fixed_beta_intercept="betaintercept3", sdRE_input='sdRE1',\
+      #beta_intensity = 0, model=["fullREDMonefixedlambda", "fullREDMonefixedlambda3", "diagREDM"], itnum=range(100),\
+      beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
+      fixed_beta_intercept="betaintercept3",\
+      sdRE_input='sdRE1',\
       fixed_beta_slope="betaslope3", optimiser='nlminb')
       # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
       # 	datasetgeneration="GenerationHnorm",  n=80, nlambda=180,\
@@ -231,7 +233,7 @@ rule inference_simulation_TMB_multiple:
     output:
        "../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS"
     shell:
-       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model} --optimiser {params.optimiser}"
+       "Rscript 2_inference_TMB/run_TMB.R --input {input} --output {output} --model {params.model} --optimiser {params.optimiser}  --use_previous_run_startingvals T"
 
 
 ## Equivalent of analyse_simulation_TMB, Whenever using inference_simulation_TMB_multiple
@@ -244,9 +246,9 @@ rule analyse_simulation_TMB_multiple:
         d = config["simulation_d_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
         beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
         datasetgeneration=wildcards.datasetgeneration,
-        fixed_beta_intercept = 'NA',
-        fixed_beta_slope = 'NA',
-        sdRE_input = 'NA',
+        fixed_beta_intercept = wildcards.fixed_beta_intercept,
+        fixed_beta_slope = wildcards.fixed_beta_slope,
+        sdRE_input = wildcards.sdRE_input,
         model = "{model}",
         itnum= range(numreplicates[wildcards.datasetgeneration]))
     output:
