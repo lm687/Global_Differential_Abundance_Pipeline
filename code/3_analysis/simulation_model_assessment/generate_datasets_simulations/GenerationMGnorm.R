@@ -44,6 +44,8 @@ beta_gamma_shape = opt$beta_gamma_shape  ##opt$hyperparam_shape ## shape paramet
 if(is.null(opt$sdRE_input)){
   sd_RE = runif(n = d-1, min = 0, max = 1) ## standard deviation for random effects
 }else{
+  opt$sdRE_input = paste0("../data/assessing_models_simulation/additional_files/multiple_fixed_", opt$sdRE_input, ".RDS")
+  cat('Reading sdRE input file ', opt$sdRE_input, '\n')
   sd_RE = readRDS(opt$sdRE_input)
 }
 
@@ -60,6 +62,8 @@ beta = matrix(0, nrow=2, ncol=d-1)
 if(is.null(opt$beta_intercept_input)){
   beta[1,] = runif(n = d-1, min = -1, max = 1)
 }else{
+  opt$beta_intercept_input = paste0("../data/assessing_models_simulation/additional_files/multiple_fixed_", opt$beta_intercept_input, ".RDS")
+  cat('Reading beta intercept input file ', opt$beta_intercept_input, '\n')
   beta[1,] = readRDS(opt$beta_intercept_input)
 }
 
@@ -73,6 +77,8 @@ if(is.null(opt$beta_slope_input)){
     beta[2,idx_neg == 1] = -beta[2,idx_neg == 1]
   }
 }else{
+  opt$beta_slope_input = paste0("../data/assessing_models_simulation/additional_files/multiple_fixed_", opt$beta_slope_input, ".RDS")
+  cat('Reading beta slope input file ', opt$beta_slope_input, '\n')
   beta[2,] = readRDS(opt$beta_slope_input)
 }
 
