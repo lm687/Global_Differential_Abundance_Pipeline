@@ -189,7 +189,7 @@ if(opt$use_previous_run_startingvals){
           logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
           cov_par_RE = python_like_select_name(results_inference_previous$par.fixed, 'cov_par_RE'),
           log_lambda = 2,2)
-        stop('Check log_lambda = 2,2. It should not affect results; it has simply added a "2" in the list')
+        cat('Check log_lambda = 2,2. It should not affect results; it has simply added a "2" in the list')
     }else if(opt$model %in% c("fullREDMonefixedlambda", "fullREDMonefixedlambda2", "fullREDMonefixedlambda3")){
       list_initial_params <- list(
         beta = matrix(python_like_select_name(results_inference_previous$par.fixed, 'beta'), nrow=2),
@@ -203,7 +203,7 @@ if(opt$use_previous_run_startingvals){
         u_large = matrix(results_inference_previous$par.random, ncol=dmin1),
         logs_sd_RE=python_like_select_name(results_inference_previous$par.fixed, 'logs_sd_RE'),
         log_lambda = 2,2)
-      stop('Check log_lambda = 2,2. It should not affect results; it has simply added a "2" in the list')
+      cat('Check log_lambda = 2,2. It should not affect results; it has simply added a "2" in the list')
     }else if(opt$model =="FEDMsinglelambda"){
         stop('Custom initial values for FEDMsinglelambda: Not implemented')
     }else{
