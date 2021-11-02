@@ -37,10 +37,9 @@ option_list = list(
   make_option(c("--dataset_generation"), type="character", default=NA,
               help="Generation name", metavar="character"),
   make_option(c("--multiple_runs"), type="logical", default=F,
-              help="Boolean: are we analysing mutiple runs?", metavar="logical")
+              help="Boolean: are we analysing mutiple runs?", metavar="logical"),
   make_option(c("--read_input_from_file"), type="logical", default=F,
               help="Boolean: are we reading the input files from a file? (set to T if the number of input files is very large)", metavar="logical")
-read_input_from_file
 );
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -144,12 +143,15 @@ table(DA_bool, M=pvals_adj <= 0.05)
 if(!is.null(dim(datasets[[1]]$beta))){
   ## if the datasets are created from the DM or M models
   df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function(i) i$beta[2,])),
+                                      beta_intercept_true = unlist(sapply(datasets, function(i) i$beta[1,])),
                                       idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1),
                                       d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1),
                                       n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1),
                                       beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1),
                                       beta_est = unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
+                                      beta_intercept_est = unlist(sapply(runs, function(i) select_intercept(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
                                       beta_stderr = unlist(sapply(runs, give_stderr)),
+                                      beta_intercept_stderr = unlist(sapply(runs, give_stderr, only_slopes=F)[c(T,F)]),
                                       pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1),
                                       DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
                                       idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$d-1))))
