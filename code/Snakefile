@@ -18,10 +18,10 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
  'GenerationInoREscaledbeta': 'generationC', 'GenerationK': 'generationG', 'GenerationK2': 'generationG',\
  'GenerationJnormTwoLambdas': 'generationG', 'GenerationInoREtwolambdas': 'generationG',\
  'generationHnormtwolambdas': 'generationG', 'GenerationMixture1': 'generationMixture1',
- 'GenerationJnormTwoLambdasOneChangingBeta': 'generationG'}
+ 'GenerationJnormTwoLambdasOneChangingBeta': 'generationG', 'GenerationJnormBTwoLambdasOneChangingBeta': 'generationG'}
 
 numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3': 4, 'GenerationMixture1': 2,\
-'GenerationJnormTwoLambdasOneChangingBeta': 2}
+'GenerationJnormTwoLambdasOneChangingBeta': 2, 'GenerationJnormBTwoLambdasOneChangingBeta': 2}
 
 rule all:
     input:
@@ -155,18 +155,24 @@ rule all:
       #   itnum=range(numreplicates['GenerationMixture1']),\
       #   fixed_beta_intercept="NA", sdRE_input="NA",\
       #   fixed_beta_slope="NA", optimiser='nlminb')
-        expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
-        datasetgeneration="GenerationJnormTwoLambdasOneChangingBeta",\
-        n=config["simulation_n_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        nlambda=config["simulation_nlambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        lmbda=config["simulation_lambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        d=config["simulation_d_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'],\
-        itnum=range(numreplicates['GenerationJnormTwoLambdasOneChangingBeta']),\
-        fixed_beta_intercept="NA", sdRE_input="NA",\
-        fixed_beta_slope="NA", optimiser='nlminb')
+        # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
+        # datasetgeneration="GenerationJnormTwoLambdasOneChangingBeta",\
+        # n=config["simulation_n_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+        # nlambda=config["simulation_nlambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+        # lmbda=config["simulation_lambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+        # d=config["simulation_d_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+        # beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+        # model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'],\
+        # itnum=range(numreplicates['GenerationJnormTwoLambdasOneChangingBeta']),\
+        # fixed_beta_intercept="NA", sdRE_input="NA",\
+        # fixed_beta_slope="NA", optimiser='nlminb')
+      expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      datasetgeneration=['GenerationJnormTwoLambdasOneChangingBeta', 'GenerationJnormBTwoLambdasOneChangingBeta'],\
+       model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      #expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      # datasetgeneration=[ 'GenerationJnorm'])
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      # datasetgeneration=['GenerationMixture1'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       # datasetgeneration=['GenerationK', 'GenerationK2', 'GenerationJnormTwoLambdas', 'GenerationInoREtwolambdas', 'generationHnormtwolambdas'], model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
       #expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
       # datasetgeneration=[ 'GenerationJnorm', 'GenerationJnorm2', 'GenerationJnorm3'])
@@ -257,20 +263,20 @@ rule analyse_simulation_TMB_multiple:
         d = config["simulation_d_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
         beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict[wildcards.datasetgeneration]],
         datasetgeneration=wildcards.datasetgeneration,
-        fixed_beta_intercept = wildcards.fixed_beta_intercept,
-        fixed_beta_slope = wildcards.fixed_beta_slope,
-        sdRE_input = wildcards.sdRE_input,
+        fixed_beta_intercept = 'NA',#wildcards.fixed_beta_intercept,  this should be changed depending on whether we are using fixed betas or not
+        fixed_beta_slope = 'NA', #wildcards.fixed_beta_slope, this should be changed depending on whether we are using fixed betas or not
+        sdRE_input = 'NA', #wildcards.sdRE_input, this should be changed depending on whether we are using fixed sds or not
         model = "{model}",
         itnum= range(numreplicates[wildcards.datasetgeneration]))
     output:
         "../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt"
     run:
-        if len(wildcards.input) < 10e6:
-            shell("Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input '{input}'\
+        if len(input) < 10e6:
+            shell("Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input_list '{input}'\
             --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
             --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T")
         else:
-            shell("cat '{input}' > tmp_input_snake; Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input tmp_input_snake \
+            shell("cat '{input}' > tmp_input_snake; Rscript 3_analysis/simulation_model_assessment/analyse_inference_simulations/analyse_inference_simulations.R --input_list tmp_input_snake \
             --output_folder_name ../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{wildcards.datasetgeneration}/{wildcards.datasetgeneration}_{wildcards.model}/ \
             --output_string {wildcards.datasetgeneration}_{wildcards.model} --model {wildcards.model} --dataset_generation {wildcards.datasetgeneration} --multiple_runs T \
             --read_input_from_file T")
