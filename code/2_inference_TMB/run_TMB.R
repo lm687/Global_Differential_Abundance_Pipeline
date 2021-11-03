@@ -242,7 +242,15 @@ if(opt$use_previous_run_startingvals){
     cat('The current number of tries for this run is ', num_tries_for_convergence[which_num_tries, 2], '\n')
     
     if(num_tries_for_convergence[which_num_tries,2] > threshold_num_tries){
-      saveRDS(object = results_inference, file = opt$output)
+      if(typeof(results_inference) == "character"){
+        ## if it was an <error> run: do not save unless it's the first run
+        if(num_tries_for_convergence[which_num_tries,2] == 0){
+          saveRDS(object = results_inference, file = opt$output)
+        }
+      }else{
+        ## if it was a good run without convergence
+        saveRDS(object = results_inference, file = opt$output)
+      }
     }else{
       saveRDS(object = results_inference, file = outfile_not_converged)
     }
