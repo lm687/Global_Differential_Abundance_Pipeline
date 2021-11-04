@@ -64,9 +64,12 @@ if(beta_gamma_shape == 0){
   if(is.null(opt$beta_slope_input)){
     beta[2,] = rnorm(n = d-1, mean = beta_gamma_shape, sd = .6) ## for the slope coefficients
   }else{
-    beta[2,] = readRDS(opt$beta_slope_input)
+    read_beta_slope = readRDS(opt$beta_slope_input)
+    stopifnot( (opt$d-1) == length(read_beta_slope))
+    beta[2,] = read_beta_slope
   }
 }
+
 
 ## Random effects
 Z_sim0 = matrix(0, nrow=n, ncol=n)

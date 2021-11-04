@@ -20,6 +20,7 @@ if(local){
   # generation = "generationHnormtwolambdas"
   # generation = "GenerationMixture1"
   generation = "GenerationJnormTwoLambdasOneChangingBeta"
+  generation = "GenerationJnormBTwoLambdasOneChangingBeta"
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -900,4 +901,59 @@ ggplot(varying_d, aes(x=factor(model,
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_d_boxplot.pdf"),
        height = 3.0, width = 4)
+
+
+##'  only for GenerationJnormTwoLambdasOneChangingBeta: looking at individual betas
+##'  we want to see if there are more false negatives in samples where the beta_i is lower
+ggplot(data = runs_diagREDM[runs_diagREDM$beta_true != 0,c('beta_true', 'pvals_adj')],
+       aes(x=beta_true, y=pvals_adj))+geom_point()+theme_bw()
+runs_diagREDM$beta_est
+
+only_logR_with_change <- runs_diagREDM[runs_diagREDM$beta_true != 0,]
+
+plot(density(only_logR_with_change$beta_true))
+
+##' I would expectL for the same beta gamma shape (or, equivalently, the same beta slope true)
+##' there are more false negatives the lower beta intercept true
+ggplot(data = only_logR_with_change,
+       aes(x=beta_true, y=beta_intercept_true, col=pvals_adj))+geom_point()+theme_bw()
+
+ggplot(data = only_logR_with_change,
+       aes(x=beta_true, y=beta_intercept_true, col=pvals_adj < 0.05))+geom_point()+theme_bw()
+## there is no trend in GenerationJnormTwoLambdasOneChangingBeta
+
+only_logR_with_change$cut_beta_intercept_true <- cut(only_logR_with_change$beta_intercept_true, breaks = seq(-1, 1, length.out = 10))
+only_logR_with_change_summarised <- only_logR_with_change %>% group_by(beta_true, cut_beta_intercept_true) %>%
+  dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+ggplot(data = only_logR_with_change,
+       aes(x=beta_true, y=cut_beta_intercept_true,
+           col=pvals_adj < 0.05))+geom_point()+theme_bw()
+ggplot(data = only_logR_with_change,
+       aes(x=beta_true, y=cut_beta_intercept_true,
+           col=pvals_adj < 0.05))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")
+ggplot(data = only_logR_with_change_summarised,
+       aes(x=beta_true, y=cut_beta_intercept_true,
+           fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+scale_x_continuous(trans = "log2") ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+
+ggplot(data = only_logR_with_change,
+       aes(x=mean(pvals_adj < 0.05, na.rm = T), y=cut_beta_intercept_true))+
+         geom_point()+theme_bw()
+
+ggplot(data = only_logR_with_change,
+       aes(x=as.numeric(pvals_adj < 0.05), y=cut_beta_intercept_true))+
+  geom_violin()+theme_bw()
+
+plot(joint_df$fullRE_M.beta_intercept_true,
+     joint_df$fullRE_M.beta_true)
+
+plot(joint_df$fullRE_M.beta_intercept_true,
+     joint_df$fullRE_M.beta_gamma_shape)
+
+## including all the logR, in GenerationJnormTwoLambdasOneChangingBeta/ GenerationJnormBTwoLambdasOneChangingBeta
+plot(joint_df$fullRE_M.beta_true,
+     joint_df$fullRE_M.beta_gamma_shape)
+
+## including only logR that changes, in GenerationJnormTwoLambdasOneChangingBeta/ GenerationJnormBTwoLambdasOneChangingBeta
+plot(joint_df[joint_df$fullRE_M.idx_within_dataset == 1,]$fullRE_M.beta_true,
+     joint_df[joint_df$fullRE_M.idx_within_dataset == 1,]$fullRE_M.beta_gamma_shape)
 

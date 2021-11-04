@@ -79,7 +79,9 @@ if(is.null(opt$beta_slope_input)){
 }else{
   opt$beta_slope_input = paste0("../data/assessing_models_simulation/additional_files/multiple_fixed_", opt$beta_slope_input, ".RDS")
   cat('Reading beta slope input file ', opt$beta_slope_input, '\n')
-  beta[2,] = readRDS(opt$beta_slope_input)
+  read_beta_slope = readRDS(opt$beta_slope_input)
+  stopifnot( (opt$d-1) == length(read_beta_slope))
+  beta[2,] = read_beta_slope
 }
 
 ## Random effects

@@ -71,7 +71,9 @@ if(is.null(opt$beta_slope_input)){
     beta[2,idx_neg == 1] = -beta[2,idx_neg == 1]
   }
 }else{
-  beta[2,] = readRDS(opt$beta_slope_input)
+    read_beta_slope = readRDS(opt$beta_slope_input)
+    stopifnot( (opt$d-1) == length(read_beta_slope))
+    beta[2,] = read_beta_slope
 }
 
 ## Random effects
