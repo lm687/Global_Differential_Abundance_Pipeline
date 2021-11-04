@@ -94,8 +94,10 @@ if(is.null(opt$beta_slope_input)){
     }else{
       sim_beta_2 = F
       cat('Reading input beta slope file')
-      beta[2,] = readRDS(opt$beta_slope_input)
-    }
+    read_beta_slope = readRDS(opt$beta_slope_input)
+    stopifnot( (opt$d-1) == length(read_beta_slope))
+    beta[2,] = read_beta_slope    
+}
   }
 }
 
