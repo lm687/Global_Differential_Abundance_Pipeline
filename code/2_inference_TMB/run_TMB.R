@@ -125,18 +125,26 @@ if(opt$use_previous_run_startingvals){
   
   threshold_num_tries = 10
   file_num_tries <- "logs/num_tries_for_convergence.txt"
+  cat('Reading file', file_num_tries)
   header_num_tries='## Write down the number of tries of getting results that converge. If the number exceeds some limit, save the non-converged result\n'
-  num_tries_for_convergence <- read.table(file_num_tries, sep = '\t', comment.char = '#')
+  num_tries_for_convergence <- read.table(file_num_tries, sep = '\t', comment.char = '#', stringsAsFactors=F, fill=T, row.names=NULL)
   
   ## check if there is an entry for the dataset under consideration
   which_num_tries <- which(num_tries_for_convergence$V1 == opt$output)
+  which_num_tries = which_num_tries[length(which_num_tries)]
   cat('The current number of tries for this run is ', num_tries_for_convergence[which_num_tries, 2], '\n')
+  print(num_tries_for_convergence[which_num_tries,2])
   if(length(which_num_tries)>0){
     num_tries_for_convergence[which_num_tries,2] = num_tries_for_convergence[which_num_tries,2] + 1
+    num_tries_for_convergence = t(matrix(c(num_tries_for_convergence[which_num_tries,1], as.character(as.numeric(num_tries_for_convergence[which_num_tries,2]) + 1))))
   }else{
     ## if not, append it
+    cat('Appending\n')
+    cat(opt$output, '\n')
+    num_tries_for_convergence[which_num_tries,2] = 1 
     num_tries_for_convergence <- rbind(num_tries_for_convergence, c(opt$output, 1))
   }
+
   
   ## save updated file
   cat(header_num_tries, file = file_num_tries)
@@ -157,7 +165,7 @@ if(opt$use_previous_run_startingvals){
     ## run with given initial parameters
     results_inference_previous <- readRDS(outfile_not_converged)
     
-    ## dependoing on the model, the list of initial params is different
+    ## depending on the model, the list of initial params is different
     ## need to compute dmin1
 
     dmin1 <- length(python_like_select_name(results_inference_previous$par.fixed, 'beta'))/2
