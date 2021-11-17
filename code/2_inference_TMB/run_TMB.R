@@ -124,9 +124,16 @@ if(opt$use_previous_run_startingvals){
   ## get the number of previous tries, and add one to the <num_tries_for_convergence> document
   
   threshold_num_tries = 10
-  file_num_tries <- "logs/num_tries_for_convergence.txt"
-  cat('Reading file', file_num_tries)
   header_num_tries='## Write down the number of tries of getting results that converge. If the number exceeds some limit, save the non-converged result\n'
+
+  #file_num_tries <- "logs/num_tries_for_convergence.txt"
+  file_num_tries <- paste0('logs/num_tries_for_convergence/', basename(opt$input))
+
+  if(!file.exists(file_num_tries)){
+    #system(paste0('touch ', file_num_tries))
+    write(paste0(header_num_tries, 'dummy\tdummy\n' ), file_num_tries)
+  }
+  cat('Reading file', file_num_tries, '\n')
   num_tries_for_convergence <- read.table(file_num_tries, sep = '\t', comment.char = '#', stringsAsFactors=F, fill=T, row.names=NULL)
   
   ## check if there is an entry for the dataset under consideration
@@ -135,20 +142,21 @@ if(opt$use_previous_run_startingvals){
   cat('The current number of tries for this run is ', num_tries_for_convergence[which_num_tries, 2], '\n')
   print(num_tries_for_convergence[which_num_tries,2])
   if(length(which_num_tries)>0){
-    num_tries_for_convergence[which_num_tries,2] = num_tries_for_convergence[which_num_tries,2] + 1
-    num_tries_for_convergence = t(matrix(c(num_tries_for_convergence[which_num_tries,1], as.character(as.numeric(num_tries_for_convergence[which_num_tries,2]) + 1))))
+    num_tries_for_convergence[which_num_tries,2] = as.numeric(num_tries_for_convergence[which_num_tries,2]) + 1
+    num_tries_for_convergence_append = t(matrix(c(num_tries_for_convergence[which_num_tries,1], as.character(as.numeric(num_tries_for_convergence[which_num_tries,2]) + 1))))
   }else{
     ## if not, append it
     cat('Appending\n')
     cat(opt$output, '\n')
     num_tries_for_convergence[which_num_tries,2] = 1 
     num_tries_for_convergence <- rbind(num_tries_for_convergence, c(opt$output, 1))
+    num_tries_for_convergence_append = num_tries_for_convergence
   }
 
   
   ## save updated file
   cat(header_num_tries, file = file_num_tries)
-  write.table(num_tries_for_convergence, quote = F, sep = "\t", file = file_num_tries, append = T, col.names = FALSE, row.names = FALSE)
+  write.table(num_tries_for_convergence_append, quote = F, sep = "\t", file = file_num_tries, append = T, col.names = FALSE, row.names = FALSE)
 
   
   good_previous_nonconvergedf_file1 <- file.exists(outfile_not_converged)
@@ -247,6 +255,9 @@ if(opt$use_previous_run_startingvals){
   }
   if(not_converged){
     ## if it still doesn't converge, save it as _NC
+    cat('The run has not converged yet\n')
+    print(which_num_tries)
+    print(num_tries_for_convergence[which_num_tries,])
     cat('The current number of tries for this run is ', num_tries_for_convergence[which_num_tries, 2], '\n')
     
     if(num_tries_for_convergence[which_num_tries,2] > threshold_num_tries){
