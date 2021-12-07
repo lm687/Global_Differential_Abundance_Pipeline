@@ -87,11 +87,8 @@ echo "beta_gamma_shape_generationC:
 - 0.0002
 - 0.0005
 - 0.00075
-<<<<<<< HEAD
 - 0.001
 - 0.002
-=======
->>>>>>> 0e79d9d627c98691d22abede410a2d9e060b8d0b
 - 0.005
 - 0.001
 - 0.002
@@ -225,7 +222,9 @@ echo "simulation_lambda_generationF:
 - 50
 - 80
 " >> $name_config
-
+ 
+##########################################################################################
+##########################################################################################
 
 ## Generation G of simulations
 echo "\nsimulation_n_generationG:
@@ -258,6 +257,8 @@ echo "simulation_lambda_generationG:
 - 80
 " >> $name_config
 
+##########################################################################################
+##########################################################################################
 
 ## Generation Mixture1 of simulations
 echo "\nsimulation_n_generationMixture1:
@@ -285,3 +286,41 @@ echo "simulation_nlambda_generationMixture1:
 echo "simulation_lambda_generationMixture1:
 - 0
 " >> $name_config
+
+##########################################################################################
+##########################################################################################
+
+## Generation GenerationJnormBTwoLambdasOneChangingBeta of simulations
+echo "\nsimulation_n_GenerationJnormBTwoLambdasOneChangingBeta:
+- 20
+- 30
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationJnormBTwoLambdasOneChangingBeta:
+- 0
+- 0.01
+- 0.1
+- 0.2
+- 0.3
+- 0.6
+- 4
+" >> $name_config
+
+echo "simulation_d_GenerationJnormBTwoLambdasOneChangingBeta:
+- 3
+- 4
+- 5
+- 6
+" >> $name_config
+
+echo "simulation_nlambda_GenerationJnormBTwoLambdasOneChangingBeta:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_GenerationJnormBTwoLambdasOneChangingBeta:
+- 80
+" >> $name_config
+
+

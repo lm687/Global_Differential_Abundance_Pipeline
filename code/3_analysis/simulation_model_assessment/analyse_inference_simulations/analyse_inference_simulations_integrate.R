@@ -53,7 +53,7 @@ library(reshape2)
 library(jcolors)
 library(cowplot)
 library(ggrepel)
-
+require( tikzDevice )
 
 if(multiple_runs){
   flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/"
@@ -909,7 +909,13 @@ ggplot(data = runs_diagREDM[runs_diagREDM$beta_true != 0,c('beta_true', 'pvals_a
        aes(x=beta_true, y=pvals_adj))+geom_point()+theme_bw()
 runs_diagREDM$beta_est
 
-only_logR_with_change <- runs_diagREDM[runs_diagREDM$beta_true != 0,]
+
+## this should be normalised by the abundance of the last category which serves as baseline
+## reminder: it is always the first log-ratio which is not different from zero
+table(runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]$beta_true)
+table(runs_diagREDM[runs_diagREDM$idx_within_dataset != 1,]$beta_true)
+
+only_logR_with_change <- runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]
 
 plot(density(only_logR_with_change$beta_true))
 
@@ -934,6 +940,50 @@ ggplot(data = only_logR_with_change,
 ggplot(data = only_logR_with_change_summarised,
        aes(x=beta_true, y=cut_beta_intercept_true,
            fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+scale_x_continuous(trans = "log2") ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+
+## we compute the absolute abundance (in proportion) of the first category
+idx_dataset_it = 1
+
+abundances_in_prob <- lapply(unique(runs_diagREDM$idx), function(idx_dataset_it){
+  softmax(c(runs_diagREDM[runs_diagREDM$idx == idx_dataset_it,]$beta_intercept_true, 0)) ## abundance of first cat
+})
+
+abundances_first_cat <- sapply(abundances_in_prob, `[`, 1)
+abundances_last_cat <- sapply(abundances_in_prob, function(i) i[length(i)]) ## not used
+
+length(abundances_first_cat)
+dim(only_logR_with_change)
+only_logR_with_change$abundance_first_cat <- abundances_first_cat
+only_logR_with_change$cut_abundances_first_cat <- cut(only_logR_with_change$abundance_first_cat,
+                                                      breaks = seq(0, max(only_logR_with_change$abundance_first_cat), length.out = 5))
+only_logR_with_change_summarised_2 <- only_logR_with_change %>% group_by(beta_true, cut_abundances_first_cat) %>%
+  dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+
+ggplot(data = only_logR_with_change,
+       aes(x=beta_true, y=abundances_first_cat,
+           col=pvals_adj < 0.05))+geom_point()+theme_bw()
+
+tikz(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
+     height = 3.5, width = 6)
+ggplot(data = only_logR_with_change_summarised_2,
+       aes(x=factor(beta_true), y=cut_abundances_first_cat,
+           fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+  scale_fill_jcolors_contin(palette = "pal2")+
+  labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+# ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+dev.off()
+
+ggplot(data = only_logR_with_change_summarised_2,
+       aes(x=factor(beta_true), y=cut_abundances_first_cat,
+           fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+  scale_fill_jcolors_contin(palette = "pal2")+
+  labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
+       height = 3.5, width = 6)
+
+table(only_logR_with_change$beta_true)
+
+runs_diagREDM
 
 ggplot(data = only_logR_with_change,
        aes(x=mean(pvals_adj < 0.05, na.rm = T), y=cut_beta_intercept_true))+

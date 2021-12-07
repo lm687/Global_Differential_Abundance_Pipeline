@@ -292,6 +292,7 @@ for(xx in fles){
                            fullDMSL=results_inference_fullDMSL$par.random,
                            fullDMDLonefixedslambda=results_inference_fullDMDLonefixedslambda$par.random),
           main=name_plots, pch=19, col=scales::alpha('black', 0.2))
+      
   }else{
     pairs(cbind.data.frame(diagDMDL=results_inference_diagDMDL$par.random,
                            fullDMDLnoscaling=results_inference_fullDMDLnoscaling$par.random,
@@ -299,7 +300,20 @@ for(xx in fles){
                            fullDMDLonefixedslambda=results_inference_fullDMDLonefixedslambda$par.random),
           main=name_plots, pch=19, col=scales::alpha('black', 0.2))
   }
+  ## checking results more throroughly
+  ## what are these lines of diagDMDL == 0?
+  rm(dmin1)
+  rm(nindiv)
+  dmin1 = length(python_like_select_name(results_inference_diagDMDL$par.fixed, 'beta'))/2
+  nindiv = length(results_inference_fullDMSL$par.random)/dmin1
+  print(ggplot(data.frame(diagDMDL=results_inference_diagDMDL$par.random,
+                    fullDMSL=results_inference_fullDMSL$par.random,
+                    logRid=((1:length(results_inference_fullDMSL$par.random))-1) %/% nindiv),
+         aes(y=diagDMDL, x=fullDMSL, col=factor(logRid)))+
+    geom_point()+theme_bw()+facet_wrap(.~logRid)+geom_hline(yintercept = 0, lty='dashed')) ## it's two signatures that have this line
   
+  # pheatmap(matrix(results_inference_fullDMSL$par.random, ncol=dmin1))
+  # pheatmap(matrix(results_inference_diagDMDL$par.random, ncol=dmin1))
 }
 dev.off()
 

@@ -699,12 +699,12 @@ wald_generalised = function(v, sigma){
   pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
 
-wald_TMB_wrapper = function(i, verbatim=TRUE){
+wald_TMB_wrapper = function(i, verbatim=TRUE, fail_non_converged=T){
   if(typeof(i) == "character"){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-    if(!i$pdHess){
+    if(!i$pdHess & fail_non_converged){
       ## didn't converge
       NA
     }else{
@@ -1337,7 +1337,7 @@ give_interval_plots = function(df_rank, data_object, loglog=F){
   return(a)
 }
 
-give_interval_plots_2 = function(df_rank, data_object,loglog=F, title, theme_bw=F){
+give_interval_plots_2 = function(df_rank, data_object,loglog=F, title, theme_bw=T){
   xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
   xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
                                                        max_interval=quantile(sorted_value, probs = c(0.975)),
@@ -1372,7 +1372,7 @@ give_betas <- function(TMB_obj){
 
 
 plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
-                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL){
+                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F){
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1403,7 +1403,10 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
     
     if(line_zero) plt <- plt + geom_hline(yintercept = 0, lty='dashed', col='blue')
-      
+    if(add_median) { plt <- plt +
+      geom_hline(yintercept = median(c(0,.summary_betas$Estimate[.summary_betas$type_beta == 'Slope'])),
+                 lty='dashed', col='red') }
+    
     plt <- plt +
       geom_point()+
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
@@ -1429,7 +1432,7 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     }
     
     if(!TMB_obj$pdHess){
-      plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
+      plt <- plt + annotate("text", x = -Inf, y=Inf, label="not PD", vjust=1, hjust=-.2)+geom_point(col='red')
       if(plot) print(plt)
     }else{
       if(plot) print(plt)
@@ -1607,7 +1610,7 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
                                group=c(rep(c('early','late')[obj_data$x[,2]+1]),
                                        rep(c('early','late'), n_sim)))
     return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+labs(col=sig_of_interest)+
-                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group),nrow=nrow_pca_plot)))
+                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group),nrow=nrow_pca_plot)+theme_bw()))
   }else{
     return(all_probs)
   }
@@ -1718,3 +1721,317 @@ split_matrix_in_half <- function(x){
        x[(1+(nrow(x)/2)):nrow(x),])
 }
 
+
+give_min_pert <- function(idx_sp, list_runs=diagRE_DMDL_nonexo_SP, logR_names_vec=logR_nonexo_notsorted_SP){
+  .betas_SP <- data.frame(plot_betas(list_runs[[idx_sp]], names_cats= logR_names_vec[[idx_sp]],
+                                     return_df=T, plot=F))
+  
+  .slopes_minpert_SP <- .betas_SP %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+  # print(.slopes_minpert_SP)
+  ## check if the CI of the betas touches this median value
+  .summary_betas_slope_SP <- python_like_select_rownames(summary(list_runs[[idx_sp]]), 'beta')[c(F,T),]
+  nrow(.summary_betas_slope_SP)
+  
+  minimal_change_baseline <- median(c(.slopes_minpert_SP, 0))
+  # print(.summary_betas_slope_SP)
+  # print(logR_nonexo_notsorted_SP[[idx_sp]])
+  # print(dim(.summary_betas_slope_SP))
+  if(!is.null(dim(.summary_betas_slope_SP))){
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[,1],
+                                       vec_stderr=.summary_betas_slope_SP[,2],
+                                       vec_true=rep(minimal_change_baseline, nrow(.summary_betas_slope_SP)))
+  }else{
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[1],
+                                       vec_stderr=.summary_betas_slope_SP[2],
+                                       vec_true=minimal_change_baseline)
+  }
+  .params_in_ci <- sapply(1:length(.params_in_ci), function(i){
+    ## for the ones in which there is a change, say whether it's up- or down-regulated
+    if(!.params_in_ci[i]){
+      ## if there is a change: not in confidence interval
+      if(is.null(dim(.summary_betas_slope_SP))){
+        ## one-dim
+        if(.summary_betas_slope_SP[1] > minimal_change_baseline){
+          'increase'
+        }else{
+          'decrease'
+        }
+      }else{
+        ## multi-dim
+        if(.summary_betas_slope_SP[i,1] > minimal_change_baseline){
+          'increase'
+        }else{
+          'decrease'
+        }
+      }
+    }else{
+      'FALSE'
+    }
+  })
+  names(.params_in_ci) <- sapply(logR_names_vec[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
+  .baseline <- strsplit(logR_names_vec[[idx_sp]][[1]], '/')[[1]][2]
+  return(list(betas_perturbed=.params_in_ci, baseline=.baseline))
+}
+
+comparison_betas_models <- function(model_fullRE_DMSL_list, model_diagRE_DMSL_list, model_fullRE_M_list ){
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_beta_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_diagRE_DMSL <- try(python_like_select_name(model_diagRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.fixed, "beta"))
+    if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMSL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_betas <- list(x_beta_fullRE_DMSL, x_beta_diagRE_DMSL, x_beta_fullRE_M)
+      typeofs_of_betas <- sapply(list_betas, typeof)
+      if( all(typeofs_of_betas == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_betas[1] == "character"){
+          x_beta_fullRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[2] == "character"){
+          x_beta_diagRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[3] == "character"){
+          x_beta_fullRE_M <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMSL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    cbind.data.frame(rbind.data.frame(
+      cbind.data.frame(fullRE_DMSL=select_slope_2(x_beta_fullRE_DMSL),
+                       diagRE_DMSL=select_slope_2(x_beta_diagRE_DMSL),
+                       fullRE_M=select_slope_2(x_beta_fullRE_M),
+                       beta_type='Slope'),
+      cbind.data.frame(fullRE_DMSL=select_intercept(x_beta_fullRE_DMSL),
+                       diagRE_DMSL=select_intercept(x_beta_diagRE_DMSL),
+                       fullRE_M=select_intercept(x_beta_fullRE_M),
+                       beta_type='Intercept')),
+      ct=ct)
+  }
+  ))
+  
+  ## if something hasn't converged, remove the value
+  bad_ct_fullRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_fullRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples,
+                                                function(ct)  try(model_fullRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_diagRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_diagRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples, function(ct)  try(model_diagRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_fullRE_M <- c(enough_samples[sapply(enough_samples,
+                                             function(ct) (typeof(model_fullRE_M_list[[ct]])) == 'character')],
+                       enough_samples[sapply(enough_samples, function(ct)  try(model_fullRE_M_list[[ct]]$pdHess)) != "TRUE"])
+  
+  .x$fullRE_DMSL[(.x$ct %in% bad_ct_fullRE_DMSL)] = NA
+  .x$diagRE_DMSL[(.x$ct %in% bad_ct_diagRE_DMSL)] = NA
+  .x$fullRE_M[(.x$ct %in% bad_ct_fullRE_M)] = NA
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+
+comparison_betas_models2 <- function(model_fullRE_DMSL_list, model_diagRE_DMDL_list, model_fullRE_M_list ){
+  
+  ## with model_diagRE_DMDL_list instead of model_diagRE_DMSL_list
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_beta_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_diagRE_DMDL <- try(python_like_select_name(model_diagRE_DMDL_list[[ct]]$par.fixed, "beta"))
+    x_beta_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.fixed, "beta"))
+    if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMDL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_betas <- list(x_beta_fullRE_DMSL, x_beta_diagRE_DMDL, x_beta_fullRE_M)
+      typeofs_of_betas <- sapply(list_betas, typeof)
+      if( all(typeofs_of_betas == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_betas[1] == "character"){
+          x_beta_fullRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[2] == "character"){
+          x_beta_diagRE_DMDL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[3] == "character"){
+          x_beta_fullRE_M <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMDL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    cbind.data.frame(rbind.data.frame(
+      cbind.data.frame(fullRE_DMSL=select_slope_2(x_beta_fullRE_DMSL),
+                       diagRE_DMDL=select_slope_2(x_beta_diagRE_DMDL),
+                       fullRE_M=select_slope_2(x_beta_fullRE_M),
+                       beta_type='Slope'),
+      cbind.data.frame(fullRE_DMSL=select_intercept(x_beta_fullRE_DMSL),
+                       diagRE_DMDL=select_intercept(x_beta_diagRE_DMDL),
+                       fullRE_M=select_intercept(x_beta_fullRE_M),
+                       beta_type='Intercept')),
+      ct=ct)
+  }
+  ))
+  
+  ## if something hasn't converged, remove the value
+  bad_ct_fullRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_fullRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples,
+                                                function(ct)  try(model_fullRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_diagRE_DMDL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_diagRE_DMDL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples, function(ct)  try(model_diagRE_DMDL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_fullRE_M <- c(enough_samples[sapply(enough_samples,
+                                             function(ct) (typeof(model_fullRE_M_list[[ct]])) == 'character')],
+                       enough_samples[sapply(enough_samples, function(ct)  try(model_fullRE_M_list[[ct]]$pdHess)) != "TRUE"])
+  
+  .x$fullRE_DMSL[(.x$ct %in% bad_ct_fullRE_DMSL)] = NA
+  .x$diagRE_DMDL[(.x$ct %in% bad_ct_diagRE_DMDL)] = NA
+  .x$fullRE_M[(.x$ct %in% bad_ct_fullRE_M)] = NA
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+
+L_to_cov <- function(cov_vector){
+  L <- fill_covariance_matrix(arg_d = d, arg_entries_var = rep(1, d), arg_entries_cov = cov_vector)
+  D <- diag(L%*%t(L))
+  diag((D)**(-1/2)) %*% L %*% t(L) %*% diag((D)**(-1/2))
+}
+
+
+comparison_randomintercepts_models <- function(model_fullRE_DMSL_list, model_diagRE_DMDL_list, model_fullRE_M_list ){
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_RE_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.random, "u_large"))
+    x_RE_diagRE_DMDL <- try(python_like_select_name(model_diagRE_DMDL_list[[ct]]$par.random, "u_large"))
+    x_RE_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.random, "u_large"))
+    if( (length(x_RE_fullRE_DMSL) != length(x_RE_diagRE_DMDL)) | (length(x_RE_fullRE_DMSL) != length(x_RE_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_RE <- list(x_RE_fullRE_DMSL, x_RE_diagRE_DMDL, x_RE_fullRE_M)
+      typeofs_of_RE <- sapply(list_RE, typeof)
+      if( all(typeofs_of_RE == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_RE[1] == "character"){
+          x_RE_fullRE_DMSL <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if(typeofs_of_RE[2] == "character"){
+          x_RE_diagRE_DMSL <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if(typeofs_of_RE[3] == "character"){
+          x_RE_fullRE_M <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if( (length(x_RE_fullRE_DMSL) != length(x_RE_diagRE_DMDL)) | (length(x_RE_fullRE_DMSL) != length(x_RE_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    
+    ## put the coefficients in matrix form
+    ## get the number of log-ratios, d-1
+    dmin1 <- (names(table(sapply(list(model_fullRE_DMSL_list, model_diagRE_DMDL_list, model_fullRE_M_list), function(i)    as.numeric(try(length(python_like_select_name(i[[ct]]$par.fixed, 'beta'))/2))))))
+    if(length(dmin1) == 1){
+      ## there should only be one, shared, d-1
+      dmin1 <- as.numeric(dmin1)
+    }else{
+      stop(paste0('Models do not agree on number of log-ratios. CT: ', ct))
+    }
+    
+    x_RE_fullRE_DMSL <- matrix(x_RE_fullRE_DMSL, ncol=dmin1, byrow=F)
+    x_RE_diagRE_DMDL <- matrix(x_RE_diagRE_DMDL, ncol=dmin1, byrow=F)
+    x_RE_fullRE_M <- matrix(x_RE_fullRE_M, ncol=dmin1, byrow=F)
+    
+    bad_fullRE_DMSL=F
+    bad_diagRE_DMDL=F
+    bad_fullRE_M=F
+    ## if something hasn't converged, set all the random coefficients to NA
+    if((typeof(model_fullRE_DMSL_list[[ct]]) == "character") ){
+      bad_fullRE_DMSL=T
+    }else{
+      if(try(!(model_fullRE_DMSL_list[[ct]]$pdHess))){
+        bad_fullRE_DMSL=T
+      }
+    }
+    if(bad_fullRE_DMSL){
+      x_RE_fullRE_DMSL <- matrix(NA, nrow = nrow(x_RE_fullRE_DMSL), ncol=ncol(x_RE_fullRE_DMSL))
+    }
+    #----
+    if((typeof(model_diagRE_DMDL_list[[ct]]) == "character") ){
+      bad_diagRE_DMDL=T
+    }else{
+      if(try(!(model_diagRE_DMDL_list[[ct]]$pdHess))){
+        bad_diagRE_DMDL=T
+      }
+    }
+    if(bad_diagRE_DMDL){
+      x_RE_diagRE_DMDL <- matrix(NA, nrow = nrow(x_RE_diagRE_DMDL), ncol=ncol(x_RE_diagRE_DMDL))
+    }
+    #-----
+    if((typeof(model_fullRE_M_list[[ct]]) == "character") ){
+      bad_fullRE_M=T
+    }else{
+      if(try(!(model_fullRE_M_list[[ct]]$pdHess))){
+        bad_fullRE_M=T
+      }
+    }
+    if(bad_fullRE_M){
+      x_RE_fullRE_M <- matrix(NA, nrow = nrow(x_RE_fullRE_M), ncol=ncol(x_RE_fullRE_M))
+    }
+    
+    ## for each patient using the x_RE_fullRE_DMSL intercepts, get the distance to the intercepts of the other two models
+    dist_DMSLs <- sapply(1:nrow(x_RE_fullRE_DMSL), function(i){
+      if(all(is.na(x_RE_fullRE_DMSL[i,])) | all(is.na(x_RE_diagRE_DMDL[i,]))){
+        NA
+      }else{
+        dist(rbind(x_RE_fullRE_DMSL[i,], x_RE_diagRE_DMDL[i,]))
+      }
+    })
+    dist_fullREs <- sapply(1:nrow(x_RE_fullRE_DMSL), function(i){
+      if(all(is.na(x_RE_fullRE_DMSL[i,])) | all(is.na(x_RE_fullRE_M[i,]))){
+        NA
+      }else{
+        dist(rbind(x_RE_fullRE_DMSL[i,], x_RE_fullRE_M[i,]))
+      }
+    })
+    
+    cbind.data.frame(melt(list(dist_DMSLs=dist_DMSLs, dist_fullREs=dist_fullREs)),
+                     ct=ct)
+  }
+  ))
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
