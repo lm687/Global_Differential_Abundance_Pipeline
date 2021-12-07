@@ -24,6 +24,8 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
 numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3': 4, 'GenerationMixture1': 2,\
 'GenerationJnormTwoLambdasOneChangingBeta': 2, 'GenerationJnormBTwoLambdasOneChangingBeta': 2}
 
+config['simulation_n_generationMGnorm'] = 200
+
 rule all:
     input:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
@@ -138,14 +140,29 @@ rule all:
       #  beta_intensity = 0, model="FEDMsinglelambda", itnum=range(100),\
       #  fixed_beta_intercept="betaintercept1", sdRE_input=1,\
       # fixed_beta_slope="betaslope1", optimiser='nlminb')
-      # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
-      # datasetgeneration="GenerationMGnorm",  n=80, nlambda=180,\
-      # d=6, lmbda=100,\
-      # #beta_intensity = 0, model=["fullREDMonefixedlambda", "fullREDMonefixedlambda3", "diagREDM"], itnum=range(100),\
-      # beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
-      # fixed_beta_intercept="betaintercept3",\
-      # sdRE_input='sdRE1',\
-      # fixed_beta_slope="betaslope3", optimiser='nlminb')
+      #expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
+      #datasetgeneration="GenerationMGnorm",  n=80, nlambda=180,\
+      #d=6, lmbda=100,\
+      #beta_intensity = 0, model=["fullREDMonefixedlambda", "fullREDMonefixedlambda3", "diagREDM"], itnum=range(100),\
+      #beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
+      #fixed_beta_intercept="betaintercept3",\
+      #sdRE_input='sdRE1',\
+      #fixed_beta_slope="betaslope3", optimiser='nlminb')
+      #expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
+      #datasetgeneration="GenerationMGnorm",  n=200, nlambda=180,\
+      #d=6, lmbda=100,\
+      #beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
+      ##beta_intensity = 0, model=["fullREDM", "diagREDM"], itnum=range(1000),\
+      #fixed_beta_intercept="betaintercept3",\
+      #sdRE_input='sdRE1',\
+      #fixed_beta_slope="betaslope3", optimiser='nlminb')
+       expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
+      datasetgeneration="GenerationJnorm",  n=200, nlambda=180,\
+      d=5, lmbda=100,\
+      beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
+      fixed_beta_intercept="betaintercept1d4",\
+      sdRE_input='cov1d4',\
+      fixed_beta_slope="betaslope1d4", optimiser='nlminb')
       # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
       # 	datasetgeneration="GenerationHnorm",  n=80, nlambda=180,\
       # 	lmbda=5, d=5,\
@@ -159,17 +176,17 @@ rule all:
       #   itnum=range(numreplicates['GenerationMixture1']),\
       #   fixed_beta_intercept="NA", sdRE_input="NA",\
       #   fixed_beta_slope="NA", optimiser='nlminb')
-        # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
-        # datasetgeneration="GenerationJnormTwoLambdasOneChangingBeta",\
-        # n=config["simulation_n_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        # nlambda=config["simulation_nlambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        # lmbda=config["simulation_lambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        # d=config["simulation_d_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        # beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
-        # model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'],\
-        # itnum=range(numreplicates['GenerationJnormTwoLambdasOneChangingBeta']),\
-        # fixed_beta_intercept="NA", sdRE_input="NA",\
-        # fixed_beta_slope="NA", optimiser='nlminb')
+      # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
+      # datasetgeneration="GenerationJnormTwoLambdasOneChangingBeta",\
+      # n=config["simulation_n_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+      # nlambda=config["simulation_nlambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+      # lmbda=config["simulation_lambda_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+      # d=config["simulation_d_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+      # beta_intensity = config["beta_gamma_shape_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
+      # model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'],\
+      # itnum=range(numreplicates['GenerationJnormTwoLambdasOneChangingBeta']),\
+      # fixed_beta_intercept="NA", sdRE_input="NA",\
+      # fixed_beta_slope="NA", optimiser='nlminb')
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       # datasetgeneration=['GenerationJnormTwoLambdasOneChangingBeta', 'GenerationJnormBTwoLambdasOneChangingBeta'],\
       #  model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
