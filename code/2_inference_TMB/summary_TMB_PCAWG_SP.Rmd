@@ -112,6 +112,7 @@ names(signatures_PCAWG) <- cts_for_PCAWG
 ```{r, colour_palette}
 pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", enough_samples), scheme = "tumour.subtype")
 names(pcawg_palette) <- enough_samples
+pcawg_palette[names(pcawg_palette) == 'Lung-SCC'] <- '#ffff29'# #a8a800 
 ```
 
 ```{r, sigs_from_paper2, warning=F, echo=F, fig.height=2.4}
@@ -339,7 +340,8 @@ comparison_betas_models_rbind$sigs[comparison_betas_models_rbind$sigs == 'nonexo
 ```{r, beta_coef_differences_in_models_plots2, echo=F, dependson=c('beta_coef_differences_in_models')}
 
 comparison_betas_models_rbind_cut <- comparison_betas_models_rbind[!(is.na(comparison_betas_models_rbind$fullRE_M)),]
-ggplot(comparison_betas_models_rbind_cut, aes(x=fullRE_DMSL, y=fullRE_M, col=ct, shape=beta_type))+
+
+ggplot(comparison_betas_models_rbind_cut, aes(x=fullRE_DMSL, y=fullRE_M, col=gsub("\\..*", "", ct), shape=beta_type))+
   geom_point()+theme_bw()+facet_wrap(.~sigs)+
   scale_color_manual(values = pcawg_palette)+guides(col=F)+
   labs(shape='')+theme(legend.position = "bottom")
@@ -383,6 +385,7 @@ comparison_betas_models_rbind_stats_per_ct_pool_beta$ct2=renaming_pcawg[,2][matc
         
 pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", comparison_betas_models_rbind_stats_per_ct$ct),
                                       scheme = "tumour.subtype")
+pcawg_palette[names(pcawg_palette) == 'Lung-SCC'] <- '#ffff29' 
 names(pcawg_palette) <- comparison_betas_models_rbind_stats_per_ct$ct
 
 
@@ -533,6 +536,7 @@ dev.off()
 ```
 
 ## differences between signatures from sigprofiler from the paper, and the ones I get
+See Rmd signatures_from_PCAWG_paper.Rmd for the figures
 
 - biliary adenoca similar, though not exact
 - bladder tcc: very similar
@@ -858,14 +862,14 @@ Plotting the betas of SBS1 and SBS5, and their correlation
 ```{r, plot_betas_signaturesPCAWG_minimal_pert3, echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dependson=c('load_runs_signaturesPCAWG', 'signaturesPCAWG_names_sigs', 'minimalperturbation_diagRE_DMDL_nonexo_S'), dev='tikz'}
 
 diagRE_DMDL_wSBS1SBS5nonexo_SP_betas <- lapply(diagRE_DMDL_wSBS1SBS5nonexo_SP, function(i) try({plot_betas(i, return_df = T, plot = F)}))
-diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5 <- do.call('rbind', diagRE_DMDL_wSBS1SBS5nonexo_SP_betas) %>%
+diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0 <- do.call('rbind', diagRE_DMDL_wSBS1SBS5nonexo_SP_betas) %>%
   dplyr::filter(type_beta == 'Slope') %>%
   dplyr::select(c('Estimate', 'LogR'))
-diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5$ct <- gsub("\\.beta.*", "", rownames(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5))
+diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0$ct <- gsub("\\.beta.*", "", rownames(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0))
 
-diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5 <- dcast(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5, LogR~ct, value.var = 'Estimate')
+diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0 <- dcast(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0, LogR~ct, value.var = 'Estimate')
 
-diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5 <- data.frame(t(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5[c(1,5),-1]))
+diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5 <- data.frame(t(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0[c(1,5),-1]))
 diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5$ct <- rownames(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5)
 # plot(t(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5[c(1,5),]))
 ggplot(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5,
@@ -875,6 +879,11 @@ ggplot(diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5,
   scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS1', y='Beta slope of SBS5')
 ```
 
+
+Correlation between the two APOBEC signatures, SBS2 and SBS13:
+```{r, plot_betas_signaturesPCAWG_minimal_pert4}
+diagRE_DMDL_wSBS1SBS5nonexo_SP_betas_SBS1SBS5_0
+```
 
 ```{r, effectsize1_SP, dependson=c('load_objects_all', 'load_runs_signaturesPCAWG'), echo=F, fig.height=4.5, fig.width=4}
 # all_objects_SP <- lapply(enough_samples, function(ct){load_PCAWG(ct = ct, typedata = "signaturesPCAWG")})
@@ -1252,10 +1261,14 @@ grid.draw(legend_ct)
 # dev.off()
 ```
 
+```{r, tracksig_table,dependson=c('tracksig_comparison')}
+tracksig
+```
+
 ```{r, gerstung, dev='tikz'}
 
 gerstung_changing_sigs_early_late <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM7_ESM.xlsx", sheet = "Figure4c")
-gerstung_changing_sigs_clonal_subclonal <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM7_ESM.xlsx", sheet = "Figure4d")
+gerstung_changing_sigs_clonalsubclonal <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM7_ESM.xlsx", sheet = "Figure4d")
 
 # gerstung_changing_sigs <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM9_ESM.xlsx", sheet = "signatures-changing")
 # gerstung_changing_sigs <- readxl::read_excel("/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/41586_2019_1907_MOESM9_ESM.xlsx", sheet = "signatures-changing")
@@ -1264,7 +1277,7 @@ gerstung_changing_sigs_clonal_subclonal <- readxl::read_excel("/Users/morril01/D
 # gerstung_constant_sigs
 
 gerstung_changing_sigs_earlylate <- gerstung_changing_sigs_early_late #gerstung_changing_sigs[gerstung_changing_sigs$time == "early-late",]
-gerstung_changing_sigs_clonalsubclonal <- gerstung_changing_sigs_clonal_subclonal #gerstung_changing_sigs[gerstung_changing_sigs$time == "clonal-subclonal",]
+# gerstung_changing_sigs_clonalsubclonal <- gerstung_changing_sigs_clonal_subclonal #gerstung_changing_sigs[gerstung_changing_sigs$time == "clonal-subclonal",]
 
 gerstung_changing_sigs_earlylate$signature[(gerstung_changing_sigs_earlylate$signature == "SBS6.14.15.20.21.26.44")] = "SBS6+"
 gerstung_changing_sigs_clonalsubclonal$signature[(gerstung_changing_sigs_clonalsubclonal$signature == "SBS6.14.15.20.21.26.44")] = "SBS6+"
@@ -1273,8 +1286,8 @@ gerstung_changing_sigs_clonalsubclonal$signature <- gsub("_", ".", gerstung_chan
 
 # df_changes_el <- gerstung_changing_sigs_earlylate %>% group_by(signature) %>% dplyr::summarise(median(mean_change))
 # df_changes_cs <- gerstung_changing_sigs_clonalsubclonal %>% group_by(signature) %>% dplyr::summarise(median(mean_change))
-df_changes_el <- gerstung_changing_sigs_earlylate %>% group_by(signature) %>% dplyr::summarise(median(log2fc_earlyLate))
-df_changes_cs <- gerstung_changing_sigs_clonalsubclonal %>% group_by(signature) %>% dplyr::summarise(median(log2fc_clonalSubclonal))
+df_changes_el <- gerstung_changing_sigs_earlylate %>% group_by(signature) %>% dplyr::summarise(median=median(log2fc_earlyLate, na.rm = T))
+df_changes_cs <- gerstung_changing_sigs_clonalsubclonal %>% group_by(signature) %>% dplyr::summarise(median=median(log2fc_clonalSubclonal, na.rm = T))
 
 
 # grid.arrange(ggplot(gerstung_changing_sigs_earlylate, aes(x=factor(signature, levels=df_changes_el$signature[order(df_changes_el$`median(mean_change)`)]),
@@ -1298,11 +1311,11 @@ pcawg_palette <- pcawg.colour.palette(x = gsub("-", ".", tolower(gsub("\\..*", "
 names(pcawg_palette) <- sort(unique(gerstung_changing_sigs_earlylate$tumour_type))
 
 
-unique(gerstung_changing_sigs_clonal_subclonal$signature)
+# unique(gerstung_changing_sigs_clonal_subclonal$signature)
 gerstung_changing_sigs_earlylate$signature <-  factor(gerstung_changing_sigs_earlylate$signature,
-                                                    levels=df_changes_el$signature[order(df_changes_el$`median(log2fc_earlyLate)`)])
+                                                      levels=df_changes_el$signature[order(df_changes_el$median)])
 gerstung_changing_sigs_clonalsubclonal$signature <- factor(gerstung_changing_sigs_clonalsubclonal$signature,
-                                                           levels=df_changes_cs$signature[order(df_changes_cs$`median(log2fc_clonalSubclonal)`)])
+                                                           levels=df_changes_cs$signature[order(df_changes_cs$median)])
 
 # grid.arrange(ggplot(gerstung_changing_sigs_earlylate, aes(x=signature,
 #                                                           y=log2fc_earlyLate, group=signature,col=tumour_type))+geom_boxplot()+geom_jitter(alpha=0.2)+
@@ -1334,6 +1347,7 @@ ggplot(gerstung_changing_sigs_clonalsubclonal, aes(x=signature,
 ```
 
 ```{r, gerstung2, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=4.5}
+
 ggplot(gerstung_changing_sigs_earlylate[grepl('SBS', gerstung_changing_sigs_earlylate$signature),], aes(x=signature,
                                                           y=log2fc_earlyLate, group=signature,col=tumour_type))+geom_boxplot()+geom_jitter(alpha=0.2)+
                geom_hline(yintercept = 0, lty='dashed')+
@@ -1413,7 +1427,7 @@ comparison_with_gerstung_earlylate <- cbind.data.frame(perturbed_betas_diagRE_DM
                                                             df_changes_el[match(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary$sig,
                                                                                 df_changes_el$signature),])
 comparison_with_gerstung_earlylate
-comparison_with_gerstung_earlylate$medianlog2fcearlylate = comparison_with_gerstung_earlylate$`median(log2fc_earlyLate)`
+comparison_with_gerstung_earlylate$medianlog2fcearlylate = comparison_with_gerstung_earlylate$median
 ggplot(comparison_with_gerstung_earlylate, aes(x=medianlog2fcearlylate, y=meanperturbed, label=signature))+geom_point()+geom_label_repel()+theme_bw()+
   labs(x='Median of log2-fold change of\nsignatures in cancer type', y='Fraction of cancer types with\nsignature perturbed (minimal p.)')
 
@@ -1447,12 +1461,12 @@ for(ct in names(diagRE_DMDL_nonexo_SP)){
 }
 
 aaa <- lapply(aaa, function(i) cbind(i, numerator_LogR = gsub("/.*", "", i$LogR)))
-aaa <- lapply(names(aaa), function(i) cbind(aaa[[i]], ct=i))
-aaa <- do.call('rbind', aaa)
+aaa2 <- lapply(names(aaa), function(i) cbind(aaa[[i]], ct=i))
+aaa2 <- do.call('rbind', aaa2)
 
 ## now put NA whenever we don't have a 
 
-aaa_dcast <- dcast(aaa, formula = numerator_LogR~ct, value.var = 'Estimate')
+aaa_dcast <- dcast(aaa2, formula = numerator_LogR~ct, value.var = 'Estimate')
 rownames(aaa_dcast) <- aaa_dcast$numerator_LogR
 aaa_dcast <- aaa_dcast[,-1]
 
@@ -1473,6 +1487,189 @@ dev.off()
 
 ```
 
+```{r, correlations_from_beta_slopes_softmax, dependson=c('load_runs_signaturesPCAWG', 'names_logR_SP'), fig.height=6.5, echo=F}
+
+aaa_softmax <- lapply(aaa, function(i) cbind.data.frame(Estimate=softmax(c(i$Estimate[i$type_beta == 'Slope'], 0)),
+                                                        sig=c(i$numerator_LogR[i$type_beta == 'Slope'],
+                                                              strsplit(i$LogR[1], '/')[[1]][2])))
+aaa_softmax <- lapply(names(aaa_softmax), function(i) cbind(aaa_softmax[[i]], ct=i))
+aaa_softmax <- do.call('rbind.data.frame', aaa_softmax)
+
+## now put NA whenever we don't have a signature
+
+aaa_dcast_softmax <- reshape2::dcast(aaa_softmax, formula = sig~ct, value.var = 'Estimate')
+rownames(aaa_dcast_softmax) <- aaa_dcast_softmax$sig
+aaa_dcast_softmax <- aaa_dcast_softmax[,-1]
+
+cors_softmax <- outer(1:ncol(aaa_dcast_softmax), 1:ncol(aaa_dcast_softmax), Vectorize(function(i,j){
+  try(cor(x = unlist(aaa_dcast_softmax[,i]), y = unlist(aaa_dcast_softmax[,j]), use = "pairwise.complete.obs"))}))
+cors_softmax <- apply(cors_softmax, 2, as.numeric)
+
+num_common_sigs <- outer(1:ncol(aaa_dcast_softmax), 1:ncol(aaa_dcast_softmax), Vectorize(function(i,j){
+  try(sum(!is.na(unlist(aaa_dcast_softmax[,i])+unlist(aaa_dcast_softmax[,j]))))}))
+
+cors_softmax0 <- cors_softmax
+cors_softmax0[is.na(cors_softmax0)] = 0
+
+rownames(cors_softmax0) <- colnames(cors_softmax0) <- colnames(aaa_dcast_softmax)
+rownames(num_common_sigs) <- colnames(num_common_sigs) <- colnames(aaa_dcast_softmax)
+
+print(pheatmap::pheatmap(cors_softmax0, color = viridis::magma(10)))
+dev.off()
+
+system("open ../../results/results_TMB/pcawg/")
+pdf("../../results/results_TMB/pcawg/correlation_cancertypes_from_betaslopes_softmax.pdf")
+print(pheatmap::pheatmap(cors_softmax0, color = viridis::magma(10)))
+dev.off()
+
+cors_softmax_melt <- cbind.data.frame(cors_softmax=melt(cors_softmax),
+                                      num_common_sigs=melt(num_common_sigs))
+```
+
+```{r, correlations_from_beta_slopes_sbs1sbs5_and_apobec, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
+aaa2[aaa2$numerator_LogR %in% c(2,13),c('Estimate', 'numerator_LogR', 'ct')]
+
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(2,13),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`2`, y=`13`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS2', y='Beta slope of SBS13')
+
+```
+
+```{r, correlations_from_beta_slopes_sbs8, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(2,8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`2`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS13', y='Beta slope of SBS8')
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(13, 8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`13`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=.7)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS13', y='Beta slope of SBS8')
+```
+
+```{r, correlations_from_beta_slopes_softmax2, dependson=c('correlations_from_beta_slopes_softmax', 'names_logR_SP'), fig.height=6.5, echo=F}
+head(cors_softmax_melt)
+hclust_correlation_betas <- hclust(dist(cors_softmax0))
+
+ggplot(cors_softmax_melt, aes(x=factor(num_common_sigs.Var1, levels = hclust_correlation_betas$labels[hclust_correlation_betas$order]),
+                              y=factor(num_common_sigs.Var2, levels=hclust_correlation_betas$labels[hclust_correlation_betas$order]),
+                                         col=cors_softmax.value, size=num_common_sigs.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+ggsave("../../results/results_TMB/pcawg/correlation_cancertypes_from_betaslopes_softmax_2.pdf")
+
+
+```
+
+```{r, correlations_from_beta_slopes_sigs, dependson=c('correlations_from_beta_slopes_softmax'), fig.height=7.5, echo=F}
+
+cors_softmax_sigs <- outer(1:nrow(aaa_dcast_softmax), 1:nrow(aaa_dcast_softmax), Vectorize(function(i,j){
+  try(cor(x = unlist(aaa_dcast_softmax[i,]), y = unlist(aaa_dcast_softmax[j,]), use = "pairwise.complete.obs"))}))
+cors_softmax_sigs <- apply(cors_softmax_sigs, 2, as.numeric)
+rownames(cors_softmax_sigs) <- colnames(cors_softmax_sigs) <- paste0('SBS', rownames(aaa_dcast_softmax))
+
+
+num_common_samples <- outer(1:nrow(aaa_dcast_softmax), 1:nrow(aaa_dcast_softmax), Vectorize(function(i,j){
+  try(sum(!is.na(unlist(aaa_dcast_softmax[i,])+unlist(aaa_dcast_softmax[j,]))))}))
+
+rownames(num_common_samples) <- colnames(num_common_samples) <- paste0('SBS', rownames(aaa_dcast_softmax))
+
+cors_softmax_melt_sigs <- cbind.data.frame(cors_softmax=melt(cors_softmax_sigs),
+                                      num_common_samples=melt(num_common_samples))
+
+cors_softmax0_sigs <- cors_softmax_sigs
+cors_softmax0_sigs[is.na(cors_softmax0_sigs)] = 0
+hclust_correlation_betas_sigs <- hclust(dist(cors_softmax0_sigs))
+
+head(cors_softmax_melt_sigs)
+
+ggplot(cors_softmax_melt_sigs, aes(x=factor(num_common_samples.Var1,
+                                            levels=hclust_correlation_betas_sigs$labels[hclust_correlation_betas_sigs$order]),
+                              y=factor(num_common_samples.Var2, levels=hclust_correlation_betas_sigs$labels[hclust_correlation_betas_sigs$order]),
+                                         col=cors_softmax.value, size=num_common_samples.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+
+```
+
+
+
+```{r, cor_pvals_samples}
+# pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", all_pvals$ct),
+#                                       scheme = "tumour.subtype")
+# 
+# names(pcawg_palette) <- all_pvals$ct
+# 
+# pcawg_palette
+pcawg_palette[names(pcawg_palette) == 'Lung-SCC'] <- '#ffff29'
+
+pcawg_palette
+
+df_cor_pvals_n <- data.frame(num_samples=num_samples_all_SP,
+                  pvalue=pvals_diagRE_DMDL_SP,
+                  ct=gsub("CA$", "Ca", gsub("\\..*", "", enough_samples)))
+df_cor_pvals_n
+ggplot(df_cor_pvals_n, aes(x=num_samples, y=pvalue, label=ct, col=ct, group=1))+
+  geom_point()+scale_y_continuous(trans = "log2")+
+  geom_smooth(method = lm)+theme_bw()+
+  geom_label_repel()+geom_hline(yintercept = log2(0.05), lty='dashed')+
+  labs(x='Number of samples', y = 'p-value (log2)')+
+  scale_color_manual(values = pcawg_palette)+
+  guides(col=FALSE)
+
+```
+
+
+```{r, BoneOsteosarc_correlations_3, echo=FALSE, fig.height=3.5,  dev='tikz'}
+
+# fullRE_M_nonexo_SP[["Bone-Osteosarc"]]
+# diagRE_DMSL_nonexo_SP[["Bone-Osteosarc"]]
+
+BoneOsteosarc_correlations_df <- rbind.data.frame(
+  cbind.data.frame(melt(give_all_correlations(all_objects_nonexo_SP[['Bone-Osteosarc']]$Y)), dataset='Observed nonexo'),
+  cbind.data.frame(melt(give_all_correlations(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo_SP[["Bone-Osteosarc"]],
+                 data_object = all_objects_nonexo_SP[['Bone-Osteosarc']],
+                 print_plot = F, nreps = 2, model = "M")[[1]])), dataset='fullRE M nonexo'),
+cbind.data.frame(melt(give_all_correlations(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo_SP[["Bone-Osteosarc"]],
+                 data_object = all_objects_nonexo_SP[['Bone-Osteosarc']],
+                 print_plot = F, nreps = 2, model = "DMSL", integer_overdispersion_param=1)[[1]])), dataset='diagRE DMSL nonexo'))
+
+BoneOsteosarc_correlations_df_normalise_rw <- rbind.data.frame(
+  cbind.data.frame(melt(give_all_correlations(normalise_rw(all_objects_nonexo_SP[['Bone-Osteosarc']]$Y))), dataset='Observed nonexo'),
+  cbind.data.frame(melt(give_all_correlations(normalise_rw(give_ranked_plot_simulation(tmb_fit_object = fullRE_M_nonexo_SP[["Bone-Osteosarc"]],
+                 data_object = all_objects_nonexo_SP[['Bone-Osteosarc']],
+                 print_plot = F, nreps = 2, model = "M")[[1]]))), dataset='fullRE M nonexo'),
+cbind.data.frame(melt(give_all_correlations(normalise_rw(give_ranked_plot_simulation(tmb_fit_object = fullRE_DMSL_nonexo_SP[["Bone-Osteosarc"]],
+                 data_object = all_objects_nonexo_SP[['Bone-Osteosarc']],
+                 print_plot = F, nreps = 2, model = "DMSL", integer_overdispersion_param=1)[[1]]))), dataset='diagRE DMSL nonexo'))
+
+BoneOsteosarc_correlations_df_both <- rbind.data.frame(cbind.data.frame(BoneOsteosarc_correlations_df, normalisation_bool='Raw exposures'),
+                                                       cbind.data.frame(BoneOsteosarc_correlations_df_normalise_rw, normalisation_bool='Normalised exposures'))
+
+ggplot(BoneOsteosarc_correlations_df_both, aes(x=value, col=dataset))+geom_density()+
+  # ggtitle('Correlations of fitted values (Bone Osteosarcoma))')+
+  theme_bw()+
+  theme(legend.position = "bottom")+
+  labs(x='Correlations of fitted values')+
+  scale_color_manual(name = "Dataset",values = c('red', 'blue', 'green'))+
+  facet_wrap(.~normalisation_bool)
+
+## smaller plot
+ggplot(BoneOsteosarc_correlations_df_both, aes(x=value, col=dataset))+geom_density()+
+  # ggtitle('Correlations of fitted values (Bone Osteosarcoma))')+
+  theme_bw()+
+  theme(legend.position = "bottom")+
+  labs(x='Correlations of fitted values')+
+  scale_color_manual(name = "Dataset",values = c('red', 'blue', 'green'))+
+  facet_wrap(.~normalisation_bool)
+```
+
+  
 Ranked plots
 ```{r, ranked_plots, fig.height=3}
 for(ct in enough_samples){
@@ -1502,17 +1699,36 @@ for(ct in enough_samples){
 ```
 
 
-```{r, simulation_from_estimates}
-ct <- "Bone-Osteosarc"
-.sim <- give_sim_from_estimates(tmb_object = fullRE_DMSL_nonexo_SP[[ct]], ct=ct, typedata="signatures",
-                                              sigs_to_remove=unique(nonexogenous$V1),
-                                              bool_give_PCA = T, path_to_data= "../../data/",
-                                            obj_data=all_objects_nonexo_SP[[ct]],
-                                              bool_nonexo=T,
-                                              model="fullRE_DM", nrow_pca_plot=1)
-.sim[[2]]+ggtitle(paste0('Simulation of ', ct))
+```{r, simulation_from_estimates, fig.height=4}
+for(ct in enough_samples){
+  try({
+  grid.arrange(give_sim_from_estimates(tmb_object = fullRE_DMSL_nonexo_SP[[ct]], ct=ct, typedata="signatures",
+                                       sigs_to_remove=unique(nonexogenous$V1),
+                                       bool_give_PCA = T, path_to_data= "../../data/",
+                                       obj_data=all_objects_nonexo_SP[[ct]],
+                                       sig_of_interest=colnames(all_objects_nonexo_SP[[ct]]$Y)[1],
+                                       bool_nonexo=T,
+                                       model="fullRE_DMSL", nrow_pca_plot=1)[[2]]+
+                 ggtitle(paste0('Simulation of ', ct, ' fullRE_DMSL')),
+               give_sim_from_estimates(tmb_object = diagRE_DMDL_nonexo_SP[[ct]], ct=ct, typedata="signatures",
+                                       sigs_to_remove=unique(nonexogenous$V1),
+                                       bool_give_PCA = T, path_to_data= "../../data/",
+                                       obj_data=all_objects_nonexo_SP[[ct]],
+                                       sig_of_interest=colnames(all_objects_nonexo_SP[[ct]]$Y)[1],
+                                       bool_nonexo=T,
+                                       model="diagRE_DMDL", integer_overdispersion_param=1000,
+                                       nrow_pca_plot=1)[[2]]+
+                 ggtitle(paste0('Simulation of ', ct, ' diagRE_DMDL')))
+  })
+}
+```
 
-
+```{r, barplots_sorted_num_muts, fig.height=2}
+for(ct in enough_samples){
+  print(createBarplot(normalise_rw(non_duplicated_rows(all_objects_SP[[ct]]$Y)),
+                order_labels = names(sort(rowSums(non_duplicated_rows(all_objects_SP[[ct]]$Y)),
+                                          decreasing = F)), remove_labels=T)+ggtitle(ct))
+}
 ```
 
 ```{r, correlations_from_beta_slopes_2, dependson=c('load_runs_signaturesPCAWG', 'names_logR_SP', 'correlations_from_beta_slopes'), fig.height=6, echo=F}
@@ -1533,7 +1749,165 @@ print(pheatmap::pheatmap(cors_sigs, color = viridis::cividis(10)))
 dev.off()
 ```
 
+```{r, correlations_from_beta_slopes_ggplot, dependson=c('correlations_from_beta_slopes', 'correlations_from_beta_slopes_2'), fig.height=7.5}
+cors_sigs_v2 <- outer(1:nrow(aaa_dcast), 1:nrow(aaa_dcast), Vectorize(function(i,j){
+  try(cor(x = unlist(aaa_dcast[i,]), y = unlist(aaa_dcast[j,]), use = "pairwise.complete.obs"))}))
+cors_sigs_v2 <- apply(cors_sigs_v2, 2, as.numeric)
+
+rownames(cors_sigs_v2) <- colnames(cors_sigs_v2) <- paste0('SBS', rownames(aaa_dcast))
+
+# rownames(cors_sigs) <- colnames(cors) <- rownames(aaa_dcast)
+
+hclust_correlation_betas_logR <- hclust(dist(cors_sigs))
+
+num_common_samples_logR <- outer(1:nrow(aaa_dcast), 1:nrow(aaa_dcast), Vectorize(function(i,j){
+  try(sum(!is.na(unlist(aaa_dcast[i,])+unlist(aaa_dcast[j,]))))}))
+rownames(num_common_samples_logR) <- colnames(num_common_samples_logR) <-paste0('SBS', rownames(aaa_dcast))
+
+cors_melt_logR <- cbind.data.frame(cors=melt(cors_sigs_v2),
+                                      num_common_samples=melt(num_common_samples_logR))
+
+head(cors_melt_logR)
+ggplot(cors_melt_logR, aes(x=factor(num_common_samples.Var1, 
+                                            levels = hclust_correlation_betas_logR$labels[hclust_correlation_betas_logR$order]),
+                              y=factor(num_common_samples.Var2, levels=hclust_correlation_betas_logR$labels[hclust_correlation_betas_logR$order]),
+                                         col=cors.value, size=num_common_samples.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+```
+
 
 ```{r, correlations_from_beta_slopes_3, dependson=c('correlations_from_beta_slopes'), fig.height=6, echo=F}
-aaa_dcast
+# aaa_dcast
 ```
+
+\section{Dirichlet-Multinomial Mixtures}
+
+We run the software \verb|MicrobeDMMv1.0| to determine whether we are facing DMM mixtures or not.
+
+We save the files in two ways: all of the samples - early or not - together, and separately.
+
+In some cases DMM says that there is an error with the input file - in this case the AIC or BIC is not plotted. If all of them are missing, all BIC and AIC are set to zero.
+
+
+```{r, save_files_dmm, echo=FALSE}
+
+system("mkdir -p ../../data/roo_for_DMM_SPpcawg/")
+
+roo_obj <- sapply(fles_roo[grepl('_signaturesPCAWG_', fles_roo)], readRDS)
+for(i in 1:length(roo_obj)){
+  if(!rlang::is_empty(attr(roo_obj[[i]], "count_matrices_active")[[1]])){
+    write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[1]])),
+                                 rbind.data.frame(rownames(attr(roo_obj[[i]],
+                                                                "count_matrices_active")[[1]]),
+                                                  round(t(attr(roo_obj[[i]], "count_matrices_active")[[1]])))),
+                file = paste0("../../data/roo_for_DMM_SPpcawg/", gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_early.csv"), sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
+    
+    write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[2]])),
+                                 rbind.data.frame(rownames(attr(roo_obj[[i]],
+                                                                "count_matrices_active")[[2]]),
+                                                  round(t(attr(roo_obj[[i]], "count_matrices_active")[[2]])))),
+                file = paste0("../../data/roo_for_DMM_SPpcawg/", gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_late.csv"), sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
+    
+    ## write all
+      write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[1]])),
+         rbind.data.frame(c(paste0(rownames(attr(roo_obj[[i]],
+                                                 "count_matrices_active")[[1]]), '-early'),
+                            paste0(rownames(attr(roo_obj[[i]],
+                                                 "count_matrices_active")[[2]]), '-late')),
+                          round(cbind.data.frame(t(attr(roo_obj[[i]],
+                                                        "count_matrices_active")[[1]]),
+                                                 t(attr(roo_obj[[i]],
+                                                        "count_matrices_active")[[2]]))))),
+         file = paste0("../../data/roo_for_DMM_SPpcawg/",
+                       gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_all.csv"),
+         sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
+              
+  }  
+}
+
+system("cd ../../data/roo_for_DMM_SPpcawg/; mkdir -p DMM_output; sh run_all.sh")
+
+```
+
+
+```{r, analyse_files_dmm, echo=FALSE, warning=FALSE, message=FALSE, results='hide', dependson=c('save_files_dmm')}
+z_DMM <- lapply(enough_samples, function(ct){
+  list(all=lapply(1:8, function(k) try(read.table(paste0("../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_all", k, "_dmm.z"), sep = ',', skip = 1))),
+       early=lapply(1:8, function(k) try(read.table(paste0("../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_early", k, "_dmm.z"), sep = ',', skip = 1))),
+       late=lapply(1:8, function(k) try(read.table(paste0("../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_late", k, "_dmm.z"), sep = ',', skip = 1))))
+})
+names(z_DMM) <- enough_samples
+
+# (# of clusters) Evidence, Negative Log Determinant, Laplace Approximation, BIC and AIC are also sent to stdout at the end and written to a file stub.fit.
+fit_DMM <- lapply(enough_samples, function(ct){
+  list(all=lapply(1:8, function(k) try(read.table(paste0("../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_all", k, "_dmm.fit"), sep = ' '))),
+       early=lapply(1:8, function(k) try(read.table(paste0("../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_early", k, "_dmm.fit"), sep = ' '))),
+       late=lapply(1:8, function(k) try(read.table(paste0("../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_late", k, "_dmm.fit"), sep = ' '))))
+})
+names(fit_DMM) <- enough_samples
+
+```
+
+
+```{r, some_functions, echo=FALSE}
+na_to_zero <- function(i) if(all(is.na(i))){i[is.na(i)] = 0; i}else{i}
+```
+
+
+```{r, analyse_files_dmm_find_k, fig.height=1.5, echo=FALSE, message=FALSE, dependson=c('analyse_files_dmm')}
+
+# (# of clusters) Evidence, Negative Log Determinant, Laplace Approximation, BIC and AIC are also sent to stdout at the end and written to a file stub.fit.
+
+par(mfrow=c(1,6), mar=c(2, 2, 2, 2))
+invisible(sapply(names(fit_DMM), function(j_name){
+  j=fit_DMM[[j_name]]
+  plot(1:8, na_to_zero(sapply(j$all, function(jj) if(! (typeof(jj) == "character")){jj[4]}else{NA})), xlab='k', ylab='BIC', main=paste0(j_name, '\nall BIC'))
+  plot(1:8, na_to_zero(sapply(j$all, function(jj) if(! (typeof(jj) == "character")){jj[5]}else{NA})), xlab='k', ylab='AIC', main=paste0(j_name, '\nall AIC'))
+  plot(1:8, na_to_zero(sapply(j$early, function(jj) if(! (typeof(jj) == "character")){jj[4]}else{NA})), xlab='k', ylab='BIC', main=paste0(j_name, '\nearly BIC'))
+  plot(1:8, na_to_zero(sapply(j$early, function(jj) if(! (typeof(jj) == "character")){jj[5]}else{NA})), xlab='k', ylab='AIC', main=paste0(j_name, '\nearly AIC'))
+  plot(1:8, na_to_zero(sapply(j$late, function(jj) if(! (typeof(jj) == "character")){jj[4]}else{NA})), xlab='k', ylab='BIC', main=paste0(j_name, '\nlate BIC'))
+  plot(1:8, na_to_zero(sapply(j$late, function(jj) if(! (typeof(jj) == "character")){jj[5]}else{NA})), xlab='k', ylab='AIC', main=paste0(j_name, '\nlate AIC'))
+}))
+
+j=fit_DMM[[1]]
+
+```
+
+Now we have the optimal classes for each cancer type, both for early and late mutations separately, and for all of them together. We want to see if there is more than one group in general, and if the groups are maintained from early to late.
+
+We look at the "all" mixtures, and look at the percentage of early/late paired observations that share group, and the percentage of early/late grouped samples that do.
+
+```{r, analyse_files_dmm_find_k_2, dependson=c('analyse_files_dmm_find_k')}
+
+
+image(as(z_DMM$`Bone-Osteosarc`$all[[2]][,-1], 'matrix'))
+image(as(z_DMM$`Bone-Osteosarc`$early[[2]][,-1], 'matrix'))
+
+give_matching_information_about_DMM <- function(ct, k){
+  if(k!=2){stop('Only k==2 implemented')}
+  .splitted_DMM <- split_matrix_in_half(as(z_DMM[[ct]]$all[[2]][,-1], 'matrix'))
+  .whichmax1 <- apply(.splitted_DMM[[1]], 1, which.max)
+  .whichmax2 <- apply(.splitted_DMM[[2]], 1, which.max)
+  # percentage of early/late paired observations that share group
+  .res1 <- max(c(mean(.whichmax1 == .whichmax2), mean(.whichmax1 != .whichmax2))) ## this is only for k=2. if higher, you need to pair the samples differently
+  #percentage of early/late grouped samples that share group
+  .res2 <- mean(c(.whichmax1 == max(.whichmax1), .whichmax2 == max(.whichmax2)))
+  return(list(pairedshared=.res1, groupshared=.res2))
+}
+
+## for now, only the ones where there are two groups
+matching_information_about_DMM_k2 <- sapply(c('Bone-Osteosarc', 'CNS-PiloAstro', 'Head-SCC', 'Kidney-ChRCC',
+                                              'Lung-SCC', 'Lymph-BNHL', 'Lymph-CLL', 'Skin-Melanoma.cutaneous',
+                                              'Thy-AdenoCA'), give_matching_information_about_DMM, k=2)
+
+matching_information_about_DMM_k2
+plot(t(matching_information_about_DMM_k2))
+# ct = "Bone-Osteosarc"
+# xxxx <- try(read.table(paste0("../../data/roo_for_DMM/DMM_output/", ct, "_signatures_all.z"), sep = ',', skip = 1))
+# length(xxxx)
+# table(apply(xxxx[grepl('_early', xxxx$V1),-1], 1, which.max),
+#       apply(xxxx[grepl('_late', xxxx$V1),-1], 1, which.max))
+```
+

@@ -29,7 +29,7 @@ option_list = list(
   make_option(c("--beta_intercept_input"), type="character", default=NA, 
               help="Used to specify multinomial proportions for the first (base) mixture population", metavar="character"),
   make_option(c("--beta_slope_input"), type="character", default=NA,
-              help="Used to specify multinomial proportions for the first (differential abundance) mixture population", metavar="character"),
+              help="Used to specify multinomial proportions for the second (differential abundance) mixture population", metavar="character"),
   make_option(c("--sdRE_input"), type="character", default=NA,
               help="Fixed standard deviations and covariances for RE", metavar="character") 
 );

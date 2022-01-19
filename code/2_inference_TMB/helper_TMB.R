@@ -1055,6 +1055,15 @@ give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
   return(sig_obj)
 }
 
+give_subset_samples_TMBobj = function(sig_obj, samples_to_remove){
+  keep_samps <- !(rownames(sig_obj$Y) %in% samples_to_remove)
+  sig_obj$Y = sig_obj$Y[keep_samps,]
+  sig_obj$x = sig_obj$x[keep_samps,]
+  sig_obj$z = sig_obj$z[keep_samps,]
+  sig_obj$z <- sig_obj$z[,colSums(sig_obj$z)>0]
+  return(sig_obj)
+}
+
 normalise_rw <- function(x){
   if(is.null(dim(x))){
     x/sum(x)
@@ -1199,7 +1208,7 @@ is_slope = function(v){
   bool_isbetaslope
 }
 
-give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, ...){
+give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, plot=T, ...){
   a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')
   b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')
   c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')
@@ -1211,15 +1220,23 @@ give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2
     d <- d+guides(fill=F)
   }
   if(legend_bottom){
-    a <- a+theme(legend.position='bottom', legend.text = element_text(size = 6))
-    b <- b+theme(legend.position='bottom', legend.text = element_text(size = 6))
-    c <- c+theme(legend.position='bottom', legend.text = element_text(size = 6))
-    d <- d+theme(legend.position='bottom', legend.text = element_text(size = 6))
+    a <- a+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
+    b <- b+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
+    c <- c+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
+    d <- d+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
   }
   if(only_normalised){
-    grid.arrange(c, d, top=title, nrow=nrow_plot)
+    if(plot){
+      grid.arrange(c, d, top=title, nrow=nrow_plot)
+    }else{
+      cowplot::as_grob(grid.arrange(c, d, top=title, nrow=nrow_plot))
+    }
   }else{
-    grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+    if(plot){
+      grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+    }else{
+      cowplot::as_grob(grid.arrange(a, b, c, d, top=title, nrow=nrow_plot))
+    }
   }
 }
 
@@ -1372,7 +1389,7 @@ give_betas <- function(TMB_obj){
 
 
 plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
-                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F){
+                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F, sort_by_slope=F){
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1399,6 +1416,10 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
         stop('Number of beta slope/intercept pairs should be the same as the length of the name of the categories')
       }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
+    }
+    if(sort_by_slope){
+      .summary_betas$LogR <- factor( .summary_betas$LogR,
+                                     levels=.summary_betas[.summary_betas$type_beta == 'Slope','LogR'][order(.summary_betas[.summary_betas$type_beta == 'Slope','Estimate'])])
     }
     plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
     
@@ -1520,91 +1541,87 @@ give_length_cov <- function(dim1_covmat){
 give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
                                     bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
                                     path_to_data= "../../../data/", tmb_object=NULL, obj_data=NULL,
-                                    nrow_pca_plot=2){
+                                    nrow_pca_plot=2, integer_overdispersion_param=1){
+  warning('<fullRE_DMSL> and <fullRE_DM> used be to used interchangeably')
   
   if(is.null(tmb_object)){
     if(model == "fullRE_M"){
       if(!bool_nonexo)    list_estimates <- fullRE_M
       if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
-    }else if(model == "fullRE_DM"){
+    }else if(model == "fullRE_DMSL"){
       if(!bool_nonexo)    list_estimates <- fullRE_DMSL
       if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
     }else if(model == "sparseRE_DM"){
       if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
+    }else{
+      stop('Add <tmb_object> or specify another model')
     }
   }else{
     list_estimates <- list()
     list_estimates[[ct]] <- tmb_object
   }
-  
+
   if(is.null(obj_data)){
     warning('WARNING! Here I am sorting the columns of TMB, I should not in all cases. Specify <obj_data> if needed')
     obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
                                                        sigs_to_remove = sigs_to_remove))
   }
   dmin1 <- ncol(obj_data$Y)-1
-  cov_vec = rep(0, (dmin1**2-dmin1)/2)
-  
+
   if(model %in% c("fullRE_M", "fullRE_DM", "fullRE_DMSL")){
-    cov_vec = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE')
-    ###**** I AM NOT SURE ABOUT THIS BIT BELOW! ARE THEY SD OR VAR???*****###
-    ### implementing them as though they were sd ###
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+    ### implementing var_vec as though they were sd ###
+    cov_mat = L_to_cov(python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE'), d=dmin1)
   }else if(model == "sparseRE_DM"){
+    cov_vec = rep(0, (dmin1**2-dmin1)/2)
     cov_vec[as.numeric(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,"V2"], ',')[[1]])] = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_RE_part')
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
-  }else if(model %in% c("diagRE_M", "diagRE_DM", "diagRE_DMSL")){
+    cov_mat = L_to_cov(cov_vec, d=dmin1)
+  }else if(model %in% c("diagRE_M", "diagRE_DMSL", "diagRE_DMDL")){
     cov_vec = rep(0, give_length_cov(length(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))))
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+    cov_mat = L_to_cov(cov_vec, d=dmin1)
   }else{
     stop('Specify correct <model>')
   }
-  
-  cov_mat <- fill_covariance_matrix(arg_d = dmin1,
-                                    arg_entries_var = var_vec,
-                                    arg_entries_cov = cov_vec)
-  cov_mat_v2 <- fill_covariance_matrix(arg_d = dmin1,
-                                       arg_entries_var = var_vec_v2,
-                                       arg_entries_cov = cov_vec)
-  # cov_matb <- fill_covariance_matrix(arg_d = dmin1,
-  #                                   arg_entries_var = var_vec**2,
-  #                                   arg_entries_cov = cov_vec)
-  
+  var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+  diag(cov_mat) <- var_vec
+
   beta_mat = matrix(python_like_select_name(list_estimates[[ct]]$par.fixed, 'beta'), nrow=2)
-  
+
   n_sim = 1000
   x_sim = cbind(1, rep(c(0,1), n_sim))
   u_sim = mvtnorm::rmvnorm(n = n_sim, mean = rep(0,dmin1), sigma = cov_mat)
-  
+
   theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
-  
+
   if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
-    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
+    ## single overdispersion parameter
+    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))*integer_overdispersion_param
   }else if(model %in% c("fullRE_M")){
+    ## no overdispersion parameter
     alpha = softmax(cbind(theta, 0))
+  }else if(model %in% c('fullRE_DMDL', 'diagRE_DMDL')){
+    ## two overdispersion parameters
+    alpha = softmax(cbind(theta, 0))*c(exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))[rep(c(1,2), each=n_sim)]*integer_overdispersion_param)
   }else{
-    stop('Check softmax step')
+      stop('Check softmax step')
   }
-  
-  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
+
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DMDL')){
     probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
   }else if(model %in% c("fullRE_M")){
     probs = alpha
   }else{
       stop('Check probabilities step')
     }
-  
+
   probs_obs = normalise_rw(obj_data$Y)
   all_probs = rbind(probs_obs, probs)
-  
+
   if(bool_give_PCA){
+    # pca <- prcomp(as(compositions::clr(all_probs), 'matrix'))
     pca <- prcomp(all_probs)
     
     if(! (sig_of_interest %in% colnames(all_probs))){stop('Specify a <sig_of_interest> present in the dataset')}
-    
+
     df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
                                sig_of_interest=all_probs[,sig_of_interest],
                                group=c(rep(c('early','late')[obj_data$x[,2]+1]),
@@ -1616,6 +1633,8 @@ give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove=
   }
   
 }
+
+select_self <- function(i) i[i]
 
 vector_cats_to_logR <- function(i){paste0(i[-length(i)], '/', i[length(i)])}
 
@@ -1915,7 +1934,7 @@ comparison_betas_models2 <- function(model_fullRE_DMSL_list, model_diagRE_DMDL_l
   
 }
 
-L_to_cov <- function(cov_vector){
+L_to_cov <- function(cov_vector, d){
   L <- fill_covariance_matrix(arg_d = d, arg_entries_var = rep(1, d), arg_entries_cov = cov_vector)
   D <- diag(L%*%t(L))
   diag((D)**(-1/2)) %*% L %*% t(L) %*% diag((D)**(-1/2))
@@ -2034,4 +2053,8 @@ comparison_randomintercepts_models <- function(model_fullRE_DMSL_list, model_dia
   
   return(.x)
   
+}
+
+give_first_col <- function(i){
+  if(is.null(dim(i))){i[1]}else{i[,1]}
 }

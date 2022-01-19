@@ -10,6 +10,15 @@ if(debugging){
   getwd()
   try(library(TMB))
   library(TMB, lib.loc = "/mnt/scratcha/fmlab/morril01/software/miniconda3/lib/R/library/")
+  opt <- list()
+  opt$input_list = '../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_50_200_80_7_0_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_50_200_80_7_0.01_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_50_200_80_7_0.1_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_50_200_80_7_0.6_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_100_200_80_7_0_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_100_200_80_7_0.01_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_100_200_80_7_0.1_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_100_200_80_7_0.6_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_200_200_80_7_0_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_200_200_80_7_0.01_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_200_200_80_7_0.1_fullREM_NA_NA_NA_dataset0.RDS ../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturePCAWG_200_200_80_7_0.6_fullREM_NA_NA_NA_dataset0.RDS'
+  opt$input_list <- strsplit(opt$input_list, ' ')[[1]]
+  opt$output_folder_name = '../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/GenerationMixturePCAWG/GenerationMixturePCAWG_fullREM/'
+  opt$output_string = 'GenerationMixturePCAWG_fullREM'
+  opt$model = 'fullREM'
+  opt$dataset_generation = 'GenerationMixturePCAWG'
+  opt$multiple_runs = T
+  
 }
 
 library(optparse)
@@ -118,7 +127,24 @@ if(opt$multiple_runs){
 
 
 datasets = lapply(datasets_files, readRDS)
+
+if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', opt$dataset_generation) ){
+  cat('Transforming beta gamma shape from logR to probability')
+  datasets <- lapply(datasets, function(i){
+    if(i$beta_gamma_shape == -999){
+      i$beta_gamma_shape = 0
+    }else{
+      i$beta_gamma_shape = softmax(c(i$beta_gamma_shape, 0))[1]
+    }
+    i
+  })
+}else{
+  if(grepl('Mixture', generation)){
+    stop('Are you sure you are using probabilities beta_gamma_shape for and not log-ratios?\n')
+  }
+}
 names(datasets) = gsub(".RDS", "", basename(datasets_files))
+
 DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
 runs = lapply(opt$input_list, readRDS)
@@ -195,18 +221,26 @@ if(!is.null(dim(datasets[[1]]$beta))){
   # print(rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1))
   # print(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))))
   
-  
-  df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function(i) rep(NA, i$d-1))),
+  make.names_allowing_hyphen <- function(i){
+    for(j in unique(i)){
+      i[i == j] = paste0(j, '.', 1:sum(i == j))
+    }
+    i
+  }
+
+  #' in df_beta_recovery, as vector() added to unlist(), because with  opt$dataset_generation
+  #' [1] "GenerationMixturePCAWG" I got a df_beta_recovery with matrices inside, i.e. many columns
+  df_beta_recovery = cbind.data.frame(beta_true = as.vector(unlist(sapply(datasets, function(i) rep(NA, i$d-1)))),
                                       idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1),
                                       d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1),
                                       n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1),
                                       beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1),
-                                      beta_est = unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
-                                      beta_stderr = unlist(sapply(runs, give_stderr)),
+                                      beta_est = as.vector(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE)))),
+                                      beta_stderr = as.vector(unlist(sapply(runs, give_stderr))),
                                       pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1),
                                       DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
-                                      idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$d-1))))
-  
+                                      idx_within_dataset=as.vector(unlist(sapply(datasets, function(i) 1:(i$d-1)))))
+  rownames(df_beta_recovery) <- make.names_allowing_hyphen(names(datasets)[df_beta_recovery$idx]) ## added 12 jan 2022
   df_beta_recovery$bool_zero_true_beta = factor(df_beta_recovery$beta_gamma_shape == 0, levels=c(TRUE, FALSE))
   df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(is.null((i))){FALSE}else{i})[df_beta_recovery$idx]
   
@@ -248,22 +282,22 @@ ggsave(paste0(folder_output, "recovery_betaslope_scatter_sepDA.pdf"))
 })
 
 #' ## Multinomial
+filename_betarecovery1 = paste0(folder_output, "recovery_betaslope2.pdf")
 try({
   p <- ggplot(df_beta_recovery,
             aes(x=(beta_true), y=(beta_est), col=(pvals_adj<0.05)))+geom_point()+
   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~bool_zero_true_beta, scales = "free_x")
 gp <- ggplotGrob(p); facet.columns <- gp$layout$l[grepl("panel", gp$layout$name)]; gp$widths[facet.columns] <- gp$widths[facet.columns] * c(1,4); grid::grid.draw(gp)
-filename_betarecovery1 = paste0(folder_output, "recovery_betaslope2.pdf")
 ggsave(filename_betarecovery1)
 })
 
 #' ## Looking at true zeros
 #' ## i.e. runs where all beta slopes are zero
+filename_betarecovery2 = paste0(folder_output, "betaslopes_nonDA.pdf")
 try({
   ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
        aes(x=(beta_true), y=(beta_est), col=(pvals_adj<0.05)))+geom_point()+
   geom_abline(intercept = 0, slope = 1)+facet_wrap(.~(pvals_adj<0.05), scales = "free_x")
-filename_betarecovery2 = paste0(folder_output, "betaslopes_nonDA.pdf")
 ggsave(filename_betarecovery2, height = 3, width = 8)
 })
 
@@ -311,6 +345,7 @@ dev.off()
 })
 
 ## Compute FP, FN, for each beta
+cat('Compute FP, FN, for each beta\n')
 sum(is.na(pvals))
 df_beta_recovery_accuracy = df_beta_recovery %>% group_by(idx) %>% mutate(acc= paste0(c(unique(pvals_adj<0.05), unique(DA_bool)), collapse='-'))
 table(df_beta_recovery_accuracy$acc)
@@ -329,6 +364,7 @@ change_da_acc = function(i){
   }
 }
 
+
 df_beta_recovery_accuracy$acc = sapply(df_beta_recovery_accuracy$acc, change_da_acc)
 df_beta_recovery_accuracy$acc
 ggplot(df_beta_recovery_accuracy, aes(x=beta_gamma_shape, fill=acc))+geom_bar()
@@ -339,6 +375,7 @@ df_beta_recovery_accuracy_grouped = df_beta_recovery_accuracy %>% group_by(idx) 
             specificity=(sum(acc == 'TN')/(sum(acc == 'TN')+sum(acc == 'FP'))))
 df_beta_recovery_accuracy_grouped
 
+cat('Plotting accuracy\n')
 pdf(paste0(opt$output_folder_name, "/", opt$output_string, "_specificity_sensitivity.pdf"), width = 7, height = 2)
 grid.arrange(ggplot(df_beta_recovery_accuracy_grouped,
        aes(x=beta_gamma_shape, y=sensitivity, group=beta_gamma_shape))+geom_point()+geom_violin(),
@@ -353,6 +390,9 @@ ggplot(df_beta_recovery_accuracy_grouped,
 df_beta_recovery_accuracy2 = df_beta_recovery_accuracy
 # df_beta_recovery_accuracy2 = df_beta_recovery_accuracy2[!(is.na(df_beta_recovery_accuracy2$acc)),]
 
+cat('Plotting accuracy 2\n')
+
+try({
 ggplot(df_beta_recovery_accuracy2, aes(x=beta_gamma_shape, fill=acc))+geom_bar(position='stack')+
   facet_wrap(.~interaction(beta_gamma_shape,df_beta_recovery_accuracy2$n),ncol=7 )
 
@@ -365,7 +405,7 @@ ggplot(df_beta_recovery_accuracy2, aes(x=factor(beta_gamma_shape), fill=acc))+
   # geom_bar(position='stack')+facet_wrap(.~n)
   geom_bar(position='fill')+facet_wrap(.~n)
 ggsave(paste0(opt$output_folder_name, "/", opt$output_string, "_specificity_sensitivity_2.pdf"), height = 3, width = 8)
-
+})
 
 outfile_text <- paste0(opt$output_folder_name, "/", opt$output_string, "_results_info.txt")
 cat('Creating output file for snakemake: ', outfile_text, '\n')

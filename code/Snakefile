@@ -19,10 +19,16 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
  'GenerationJnormTwoLambdas': 'generationG', 'GenerationInoREtwolambdas': 'generationG',\
  'generationHnormtwolambdas': 'generationG', 'GenerationMixture1': 'generationMixture1',
  'GenerationJnormTwoLambdasOneChangingBeta': 'generationG',\
- 'GenerationJnormBTwoLambdasOneChangingBeta': 'GenerationJnormBTwoLambdasOneChangingBeta'}
+ 'GenerationJnormBTwoLambdasOneChangingBeta': 'GenerationJnormBTwoLambdasOneChangingBeta',\
+ 'GenerationMixturePCAWG': 'GenerationMixturePCAWG', 'GenerationMixturefewersignaturesPCAWG': 'GenerationMixturefewersignaturesPCAWG',\
+ 'GenerationMixturefewersignaturespairedPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',
+ 'GenerationMixturefewersignaturespairedstomachPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
+ 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG'}
 
 numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3': 4, 'GenerationMixture1': 2,\
-'GenerationJnormTwoLambdasOneChangingBeta': 2, 'GenerationJnormBTwoLambdasOneChangingBeta': 2}
+'GenerationJnormTwoLambdasOneChangingBeta': 2, 'GenerationJnormBTwoLambdasOneChangingBeta': 2, 'GenerationMixturePCAWG': 1,\
+'GenerationMixturefewersignaturesPCAWG': 20, 'GenerationMixturefewersignaturespairedPCAWG': 20,
+'GenerationMixturefewersignaturespairedstomachPCAWG': 20, 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG': 20}
 
 config['simulation_n_generationMGnorm'] = 200
 
@@ -45,6 +51,12 @@ rule all:
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWGSaA",\
       #  cancer_type=[x.split('_')[0] for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/roo/') if "signaturesPCAWGSaA" in x],\
       #  model=['fullREDMonefixedlambda'])
+      # [expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesmutSigExtractor",\
+      # cancer_type=[x.split('_')[0] for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/roo/') if "signaturesmutSigExtractor" in x],\
+      # model=['fullREM', 'fullREDM', 'diagREDM']),
+      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS",\
+      # feature_type="nucleotidesubstitution1", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
+      # model=['fullREM', 'fullREDMsinglelambda', 'diagREDM'])] ## should be changed, i.e. nonexo removed
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}wSBS1SBS5nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG",
       #   cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
       # model=['diagREDM'])
@@ -156,13 +168,13 @@ rule all:
       #fixed_beta_intercept="betaintercept3",\
       #sdRE_input='sdRE1',\
       #fixed_beta_slope="betaslope3", optimiser='nlminb')
-       expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
-      datasetgeneration="GenerationJnorm",  n=200, nlambda=180,\
-      d=5, lmbda=100,\
-      beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
-      fixed_beta_intercept="betaintercept1d4",\
-      sdRE_input='cov1d4',\
-      fixed_beta_slope="betaslope1d4", optimiser='nlminb')
+      #  expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
+      # datasetgeneration="GenerationJnorm",  n=200, nlambda=180,\
+      # d=5, lmbda=100,\
+      # beta_intensity = 0, model=["diagREDM"], itnum=range(1000),\
+      # fixed_beta_intercept="betaintercept1d4",\
+      # sdRE_input='cov1d4',\
+      # fixed_beta_slope="betaslope1d4", optimiser='nlminb')
       # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_it{itnum}.RDS",\
       # 	datasetgeneration="GenerationHnorm",  n=80, nlambda=180,\
       # 	lmbda=5, d=5,\
@@ -210,14 +222,30 @@ rule all:
       #  datasetgeneration='GenerationMGnorm', model=['fullREDM', 'diagREDM'], fixed_beta_intercept = 'betaintercept3',\
       # fixed_beta_slope = 'betaslope3', sdRE_input = 'sdRE1',  n = 200, nlambda = 180, lmbda = 100, d = 6,
       # beta_intensity=0)
-      expand("../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_multiple_{datasetgeneration}_nlminb_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_onlyconverged_coverage_beta.pdf",\
-      datasetgeneration='GenerationJnorm', model=['diagREDM', 'fullREDM'], fixed_beta_intercept = 'betaintercept1d4',\
-      fixed_beta_slope = 'betaslope1d4', sdRE_input = 'covmat1d4',  n = 200, nlambda = 180, lmbda = [2, 20, 100], d = 5,
-      beta_intensity=0)
+      # expand("../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_multiple_{datasetgeneration}_nlminb_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_onlyconverged_coverage_beta.pdf",\
+      # datasetgeneration='GenerationJnorm', model=['diagREDM', 'fullREDM'], fixed_beta_intercept = 'betaintercept1d4',\
+      # fixed_beta_slope = 'betaslope1d4', sdRE_input = 'covmat1d4',  n = 200, nlambda = 180, lmbda = [2, 20, 100], d = 5,
+      # beta_intensity=0)
+       # expand("../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_multiple_{datasetgeneration}_nlminb_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_onlyconverged_coverage_beta.pdf",\
+       # datasetgeneration='GenerationJnorm', model=['diagREDM', 'fullREDM'], fixed_beta_intercept = 'betaintercept1d3',\
+       # fixed_beta_slope = 'betaslope1d3', sdRE_input = 'covmat1d3',  n = 200, nlambda = 180, lmbda = [2, 20], d = 4,
+       # beta_intensity=0)
       # expand("../results/results_TMB/simulated_datasets/bias_and_coverage/setsim_multiple_{datasetgeneration}_nlminb_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_onlyconverged_coverage_beta.pdf",\
       # datasetgeneration='GenerationJnorm', model=['fullREDM'], fixed_beta_intercept = ['betaintercept1d2', 'betaintercept2d2'],\
       # fixed_beta_slope = ['betaslope1d2', 'betaslope2d2'], sdRE_input = 'covmat1d2',  n = 200, nlambda = 180, lmbda = [20], d = 3,
       # beta_intensity=0)
+      ## Mixing data from two cancer types
+      # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      # datasetgeneration=[ 'GenerationMixturePCAWG'])
+      ## Mixing data from two cancer types (same as above), but with a subset of signatures so that d=4
+      # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      # datasetgeneration=[ 'GenerationMixturefewersignaturesPCAWG'])
+       ## Mixing data from two cancer types (same as above), but with a subset of signatures so that d=4, and with paired data
+      expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      datasetgeneration=[ #'GenerationMixturefewersignaturespairedPCAWG', 
+      #'GenerationMixturefewersignaturespairedstomachPCAWG',\
+      'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'])
+
 
 numreplicates_for_bias = 1000
 

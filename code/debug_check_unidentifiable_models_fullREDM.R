@@ -125,6 +125,7 @@ for(xx in fles){
   dmin1 <- length(python_like_select_name(results_inference$par.fixed, 'beta'))/2
   
   if(dmin1 > 1){
+    ## not correct - cov_par_RE are the values of L, not the off-entries of the covariance matrix
     cov_estimates <- fill_covariance_matrix(arg_d = dmin1,
                                             arg_entries_var = rep(1, dmin1),
                                             arg_entries_cov = python_like_select_name(results_inference$par.fixed, 'cov_par_RE'))
@@ -411,3 +412,34 @@ for(xx in fles){
   }
   
 }
+
+## check wald test results depending on the order
+dataset_roo
+
+results_inferenc_diagDMDL1 = try(wrapper_run_TMB(object = dataset, model = "diagRE_DM", use_nlminb=use_nlminb))
+results_inferenc_diagDMDL1
+
+dataset_reorder <- dataset
+dataset_reorder2 <- dataset
+dataset_reorder$Y <- dataset_reorder$Y[,ncol(dataset_reorder$Y):1]
+dataset_reorder2$Y <- cbind(dataset_reorder$Y[,-4],dataset_reorder$Y[,4])
+
+results_inferenc_diagDMDL2 = try(wrapper_run_TMB(object = dataset_reorder, model = "diagRE_DM", use_nlminb=use_nlminb))
+results_inferenc_diagDMDL2
+
+results_inferenc_diagDMDL3 = try(wrapper_run_TMB(object = dataset_reorder2, model = "diagRE_DM", use_nlminb=use_nlminb))
+results_inferenc_diagDMDL3
+
+wald_TMB_wrapper(results_inferenc_diagDMDL1)
+wald_TMB_wrapper(results_inferenc_diagDMDL2)
+wald_TMB_wrapper(results_inferenc_diagDMDL3)
+
+plot(sort(softmax(c(select_slope_2(python_like_select_name(results_inferenc_diagDMDL1$par.fixed, 'beta')), 0))),
+sort(softmax(c((select_slope_2(python_like_select_name(results_inferenc_diagDMDL2$par.fixed, 'beta'))), 0))))
+abline(coef = c(0,1), lty='dashed')
+
+pairs(cbind(sort(softmax(c(select_slope_2(python_like_select_name(results_inferenc_diagDMDL1$par.fixed, 'beta')), 0))),
+            sort(softmax(c((select_slope_2(python_like_select_name(results_inferenc_diagDMDL2$par.fixed, 'beta'))), 0))),
+            sort(softmax(c((select_slope_2(python_like_select_name(results_inferenc_diagDMDL3$par.fixed, 'beta'))), 0)))))
+abline(coef = c(0,1), lty='dashed')
+

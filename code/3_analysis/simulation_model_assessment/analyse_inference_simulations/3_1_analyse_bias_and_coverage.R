@@ -192,14 +192,14 @@ d <- length(python_like_select_name(runs[[1]]$par.fixed, 'logs_sd_RE'))
 if("cov_par_RE" %in% unique(summaries_melt$Var1)){
   cat('Getting estimated covariances\n')
   for(idx in unique(summaries_melt$Var2)){
-    .x <- L_to_cov(summaries_melt[(summaries_melt$Var1 == "cov_par_RE") & (summaries_melt$Var2 == idx), "value"])
+    .x <- L_to_cov(summaries_melt[(summaries_melt$Var1 == "cov_par_RE") & (summaries_melt$Var2 == idx), "value"], d=d)
     summaries_melt[(summaries_melt$Var1 == "cov_par_RE") & (summaries_melt$Var2 == idx), "value"] <- .x[upper.tri(.x)]
   }
   ## checking positive semi-definiteness
   give_first_col <- function(i){
     if(is.null(dim(i))){i[1]}else{i[,1]}
   }
-  mvtnorm::rmvnorm(n=10, mean = rep(0, d), sigma = L_to_cov(give_first_col(python_like_select_rownames(summaries[[1]], 'cov_par_RE'))))
+  mvtnorm::rmvnorm(n=10, mean = rep(0, d), sigma = L_to_cov(give_first_col(python_like_select_rownames(summaries[[1]], 'cov_par_RE')), d=d))
   
 }
 

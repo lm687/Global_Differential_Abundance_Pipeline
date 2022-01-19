@@ -324,3 +324,98 @@ echo "simulation_lambda_GenerationJnormBTwoLambdasOneChangingBeta:
 " >> $name_config
 
 
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturePCAWG:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturePCAWG:
+- -12
+- -10
+- -8
+- -4
+- -2
+" >> $name_config
+
+echo "simulation_d_GenerationMixturePCAWG:
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturePCAWG:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturePCAWG:
+- 80
+" >> $name_config
+
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturefewersignaturesPCAWG:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturefewersignaturesPCAWG:
+- -999
+- -12
+- -10
+- -8
+- -4
+- -2
+" >> $name_config
+
+echo "simulation_d_GenerationMixturefewersignaturesPCAWG:
+- 4
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturefewersignaturesPCAWG:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturefewersignaturesPCAWG:
+- 80
+" >> $name_config
+
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturefewersignaturespairedstomachPCAWG:
+- -999
+- -12
+- -10
+- -8
+- -4
+- -2
+- -1
+- 0
+- 4
+- 8
+- 12
+" >> $name_config
+
+echo "simulation_d_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 4
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 80
+" >> $name_config
+
+
