@@ -512,6 +512,9 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggplot(varying_d, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
   ggsave(paste0(flder_out, generation, "/summaries/AUC_with_d.pdf"),
          height = 3.0, width = 4.5)
+  ggplot(varying_betashape, aes(x=beta_gamma_shape, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
+  ggsave(paste0(flder_out, generation, "/summaries/AUC_with_betashape.pdf"),
+         height = 3.0, width = 4.5)
   
   cat('Plotting: varying d (2)\n')
   ggplot(varying_d_all_converged, aes(x=d, y = AUC, col=model, group=model))+geom_point()+geom_line()+theme_bw()+facet_wrap(.~model)
@@ -584,6 +587,32 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     scale_color_manual(values=colours_models)+guides(col=FALSE)+ggtitle(generation)#+facet_wrap(.~model)
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2.pdf"),
          height = 3.0, width = 4.0)
+  max_n <- max(varying_n_all_converged$n)
+  min_n <- min(varying_n_all_converged$n)
+  ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model,
+                                      lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM'),
+                                      label=model))+
+    geom_point()+ geom_line()+theme_bw()+
+    geom_label_repel(data = varying_n_all_converged[varying_n_all_converged$n == max_n,],
+                     max.iter = Inf, aes(x=max(n)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     size=3)+
+    # geom_text(data = varying_n_all_converged[varying_n_all_converged$n == max_n,],
+    #                  aes(x=n*1.2, y=WeightedAccuracy),
+    #                  size=3)+
+    lims(x=c(min_n, max_n*1.3))+
+                     # )+
+    scale_color_manual(values=colours_models)+guides(col=FALSE, lty='none')+
+    ggtitle(gsub("Generation", "", gsub("generation", "", generation)))#+facet_wrap(.~model)
+  ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_names.pdf"),
+         height = 3.0, width = 3.5)
+  ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model,
+                                      lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM'),
+                                      label=model))+
+    geom_point()+ geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+guides(col=FALSE, lty='none')+
+    ggtitle(gsub("Generation", "", gsub("generation", "", generation)))#+facet_wrap(.~model)
+  ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_lty.pdf"),
+         height = 3.0, width = 3.0)
   
   ggplot(varying_n, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
     scale_color_manual(values=colours_models)+labs(col='')+guides(col=FALSE)+ggtitle(generation)#+facet_wrap(.~model)
