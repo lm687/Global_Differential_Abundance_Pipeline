@@ -26,7 +26,7 @@ give_x_matrix = function(n_times_2){
 
 rsq = function (x, y) cor(x, y) ^ 2
 
-load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/", read_directly=FALSE, old_version_creating_X_Z=F){
+load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/", read_directly=FALSE, old_version_creating_X_Z=F, load_all_sigs=F){
   if(simulation | read_directly){
     fle = ct
     print(ct)
@@ -52,11 +52,14 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
   
   if(typedata %in% c("nucleotidesubstitution1", "simulation")){
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
-  }else if(typedata == "nucleotidesubstitution3"){
+  }else if( grepl("nucleotidesubstitution3", typedata)){
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+    if( typedata == 'nucleotidesubstitution3MSE' ){
+      objects_sigs_per_CT_features = lapply(objects_sigs_per_CT_features, t) ## need to transpose output of MSE contexts
+    }
   }else if(grepl("signatures", typedata)){
-    if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0)){
-      ## no active signatures
+    if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0) | load_all_sigs){
+      ## no active signatures, or we want to load all signatures
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
     }else{
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_active")
@@ -77,7 +80,13 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
   if(all(rownames(objects_sigs_per_CT_features[[1]]) == rownames(objects_sigs_per_CT_features[[2]]))){
     old_version_creating_X_Z = T
   }else{
-    stop('Patients in input data are rearranged. Could not create matrices X and Z')
+    if(typedata %in% c("signaturesMSE", "nucleotidesubstitution3MSE")){
+      old_version_creating_X_Z = T
+      rownames(objects_sigs_per_CT_features[[1]]) <- gsub(".consensus.20160830.somatic.snv_mnv_SUBCLONAL.vcf.gz", "", rownames(objects_sigs_per_CT_features[[1]]))
+      rownames(objects_sigs_per_CT_features[[2]]) <- gsub(".consensus.20160830.somatic.snv_mnv_SUBCLONAL.vcf.gz", "", rownames(objects_sigs_per_CT_features[[2]]))
+    }else{
+      stop('Patients in input data are rearranged. Could not create matrices X and Z')
+    }
   }
   
   if(old_version_creating_X_Z){
@@ -982,6 +991,106 @@ fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbo
   # .sigma[unlist(sapply(1:(arg_d-1), function(i) (i-1)*arg_d + (i+1):arg_d ))] = arg_entries_cov
   # .sigma[unlist(sapply(1:(arg_d-1), function(i) (i) + ((i):(arg_d-1))*arg_d))] = arg_entries_cov
   return(.sigma)
+}
+
+extract_sigs_TMB_obj <- function(dataset_obj_trinucleotide, subset_signatures){
+  require(mutSigExtractor)
+  if(length(subset_signatures) == 1){
+    SBS_SIGNATURE_PROFILES_V3_subset <- select(SBS_SIGNATURE_PROFILES_V3, subset_signatures)
+  }else{
+    SBS_SIGNATURE_PROFILES_V3_subset <- SBS_SIGNATURE_PROFILES_V3[,subset_signatures,]
+  }
+  dataset_obj_trinucleotide
+  
+  if(length(subset_signatures) > 1){
+    SBS_SIGNATURE_PROFILES_V3_subset = SBS_SIGNATURE_PROFILES_V3_subset[match(colnames(dataset_obj_trinucleotide$Y), rownames(SBS_SIGNATURE_PROFILES_V3_subset)),]
+  }else{
+    SBS_SIGNATURE_PROFILES_V3_subset = as(SBS_SIGNATURE_PROFILES_V3_subset[match(colnames(dataset_obj_trinucleotide$Y), rownames(SBS_SIGNATURE_PROFILES_V3_subset)),], 'matrix')
+    colnames(SBS_SIGNATURE_PROFILES_V3_subset) <- subset_signatures
+    rownames(SBS_SIGNATURE_PROFILES_V3_subset) <- colnames(dataset_obj_trinucleotide$Y)
+  }
+  
+  dataset_obj_trinucleotide$Y[dataset_obj_trinucleotide$x[,2] == 0,]
+  
+  sigs <- fitToSignatures(
+    mut.context.counts=(dataset_obj_trinucleotide$Y), 
+    signature.profiles=SBS_SIGNATURE_PROFILES_V3_subset
+  )
+  
+  dataset_obj_new <- dataset_obj_trinucleotide
+  dataset_obj_new$Y = round(sigs)
+  return(dataset_obj_new)
+}
+
+compare_signaturefit_to_data <- function(tmb_obj_exposures, tmb_obj_trinucleotide, signature_defs, only_cosim=F){
+  require(lsa)
+  signature_defs
+  signature_defs <- signature_defs[match( colnames(tmb_obj_trinucleotide$Y), rownames(signature_defs)),]
+  
+  reconstructed_trinuc <- as(tmb_obj_exposures$Y, 'matrix') %*% t(as(signature_defs[,colnames(tmb_obj_exposures$Y)], 'matrix'))
+  
+  if(only_cosim){
+    cossim <- ( lsa::cosine(x = normalise_rw(colSums(tmb_obj_trinucleotide$Y)), y = normalise_rw(colSums(reconstructed_trinuc))))
+    return(cossim)
+  }else{
+    
+    rss <- sum( (tmb_obj_trinucleotide$Y - reconstructed_trinuc)**2)
+    rss_max <- max(rowSums( (tmb_obj_trinucleotide$Y - reconstructed_trinuc)**2))
+    rss_norm <- sum( (normalise_rw(tmb_obj_trinucleotide$Y) - normalise_rw(reconstructed_trinuc))**2)
+    rss_norm_max <- max(rowSums( (normalise_rw(tmb_obj_trinucleotide$Y) - normalise_rw(reconstructed_trinuc))**2))
+    cossim <- ( lsa::cosine(x = normalise_rw(colSums(tmb_obj_trinucleotide$Y)), y = normalise_rw(colSums(reconstructed_trinuc))))
+    
+    return(list(rss=rss, cossim=cossim, rss_max=rss_max, rss_norm=rss_norm, rss_norm_max=rss_norm_max))
+  }
+}
+
+
+
+give_plot_fits_wrapper <- function(list_tmb_obj_exposures,  tmb_obj_trinucleotide, signature_defs){
+  .fits_sigs <- sapply(list_tmb_obj_exposures, function(it){
+    compare_signaturefit_to_data(it, tmb_obj_trinucleotide, signature_defs)
+  })
+  colnames(.fits_sigs) <- lapply(list_tmb_obj_exposures, function(i) paste(colnames(i$Y), collapse = '_'))
+  .a <- t(.fits_sigs)
+
+  .a <- data.frame(RSS=unlist(.a[,'rss']), CosSim=unlist(.a[,'cossim']), rss_max=unlist(.a[,'rss_max']),
+                   rss_norm=unlist(.a[,'rss_norm']), rss_norm_max=unlist(.a[,'rss_norm_max']))
+  nm <- gsub("SBS", "", rownames(.a))
+  .a <- (melt(.a))
+  .a$sig <- nm
+  .a$sig <- factor(.a$sig, levels=nm)
+  ggplot(.a, aes(x=sig, y=value, col=sig))+facet_wrap(.~variable, scales="free_y")+geom_point()+
+    geom_line(aes(group=1), col='black')+theme_bw()+
+    theme(legend.position = "bottom")+
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank())+
+    #guides(col=guide_legend(ncol=1,byrow=TRUE))+
+    labs(col='Signature subset')
+}
+
+give_ggplot_sig_cor_TMB <- function(tmb_obj_1, tmb_obj_2, ct_it='', no_guides=F){
+  mat1 <- tmb_obj_1$Y
+  mat2 <- tmb_obj_2$Y
+  mat2 <- mat2[,remove_na(match(colnames(mat1), colnames(mat2)))]
+  mat1 <- mat1[,remove_na(match(colnames(mat2), colnames(mat1)))]
+  
+  if(! not_same_sigs){
+    if(nrow(mat1) != nrow(mat2)){
+      return(ggplot()+ggtitle('Not the same number of samples\n'))
+    }
+    title=paste0('All sigs\n', ct_it, '\n Not the same number of sigs')
+  }else{
+    title <- paste0('All sigs\n', ct_it)
+  }
+  
+  df_MSE_comparison <- data.frame(MSE=as.vector(mat1), QP=as.vector(mat2),
+                                  sig=rep(colnames(mat1), each=nrow(mat1)))
+  plt <- ggplot(df_MSE_comparison, aes(x=MSE, y=QP, col=sig))+
+    geom_abline(intercept = 0, slope = 1, lty='dashed')+
+    geom_point()+theme_bw()+ggtitle(title)+labs(x='Exposures method 1', y='Exposures method 2', col='Signatures')
+  if(no_guides) plt+ guides(col=F)
+  print(plt)
 }
 
 give_subset_sigs = function(sig_obj, sigs_to_remove){

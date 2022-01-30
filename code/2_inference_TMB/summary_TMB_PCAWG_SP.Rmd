@@ -1471,7 +1471,12 @@ rownames(aaa_dcast) <- aaa_dcast$numerator_LogR
 aaa_dcast <- aaa_dcast[,-1]
 
 cors <- outer(1:ncol(aaa_dcast), 1:ncol(aaa_dcast), Vectorize(function(i,j){
-  try(cor(x = unlist(aaa_dcast[,i]), y = unlist(aaa_dcast[,j]), use = "pairwise.complete.obs"))}))
+  if( sum(!is.na(aaa_dcast[,i]) & !is.na(aaa_dcast[,j])) <=2){
+    NA ## if there are 2 or fewer points in common. if there are 2 the correlation is possible but always 1
+  }else{
+    try(cor(x = unlist(aaa_dcast[,i]), y = unlist(aaa_dcast[,j]), use = "pairwise.complete.obs"))
+  }
+  }))
 cors <- apply(cors, 2, as.numeric)
 
 cors[is.na(cors)] = 0
@@ -1502,7 +1507,12 @@ rownames(aaa_dcast_softmax) <- aaa_dcast_softmax$sig
 aaa_dcast_softmax <- aaa_dcast_softmax[,-1]
 
 cors_softmax <- outer(1:ncol(aaa_dcast_softmax), 1:ncol(aaa_dcast_softmax), Vectorize(function(i,j){
-  try(cor(x = unlist(aaa_dcast_softmax[,i]), y = unlist(aaa_dcast_softmax[,j]), use = "pairwise.complete.obs"))}))
+    if( sum(!is.na(aaa_dcast[,i]) & !is.na(aaa_dcast[,j])) <=2){
+    NA ## if there are 2 or fewer points in common. if there are 2 the correlation is possible but always 1
+  }else{
+    try(cor(x = unlist(aaa_dcast_softmax[,i]), y = unlist(aaa_dcast_softmax[,j]), use = "pairwise.complete.obs"))
+  }
+    }))
 cors_softmax <- apply(cors_softmax, 2, as.numeric)
 
 num_common_sigs <- outer(1:ncol(aaa_dcast_softmax), 1:ncol(aaa_dcast_softmax), Vectorize(function(i,j){
@@ -1526,29 +1536,6 @@ cors_softmax_melt <- cbind.data.frame(cors_softmax=melt(cors_softmax),
                                       num_common_sigs=melt(num_common_sigs))
 ```
 
-```{r, correlations_from_beta_slopes_sbs1sbs5_and_apobec, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
-aaa2[aaa2$numerator_LogR %in% c(2,13),c('Estimate', 'numerator_LogR', 'ct')]
-
-
-ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(2,13),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`2`, y=`13`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
-  geom_smooth(method = "lm")+
-  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
-  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS2', y='Beta slope of SBS13')
-
-```
-
-```{r, correlations_from_beta_slopes_sbs8, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
-
-ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(2,8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`2`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
-  geom_smooth(method = "lm")+
-  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
-  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS13', y='Beta slope of SBS8')
-
-ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(13, 8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`13`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
-  geom_smooth(method = "lm")+
-  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=.7)+
-  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS13', y='Beta slope of SBS8')
-```
 
 ```{r, correlations_from_beta_slopes_softmax2, dependson=c('correlations_from_beta_slopes_softmax', 'names_logR_SP'), fig.height=6.5, echo=F}
 head(cors_softmax_melt)
@@ -1574,7 +1561,12 @@ rownames(cors_softmax_sigs) <- colnames(cors_softmax_sigs) <- paste0('SBS', rown
 
 
 num_common_samples <- outer(1:nrow(aaa_dcast_softmax), 1:nrow(aaa_dcast_softmax), Vectorize(function(i,j){
-  try(sum(!is.na(unlist(aaa_dcast_softmax[i,])+unlist(aaa_dcast_softmax[j,]))))}))
+  if( sum(!is.na(aaa_dcast_softmax[i,]) & !is.na(aaa_dcast_softmax[j,])) <=2){
+    NA ## if there are 2 or fewer points in common. if there are 2 the correlation is possible but always 1
+  }else{
+   try(sum(!is.na(unlist(aaa_dcast_softmax[i,])+unlist(aaa_dcast_softmax[j,]))))
+  }
+}))
 
 rownames(num_common_samples) <- colnames(num_common_samples) <- paste0('SBS', rownames(aaa_dcast_softmax))
 
@@ -1596,8 +1588,6 @@ ggplot(cors_softmax_melt_sigs, aes(x=factor(num_common_samples.Var1,
   labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
 
 ```
-
-
 
 ```{r, cor_pvals_samples}
 # pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", all_pvals$ct),
@@ -1621,6 +1611,69 @@ ggplot(df_cor_pvals_n, aes(x=num_samples, y=pvalue, label=ct, col=ct, group=1))+
   labs(x='Number of samples', y = 'p-value (log2)')+
   scale_color_manual(values = pcawg_palette)+
   guides(col=FALSE)
+
+```
+
+
+```{r, correlations_from_beta_slopes_sbs1sbs5_and_apobec, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
+aaa2[aaa2$numerator_LogR %in% c(2,13),c('Estimate', 'numerator_LogR', 'ct')]
+
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(2,13),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`2`, y=`13`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS2', y='Beta slope of SBS13')
+
+```
+
+Correlations of beta slopes of SBS8 and APOBEC signatures
+
+```{r, correlations_from_beta_slopes_sbs8, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(2,8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`2`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS2', y='Beta slope of SBS8')
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(13, 8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`13`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=.7)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS13', y='Beta slope of SBS8')
+```
+
+Correlations of beta slopes of SBS8 with SBS6, SBS18, SBS30
+
+```{r, correlations_from_beta_slopes_sbs8_2, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(6,8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`6`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS6', y='Beta slope of SBS8')
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(30, 8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`30`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=.7)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS30', y='Beta slope of SBS8')
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c(18, 8),c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`18`, y=`8`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.9, label.y = Inf, vjust=2, hjust=.7)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS18', y='Beta slope of SBS8')
+
+```
+
+
+```{r, correlations_from_beta_slopes_sbs10, dependson=c('correlations_from_beta_slopes'), echo=F, fig.height=2.5, fig.width=2.5, warning=FALSE, dev='tikz'}
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c('10a','10b'), c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`10a`, y=`10b`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS10a', y='Beta slope of SBS10b')
+
+ggplot(dcast(aaa2[aaa2$numerator_LogR %in% c('17b','40'), c('Estimate', 'numerator_LogR', 'ct')], ct~numerator_LogR, value.var = "Estimate"), aes(x=`17b`, y=`40`, col=gsub("CA$", "Ca", gsub("\\..*", "", ct)),  group=1))+geom_point()+theme_bw()+guides(col=FALSE)+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  scale_color_manual(values = pcawg_palette)+labs(x='Beta slope of SBS17b', y='Beta slope of SBS40')
 
 ```
 
@@ -1751,7 +1804,12 @@ dev.off()
 
 ```{r, correlations_from_beta_slopes_ggplot, dependson=c('correlations_from_beta_slopes', 'correlations_from_beta_slopes_2'), fig.height=7.5}
 cors_sigs_v2 <- outer(1:nrow(aaa_dcast), 1:nrow(aaa_dcast), Vectorize(function(i,j){
-  try(cor(x = unlist(aaa_dcast[i,]), y = unlist(aaa_dcast[j,]), use = "pairwise.complete.obs"))}))
+  if( sum(!is.na(aaa_dcast[i,]) & !is.na(aaa_dcast[j,])) <=2){
+    NA ## if there are 2 or fewer points in common. if there are 2 the correlation is possible but always 1
+  }else{
+    try(cor(x = unlist(aaa_dcast[i,]), y = unlist(aaa_dcast[j,]), use = "pairwise.complete.obs"))
+  }
+  }))
 cors_sigs_v2 <- apply(cors_sigs_v2, 2, as.numeric)
 
 rownames(cors_sigs_v2) <- colnames(cors_sigs_v2) <- paste0('SBS', rownames(aaa_dcast))

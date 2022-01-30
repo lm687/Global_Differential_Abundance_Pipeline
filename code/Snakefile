@@ -32,6 +32,14 @@ numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3'
 
 config['simulation_n_generationMGnorm'] = 200
 
+
+## unzip
+
+def remove_end(i):
+    return i[:-3]
+
+##gzip
+
 rule all:
     input:
       # expand("../data/restricted/pcawg/pcawg_restricted_snv/{sample}.consensus.20160830.somatic.snv_mnv.vcf.gz.tbi", sample=config["samples"]),
@@ -39,12 +47,17 @@ rule all:
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type=config["feature_types"], cancer_type=cancer_types),
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type="signaturesmutSigExtractor", cancer_type=cancer_types),
       # expand("../data/roo/{cancer_type}_{feature_type}_ROO.RDS", feature_type="signaturesPCAWG", cancer_type=cancer_types)
+      # expand("../data/roo/{cancer_type}_signaturesMSE_ROO2.RDS", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])]) ## mutsigextractor on pcawg signatures
       # [Inference] Running stan code on PCAWG
       # expand("../data/inference/{cancer_type}_{feature_type}_{nits}_{model}ROO.RData", feature_type=config["feature_types"], cancer_type=cancer_types, nits=num_iterations, model=models)
       ## [Inference] Running TMB on PCAWG
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG",
       #   cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
       # model=['fullREM', 'fullREDM', 'diagREDM', 'fullREDMsinglelambda'])
+      ## signaturesMSE: PCAWG signatures from mutsigextractor
+      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS", feature_type="signaturesMSE",
+      # cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
+      # model=['fullREM', 'fullREDM', 'diagREDM'])
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS",\
       # feature_type="signaturesPCAWG", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
       # model=['fullREM', 'fullREDMsinglelambda', 'diagREDMsinglelambda', 'diagREDM', 'fullREDMnoscaling', 'fullREDMonefixedlambda', 'fullREDMonefixedlambda2'])
@@ -54,9 +67,9 @@ rule all:
       # [expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesmutSigExtractor",\
       # cancer_type=[x.split('_')[0] for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/roo/') if "signaturesmutSigExtractor" in x],\
       # model=['fullREM', 'fullREDM', 'diagREDM']),
-      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS",\
-      # feature_type="nucleotidesubstitution1", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
-      # model=['fullREM', 'fullREDMsinglelambda', 'diagREDM'])] ## should be changed, i.e. nonexo removed
+      expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS",\
+      feature_type="nucleotidesubstitution1", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
+      model=['fullREDM']) ## should be changed, i.e. nonexo removed
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}wSBS1SBS5nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG",
       #   cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
       # model=['diagREDM'])
@@ -241,10 +254,12 @@ rule all:
       # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
       # datasetgeneration=[ 'GenerationMixturefewersignaturesPCAWG'])
        ## Mixing data from two cancer types (same as above), but with a subset of signatures so that d=4, and with paired data
-      expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
-      datasetgeneration=[ #'GenerationMixturefewersignaturespairedPCAWG', 
-      #'GenerationMixturefewersignaturespairedstomachPCAWG',\
-      'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'])
+      # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      # datasetgeneration=[ #'GenerationMixturefewersignaturespairedPCAWG', 
+      # #'GenerationMixturefewersignaturespairedstomachPCAWG',\
+      # 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'])
+      # "/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/02917220-6a7a-46a1-8656-907e96bef88e.consensus.20160830.somatic.snv_mnv.vcf.annovar"
+      # expand(['/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/'+x.strip('.gz')+'.annovar' for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/') if re.search('.gz$', x)])
 
 
 numreplicates_for_bias = 1000
@@ -268,6 +283,16 @@ rule make_roo_files:
        f="{feature_type}"
     shell:
         "Rscript 1_create_ROO/create_ROO_split.R --input_files '{input}' --cancer_type {params.ct} --feature_type {params.f} --output {output}"
+
+rule make_roo_filesMSE:
+    input:
+        '../data/restricted/pcawg/pcawg.wg11.final_sample_list_MARCH2019.txt'
+    output:
+         "../data/roo/{cancer_type}_signaturesMSE_ROO2.RDS"
+    params:
+       ct="{cancer_type}",
+    shell:
+        "Rscript 1_create_ROO/sigextractB_extract_mutations_mutSigExtractor.R --input_files {input} --cancer_type {params.ct} --output {output}"
 
 rule inference_TMB:
     input:
@@ -377,3 +402,27 @@ rule analyse_simulation_TMB_bias:
         --multiple_runs T --run_nonconverged F --beta_intercept_input {wildcards.fixed_beta_intercept} \
         --beta_slope_input {wildcards.fixed_beta_slope} --sdRE_input {wildcards.sdRE_input}  --d {wildcards.d} --n {wildcards.n} --nlambda {wildcards.nlambda} --lambda {wildcards.lmbda} --beta_gamma_shape {wildcards.beta_intensity} "
 
+
+
+rule unzip:
+    input:
+        "/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/{sample}.gz"
+    output:
+        "/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/{sample}"
+    shell:
+        "gzip -d {input}; "
+
+rule annotate_vcf:
+    input:
+        "/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/{sample}"
+    output:
+        "/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/{sample}.annovar"
+    params:
+    # shell:
+    #     "/Users/morril01/software/annovar/./table_annovar.pl {input} \
+    #     /Users/morril01/software/annovar/humandb/ -buildver hg19 -out {output} -remove -protocol refGene,cytoBand,exac03 -operation gx,r,f -nastring . -csvout -polish \
+    #     -xref /Users/morril01/software/annovar/example/gene_xref.txt; gzip {input}; mv {output}.hg19_multianno.csv {output}"
+    shell:
+        "/Users/morril01/software/annovar/./table_annovar.pl {input} \
+        /Users/morril01/software/annovar/humandb/ -buildver hg19 -out {output} -remove -protocol icgc28 -operation f -nastring . -csvout -polish \
+        -xref /Users/morril01/software/annovar/example/gene_xref.txt; gzip {input}; mv {output}.hg19_multianno.csv {output}"

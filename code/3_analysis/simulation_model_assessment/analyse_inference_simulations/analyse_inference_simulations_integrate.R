@@ -14,14 +14,14 @@ if(local){
   # generation = "generationFnorm"
   # generation = "GenerationCnorm"
   # generation = "GenerationJnorm2"
-  generation = "GenerationJnorm3"
+  # generation = "GenerationJnorm3"
   # generation = "GenerationJnormTwoLambdas"
   # generation = "GenerationInoREtwolambdas"
   # generation = "generationHnormtwolambdas"
   # generation = "GenerationMixture1"
-  generation = "GenerationJnormTwoLambdasOneChangingBeta"
-  generation = "GenerationJnormBTwoLambdasOneChangingBeta"
-  generation = "GenerationMixturePCAWG"
+  # generation = "GenerationJnormTwoLambdasOneChangingBeta"
+  # generation = "GenerationJnormBTwoLambdasOneChangingBeta"
+  # generation = "GenerationMixturePCAWG"
   generation = "GenerationMixturefewersignaturesPCAWG"
   ##########################################
   # multiple_runs = F

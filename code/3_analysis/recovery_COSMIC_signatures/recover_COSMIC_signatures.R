@@ -45,7 +45,9 @@ give_plot_bleeding <- function(names_sigs, abundances=NULL, rel_path='../../../'
   
   ## get mutations
   ## for each signature, choose at random a mutation it creates
-  count_obs <- t(apply(nlambda_sig, 1, function(i) {rowSums(sapply(1:k, function(i_sig) rowSums(rmultinom(n = i[i_sig], size=1, prob=sigs_cosmic[,names_sigs[i_sig]] )  ))) }))
+  count_obs <- t(apply(nlambda_sig, 1, function(i) {
+    rowSums(sapply(1:k, function(i_sig) rowSums(rmultinom(n = i[i_sig], size=1, prob=sigs_cosmic[,names_sigs[i_sig]] )  )))
+    }))
   
   all(rowSums(count_obs) == nlambda)
   min(nlambda)
