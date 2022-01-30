@@ -140,6 +140,15 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
                             diagRE_DM=runs_diagREDM[match(rownames(runs_fullREM),
                                                 rownames(runs_diagREDM)),])
 
+
+# if(generation %in% c( "GenerationMixturefewersignaturesPCAWG")){
+#   for(col_beta_gamma in colnames(joint_df)[grepl('beta_gamma_shape', colnames(joint_df))]){
+#     joint_df[which(joint_df[,col_beta_gamma] == -999) ,col_beta_gamma] <- 0
+#   }
+#   for(col_beta_gamma in colnames(joint_df)[grepl('beta_gamma_shape', colnames(joint_df))]){
+#     joint_df[,col_beta_gamma] <- sapply(joint_df[,col_beta_gamma], function(i) softmax(c(i,0))[1])
+#   }
+# }
 ## These are only beta slopes that we are analysing here
 
 # library(extrafont)
@@ -214,16 +223,24 @@ length(datasets_files)
 #                                       gsub("_dataset.RDS", "", basename(datasets_files)))]
 
 datasets = lapply(datasets_files, readRDS)
-names(datasets) = unique(gsub("_dataset.RDS", "", basename(datasets_files)))
 if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
-    cat('beta_gamma_shape is in logR')
-  DA_bool = ( sapply(datasets, function(i) softmax(c(i$beta_gamma_shape, 0))[1]) > 0 )
+  cat('Transforming beta gamma shape from logR to probability')
+  datasets <- lapply(datasets, function(i){
+    if(i$beta_gamma_shape == -999){
+      i$beta_gamma_shape = 0
+    }else{
+      i$beta_gamma_shape = softmax(c(i$beta_gamma_shape, 0))[1]
+    }
+    i
+  })
 }else{
   if(grepl('Mixture', generation)){
     stop('Are you sure you are using probabilities beta_gamma_shape for and not log-ratios?\n')
   }
-  DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 }
+names(datasets) = unique(gsub("_dataset.RDS", "", basename(datasets_files)))
+
+DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
 runs_ttest_irl = lapply(datasets_files, function(i)  try(wrapper_run_ttest_ilr(i)))
 hist(as.numeric(runs_ttest_irl), breaks=30); table(sapply(runs_ttest_irl, typeof))
@@ -618,6 +635,62 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     scale_color_manual(values=colours_models)+labs(col='')+guides(col=FALSE)+ggtitle(generation)#+facet_wrap(.~model)
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_palette2.pdf"),
          height = 3.0, width = 4.0)
+  ggplot(varying_n, aes(x=n, y = WeightedAccuracy, col=model, group=model,
+                                      lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM'),
+                                      label=model))+
+    geom_point()+ geom_line()+theme_bw()+
+    geom_label_repel(data = varying_n[varying_n$n == max_n,],
+                     max.iter = Inf, aes(x=max(n)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     size=3)+
+    lims(x=c(min_n, max_n*1.3))+
+    # )+
+    scale_color_manual(values=colours_models)+guides(col=FALSE, lty='none')+
+    ggtitle(gsub("Generation", "", gsub("generation", "", generation)))#+facet_wrap(.~model)
+  ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_palette2_names.pdf"),
+         height = 3.0, width = 3.5)
+  
+  ggplot(varying_betashape, aes(x=beta_gamma_shape, y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+labs(col='')+guides(col='none', lty='none')+
+    ggtitle(generation)+#+facet_wrap(.~model)
+    geom_label_repel(data = varying_betashape[varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape),],
+                   max.iter = Inf, aes(x=max(varying_betashape$beta_gamma_shape)), direction = "y", nudge_x=max_n*0.3,force=100,
+                   size=3)+
+    lims(x=c(min(varying_betashape$beta_gamma_shape), max(varying_betashape$beta_gamma_shape)*1.5))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2.pdf"),
+         height = 3.0, width = 4.0)
+  
+  ggplot(varying_betashape_all_converged, aes(x=beta_gamma_shape, y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+labs(col='')+guides(col='none', lty='none')+
+    ggtitle(generation)+#+facet_wrap(.~model)
+    geom_label_repel(data = varying_betashape_all_converged[varying_betashape_all_converged$beta_gamma_shape == max(varying_betashape_all_converged$beta_gamma_shape),],
+                     max.iter = Inf, aes(x=max(varying_betashape_all_converged$beta_gamma_shape)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     size=3)+
+    lims(x=c(min(varying_betashape_all_converged$beta_gamma_shape), max(varying_betashape_all_converged$beta_gamma_shape)*1.5))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_all_converged_palette2.pdf"),
+         height = 3.0, width = 4.0)
+  
+  if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
+    varying_betashape$beta_gamma_shape <- signif(varying_betashape$beta_gamma_shape, 2)
+  }
+  
+  ggplot(varying_betashape, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(generation)+#+facet_wrap(.~model)
+    geom_label_repel(data = varying_betashape[varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape),],
+                     max.iter = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y", nudge_x=max_n*0.3,force=100,
+                     size=3)+
+    coord_cartesian(xlim = c(0, 9))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+    # lims(x=c(min(varying_betashape$beta_gamma_shape), max(varying_betashape$beta_gamma_shape)*1.5))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2_factor.pdf"),
+         height = 3.0, width = 4.0)
+  
   
   # ggplot(varying_n_betashape, aes(x=beta_gamma_shape+.001, y = Accuracy, group=model, col=n))+
   #   geom_point()+geom_line()+theme_bw()+facet_wrap(.~model, nrow=2)+scale_x_continuous(trans = "log10")

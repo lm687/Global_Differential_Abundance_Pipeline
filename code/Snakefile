@@ -67,9 +67,9 @@ rule all:
       # [expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesmutSigExtractor",\
       # cancer_type=[x.split('_')[0] for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/roo/') if "signaturesmutSigExtractor" in x],\
       # model=['fullREM', 'fullREDM', 'diagREDM']),
-      expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS",\
-      feature_type="nucleotidesubstitution1", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
-      model=['fullREDM']) ## should be changed, i.e. nonexo removed
+      # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}_{cancer_type}_{feature_type}.RDS",\
+      # feature_type="nucleotidesubstitution1", cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
+      # model=['fullREDM'])
       # expand("../data/pcawg_robjects_cache/tmb_results/nlminb/{model}wSBS1SBS5nonexo_{cancer_type}_{feature_type}.RDS", feature_type="signaturesPCAWG",
       #   cancer_type=[x for x in cancer_types if not any(y in x for y in ['Myeloid-AML','Breast-DCIS', 'Melanoma.mucosal'])],\
       # model=['diagREDM'])
@@ -254,10 +254,10 @@ rule all:
       # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
       # datasetgeneration=[ 'GenerationMixturefewersignaturesPCAWG'])
        ## Mixing data from two cancer types (same as above), but with a subset of signatures so that d=4, and with paired data
-      # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
-      # datasetgeneration=[ #'GenerationMixturefewersignaturespairedPCAWG', 
-      # #'GenerationMixturefewersignaturespairedstomachPCAWG',\
-      # 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'])
+      expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      datasetgeneration=[ 'GenerationMixturefewersignaturespairedPCAWG', \
+      'GenerationMixturefewersignaturespairedstomachPCAWG',\
+      'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'])
       # "/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/02917220-6a7a-46a1-8656-907e96bef88e.consensus.20160830.somatic.snv_mnv.vcf.annovar"
       # expand(['/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/'+x.strip('.gz')+'.annovar' for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/') if re.search('.gz$', x)])
 
