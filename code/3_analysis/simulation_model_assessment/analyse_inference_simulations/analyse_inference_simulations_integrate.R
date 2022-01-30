@@ -22,7 +22,8 @@ if(local){
   # generation = "GenerationJnormTwoLambdasOneChangingBeta"
   # generation = "GenerationJnormBTwoLambdasOneChangingBeta"
   # generation = "GenerationMixturePCAWG"
-  generation = "GenerationMixturefewersignaturesPCAWG"
+  # generation = "GenerationMixturefewersignaturesPCAWG"
+  generation = "GenerationMixturefewersignaturespairedKidneyRCCPCAWG"
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -47,6 +48,7 @@ if(local){
 
 source("../../../2_inference_TMB/helper_TMB.R")
 source("../../../1_create_ROO/roo_functions.R")
+source("helper_model_assessment.R")
 
 library(grid)
 library(gridExtra)
@@ -117,16 +119,10 @@ runs_fullREDMSL <- runs_fullREDMSL0[runs_fullREDMSL0$converged,]
 runs_diagREDMSL <- runs_diagREDMSL0[runs_diagREDMSL0$converged,]
 runs_diagREDM <- runs_diagREDM0[runs_diagREDM0$converged,]
 
-# #### For mixture model there was a problem with the columns
-# colnames(runs_fullREM) <- sapply(colnames(runs_fullREM), function(i) strsplit(i, '[.]')[[1]][1])
-# colnames(runs_fullREDMSL) <- sapply(colnames(runs_fullREDMSL), function(i) strsplit(i, '[.]')[[1]][1])
-# colnames(runs_diagREDMSL) <- sapply(colnames(runs_diagREDMSL), function(i) strsplit(i, '[.]')[[1]][1])
-# colnames(runs_diagREDM) <- sapply(colnames(runs_diagREDM), function(i) strsplit(i, '[.]')[[1]][1])
-# 
-# runs_fullREM <- runs_fullREM[,!duplicated(colnames(runs_fullREM))]
-# runs_fullREDMSL <- runs_fullREDMSL[,!duplicated(colnames(runs_fullREDMSL))]
-# runs_diagREDMSL <- runs_diagREDMSL[,!duplicated(colnames(runs_diagREDMSL))]
-# runs_diagREDM <- runs_diagREDM[,!duplicated(colnames(runs_diagREDM))]
+length(runs_fullREM)
+length(runs_fullREDMSL)
+length(runs_diagREDMSL)
+length(runs_diagREDM)
 
 ####
 
@@ -139,6 +135,8 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
                                                 rownames(runs_diagREDMSL)),],
                             diagRE_DM=runs_diagREDM[match(rownames(runs_fullREM),
                                                 rownames(runs_diagREDM)),])
+
+sort(unique(gsub("\\..*","",rownames(joint_df))))
 
 
 # if(generation %in% c( "GenerationMixturefewersignaturesPCAWG")){
@@ -156,8 +154,8 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
 # font_import(pattern = "lmodern*")
 # par(family = "LM Roman 10")
 
-print(joint_df)
-print(colnames(joint_df))
+# print(joint_df)
+# print(colnames(joint_df))
 
 try({
 pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots.pdf"), height = 2.5)
@@ -214,13 +212,20 @@ do.call('grid.arrange', list(ggplot(joint_df[!is.na(joint_df$fullRE_M.beta_est) 
                                theme_bw()+theme(legend.position = "bottom"), ncol=2))
 dev.off()
 
+
+## Read in datasets
+cat('Reading datasets\n')
 datasets_files = list.files("../../../../data/assessing_models_simulation/datasets/", full.names = TRUE)
 datasets_files = datasets_files[grep(pattern = paste0('/multiple_', generation, '_'), datasets_files)]
 length(datasets_files)
 
-# match
-# datasets_files = datasets_files[match(unique(sapply(rownames(joint_df), function(i) strsplit(i, "_dataset")[[1]][1])),
+# match. This used to be commented out up until the 20220130, where I have uncommented it for generation = "GenerationMixturePCAWG". I have modified it, though,
+# to accomodate for multiple runs
+# datasets_files = datasets_files[match(unique(sapply(rownames(joint_df), function(i) strsplit(i, "_dataset")[[1]][1])), ## what it used to be
 #                                       gsub("_dataset.RDS", "", basename(datasets_files)))]
+datasets_files = datasets_files[match((sapply(rownames(joint_df[joint_df$fullRE_M.idx_within_dataset == 1,]), function(i) strsplit(i, "_dataset")[[1]][1])), ## new version
+                                      (gsub("_dataset[0-9]+.RDS", "", basename(datasets_files))))]
+length(datasets_files)
 
 datasets = lapply(datasets_files, readRDS)
 if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
@@ -275,6 +280,8 @@ names_datasets_uniq <- sort(unique(gsub(".RDS", "", names(datasets)))) #sort(uni
                         #             rownames(runs_diagREDMSL0), rownames(runs_diagREDM0))))
 head(names_datasets_uniq)
 names(datasets)
+
+colnames(joint_df)
 
 if(multiple_runs){
   pvals_list <- list()
@@ -358,6 +365,18 @@ dim(runs_diagREDMSL0)
 dim(runs_fullREDMSL0)
 dim(runs_fullREM0)
 
+pvals_fullREDMSL
+pvals_diagREDM
+pvals_diagREDMSL
+
+sort(names(datasets))
+sort(unique(gsub("\\..*","",rownames(joint_df))))
+
+cat('Runs ', rownames(runs_fullREM0), '\n')
+cat('Pvals ', names(pvals_fullREDMSL), '\n')
+cat('Datasets\n ', paste0(sort(names(datasets)), '\n'))
+cat('Number of runs ', length(pvals_fullREDMSL), '\n')
+cat('Number of datasets ', length(datasets), '\n')
 if(length(pvals_fullREDMSL) != length(datasets)){
   stop('The number of runs is not the number of datasets')
 }
@@ -438,41 +457,6 @@ summarise_DA_detection(true = DA_bool, predicted = pvals_fullREDMSL < 0.05)
 table(DA_bool, pvals_data_frame$ttest_props <= 0.05)
 
 cat('Creating <put_vals_in_table> table\n')
-
-put_vals_in_table <- function(.pvals){
-  rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREDMSL < 0.05),
-      fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM <= 0.05),
-      diagREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDMSL <= 0.05),
-      diagREDM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDM <= 0.05),
-      pvals_chi_Harris=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_chi_Harris <= 0.05),
-      ttest=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_props <= 0.05),
-      ILR=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_ilr_adj <= 0.05),
-      HMP=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP <= 0.05),
-      HMP2=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP2 <= 0.05),
-      perturbation=summarise_DA_detection(true = .pvals$true, predicted = .pvals$perturbation <= 0.05),
-      permutation=summarise_DA_detection(true = .pvals$true, predicted = .pvals$permutation <= 0.05))
-}
-  
-give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datasets, pvals_data_frame_arg=pvals_data_frame){
-  if(two_var){
-    do.call('rbind', apply(expand.grid(sapply(var, function(i) unique(unlist(sapply(datasets_arg, `[`, i))))), 1, function(vars_it){
-      .pvals <- pvals_data_frame_arg[which(sapply(datasets_arg, '[', var[1]) == vars_it[[1]] & sapply(datasets_arg, '[', var[2]) == vars_it[[2]]),]
-      .res_all_subset = put_vals_in_table(.pvals)
-      .return <- cbind.data.frame(.res_all_subset, VAR1=vars_it[1], VAR2=vars_it[2], model=rownames(.res_all_subset))
-      colnames(.return)[(ncol(.return)-2)] <- var[1]
-      colnames(.return)[(ncol(.return)-1)] <- var[2]
-      return(.return)
-    }))    
-  }else{
-    do.call('rbind', lapply(unique(unlist(sapply(datasets_arg, `[`, var))), function(vars_it){
-    .pvals <- pvals_data_frame_arg[which(sapply(datasets_arg, '[', var) == vars_it),]
-    .res_all_subset = put_vals_in_table(.pvals)
-    .return <- cbind.data.frame(.res_all_subset, d=vars_it, model=rownames(.res_all_subset))
-    colnames(.return)[(ncol(.return)-1)] <- var
-  return(.return)
-}))
-  }
-}
 
 dim(joint_df)
 dim(pvals_data_frame)
@@ -587,18 +571,6 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged.pdf"),
          height = 3.0, width = 4.0)
   
-  scale_color_jcolors(palette = "pal8")
-  ###
-  sort(unique(varying_n_all_converged$model))
-  
-  colours_models <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
-    fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
-    ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
-    pvals_chi_Harris= "#2A297A", ttest=  "#995533"   )
-  
-  jcolors::display_jcolors(palette = "pal8")
-  jcolors::jcolors(palette = "pal8")
-  
   cat('Plotting varying n\n')
   ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
     scale_color_manual(values=colours_models)+guides(col=FALSE)+ggtitle(generation)#+facet_wrap(.~model)
@@ -611,7 +583,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
                                       label=model))+
     geom_point()+ geom_line()+theme_bw()+
     geom_label_repel(data = varying_n_all_converged[varying_n_all_converged$n == max_n,],
-                     max.iter = Inf, aes(x=max(n)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     max.overlaps = Inf, aes(x=max(n)), direction = "y", nudge_x=max_n*0.3,force=100,
                      size=3)+
     # geom_text(data = varying_n_all_converged[varying_n_all_converged$n == max_n,],
     #                  aes(x=n*1.2, y=WeightedAccuracy),
@@ -640,7 +612,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
                                       label=model))+
     geom_point()+ geom_line()+theme_bw()+
     geom_label_repel(data = varying_n[varying_n$n == max_n,],
-                     max.iter = Inf, aes(x=max(n)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     max.overlaps = Inf, aes(x=max(n)), direction = "y", nudge_x=max_n*0.3,force=100,
                      size=3)+
     lims(x=c(min_n, max_n*1.3))+
     # )+
@@ -655,7 +627,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     scale_color_manual(values=colours_models)+labs(col='')+guides(col='none', lty='none')+
     ggtitle(generation)+#+facet_wrap(.~model)
     geom_label_repel(data = varying_betashape[varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape),],
-                   max.iter = Inf, aes(x=max(varying_betashape$beta_gamma_shape)), direction = "y", nudge_x=max_n*0.3,force=100,
+                   max.overlaps = Inf, aes(x=max(varying_betashape$beta_gamma_shape)), direction = "y", nudge_x=max_n*0.3,force=100,
                    size=3)+
     lims(x=c(min(varying_betashape$beta_gamma_shape), max(varying_betashape$beta_gamma_shape)*1.5))
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2.pdf"),
@@ -667,7 +639,8 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     scale_color_manual(values=colours_models)+labs(col='')+guides(col='none', lty='none')+
     ggtitle(generation)+#+facet_wrap(.~model)
     geom_label_repel(data = varying_betashape_all_converged[varying_betashape_all_converged$beta_gamma_shape == max(varying_betashape_all_converged$beta_gamma_shape),],
-                     max.iter = Inf, aes(x=max(varying_betashape_all_converged$beta_gamma_shape)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     max.overlaps = Inf, aes(x=max(varying_betashape_all_converged$beta_gamma_shape)), direction = "y",
+                     nudge_x= max(varying_betashape_all_converged$beta_gamma_shape)*0.3,force=100,
                      size=3)+
     lims(x=c(min(varying_betashape_all_converged$beta_gamma_shape), max(varying_betashape_all_converged$beta_gamma_shape)*1.5))
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_all_converged_palette2.pdf"),
@@ -683,9 +656,10 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     scale_color_manual(values=colours_models)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
     ggtitle(generation)+#+facet_wrap(.~model)
     geom_label_repel(data = varying_betashape[varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape),],
-                     max.iter = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y", nudge_x=max_n*0.3,force=100,
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashape$beta_gamma_shape)+1,
                      size=3)+
-    coord_cartesian(xlim = c(0, 9))+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashape$beta_gamma_shape))*1.3))+
     theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
     # lims(x=c(min(varying_betashape$beta_gamma_shape), max(varying_betashape$beta_gamma_shape)*1.5))
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2_factor.pdf"),
@@ -1022,9 +996,9 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   plot(varying_n$Sensitivity, varying_n$Specificity)
   })
   
-  ## comparison of ilr and test of  proportions when removcing the first column
+  ## comparison of ilr and test of  proportions when removing the first column
   
-  cat('comparison of ilr and test of  proportions when removcing the first column\n')
+  cat('comparison of ilr and test of  proportions when removing the first column\n')
   
   try({
   small_num <- 0.0001
@@ -1090,7 +1064,9 @@ if(sum(!is.na(DA_bool_all_converged))>0){
                       pvals_perturbation=pvals_perturbation,
                       pvals_permutation=pvals_permutation,
                       pvals_chi_Harris=pvals_chi_Harris,
-                      joint_df=joint_df)
+                      joint_df=joint_df,
+                      datasets=datasets,
+                      pvals_data_frame=pvals_data_frame)
   
   saveRDS(object = object_save,
           file = paste0("../../../../data/assessing_models_simulation/summaries_synthetic_DA/",
