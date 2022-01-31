@@ -713,11 +713,7 @@ wald_TMB_wrapper = function(i, verbatim=TRUE, fail_non_converged=T){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
-<<<<<<< HEAD
-    if(!i$pdHess){
-=======
     if(!i$pdHess & fail_non_converged){
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
       ## didn't converge
       NA
     }else{
@@ -745,7 +741,6 @@ wald_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
     if(!i$pdHess){
       ## didn't converge
       NA
-<<<<<<< HEAD
     }else{
       scaled_coefs <- scale(i$par.fixed[idx_beta], center = T, scale = F)
       wald_generalised(v = as.vector(scaled_coefs),
@@ -764,26 +759,6 @@ ttest_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
       ## didn't converge
       NA
     }else{
-=======
-    }else{
-      scaled_coefs <- scale(i$par.fixed[idx_beta], center = T, scale = F)
-      wald_generalised(v = as.vector(scaled_coefs),
-                       sigma = i$cov.fixed[idx_beta,idx_beta])
-    }
-  }
-}
-
-ttest_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
-  ## wald test for the overdispersion parameter
-  if(typeof(i) == "character"){
-    return(NA)
-  }else{
-    idx_beta = which(names(i$par.fixed) == "log_lambda")
-    if(!i$pdHess){
-      ## didn't converge
-      NA
-    }else{
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
       .summary <- summary(i)
       loglambdas <- python_like_select_rownames(.summary, 'log_lambda')
       mean_coefs <- loglambdas[,1]
@@ -1180,9 +1155,13 @@ give_amalgamated_exposures_TMBobj = function(sig_obj, list_groupings){
 }
   
 
-give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
+give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove, remove_zero_rows=T){
   sig_obj$Y = sig_obj$Y[,!(colnames(sig_obj$Y) %in% sigs_to_remove)]
-  keep_obs = rowSums(sig_obj$Y) > 0
+  if(remove_zero_rows){
+    keep_obs = rowSums(sig_obj$Y) > 0
+  }else{
+    keep_obs <- 1:nrow(sig_obj$Y)
+  }
   sig_obj$Y = sig_obj$Y[keep_obs,]
   sig_obj$x = sig_obj$x[keep_obs,]
   sig_obj$z = sig_obj$z[keep_obs,]
@@ -1190,12 +1169,33 @@ give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
 }
 
 give_subset_samples_TMBobj = function(sig_obj, samples_to_remove){
-  keep_samps <- !(rownames(sig_obj$Y) %in% samples_to_remove)
+  if(is.null(rownames(sig_obj$Y))){
+    keep_samps <- (1:nrow(sig_obj$Y))[-samples_to_remove]
+  }else{
+    keep_samps <- !(rownames(sig_obj$Y) %in% samples_to_remove)
+  }
   sig_obj$Y = sig_obj$Y[keep_samps,]
   sig_obj$x = sig_obj$x[keep_samps,]
   sig_obj$z = sig_obj$z[keep_samps,]
   sig_obj$z <- sig_obj$z[,colSums(sig_obj$z)>0]
+  sig_obj$num_individuals <- ncol(sig_obj$z)
   return(sig_obj)
+}
+
+TMBobj_partialILR_remove_single_obs <- function(sig_obj){
+  which_remove <- rowSums(sig_obj$Y == 0) >= (ncol(sig_obj$Y)-1)
+  give_subset_samples_TMBobj(sig_obj, rownames(sig_obj$Y)[which_remove])
+}
+
+give_subset_samples_TMBobj_2 <- function(TMB_data_obj, selected_rows_obs){
+  ## very similar to give_subset_samples_TMBobj, but with samples to keep, not to remove
+  TMB_data_obj$Y <- TMB_data_obj$Y[selected_rows_obs,]
+  TMB_data_obj$n <- length(selected_rows_obs)
+  TMB_data_obj$x <- TMB_data_obj$x[selected_rows_obs,]
+  TMB_data_obj$z <- TMB_data_obj$z[selected_rows_obs,]
+  TMB_data_obj$z <- TMB_data_obj$z[,colSums(TMB_data_obj$z >= 1)]
+  TMB_data_obj$num_individuals <- ncol(TMB_data_obj$z)
+  return(TMB_data_obj)
 }
 
 normalise_rw <- function(x){
@@ -1523,11 +1523,7 @@ give_betas <- function(TMB_obj){
 
 
 plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
-<<<<<<< HEAD
-                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL){
-=======
                        line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F, sort_by_slope=F){
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1555,12 +1551,6 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
     }
-<<<<<<< HEAD
-    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
-    
-    if(line_zero) plt <- plt + geom_hline(yintercept = 0, lty='dashed', col='blue')
-      
-=======
     if(sort_by_slope){
       .summary_betas$LogR <- factor( .summary_betas$LogR,
                                      levels=.summary_betas[.summary_betas$type_beta == 'Slope','LogR'][order(.summary_betas[.summary_betas$type_beta == 'Slope','Estimate'])])
@@ -1572,7 +1562,6 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       geom_hline(yintercept = median(c(0,.summary_betas$Estimate[.summary_betas$type_beta == 'Slope'])),
                  lty='dashed', col='red') }
     
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
     plt <- plt +
       geom_point()+
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
@@ -1598,83 +1587,6 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     }
     
     if(!TMB_obj$pdHess){
-<<<<<<< HEAD
-      plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
-      if(plot) print(plt)
-    }else{
-      if(plot) print(plt)
-    }
-  }
-  
-  if(return_df){
-    .summary_betas
-  }else{
-    if(return_plot & return_df){stop('<return_plot=T> and <return_df=T> are incompatible')}
-    plot_list <- list(plt)
-    class(plot_list) <- c("quiet_list", class(plot_list))
-    if(return_plot){
-      return(cowplot::as_grob(plt))
-    }else if(return_ggplot){
-      return(plt)
-    }
-  }
-}
-
-
-plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
-  
-  lambdas_df <- python_like_select_rownames(summary(TMB_obj), 'log_lambda')
-  if(!is.null(dim(lambdas_df))){
-    .summary_lambda <- cbind.data.frame(data.frame(lambdas_df),
-                                        name=c('Lambda 1', 'Lambda 2'))
-  }else{
-    .summary_lambda <- cbind.data.frame(t(lambdas_df), name='Lambda 1')
-    colnames(.summary_lambda) <- make.names(colnames(.summary_lambda))
-  }
-  
-  plt <- (ggplot(.summary_lambda, aes(x=name, y=`Estimate`))+
-            geom_point()+
-            geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
-  if(plot){
-    print(plt)
-  }
-  
-  if(return_df){
-    return(.summary_lambda)
-  }else{
-    return(plt)
-  }
-}
-
-plot_estimates_TMB <- function(TMB_obj, parameter_name, return_df=F, plot=T, verbatim=T){
-  if(verbatim) cat('Consider the other functions <plot_betas> and <plot_lambdas>\n')
-  
-  
-  parameter_df <- python_like_select_rownames(summary(TMB_obj), parameter_name)
-  if(length(parameter_df) == 0){
-    ## there is no parameter
-    return(cbind.data.frame(Estimate=NA, `Std..Error`=NA, name=NA))
-  }else{
-    if(!is.null(dim(parameter_df))){
-      .summary_param <- cbind.data.frame(data.frame(parameter_df),
-                                          name=paste0(parameter_name, 1:nrow(parameter_df)))
-    }else{
-      ## single parameter
-      .summary_param <- cbind.data.frame(t(parameter_df), name=paste0(parameter_name, '1'))
-      colnames(.summary_param) <- make.names(colnames(.summary_param))
-    }
-  
-    plt <- (ggplot(.summary_param, aes(x=name, y=`Estimate`))+
-              geom_point()+
-              geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
-    if(plot){
-      print(plt)
-    }
-  
-    if(return_df){
-      return(.summary_param)
-    }else{
-=======
       plt <- plt + annotate("text", x = -Inf, y=Inf, label="not PD", vjust=1, hjust=-.2)+geom_point(col='red')
       if(plot) print(plt)
     }else{
@@ -1750,7 +1662,6 @@ plot_estimates_TMB <- function(TMB_obj, parameter_name, return_df=F, plot=T, ver
     if(return_df){
       return(.summary_param)
     }else{
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
       return(plt)
     }
   }
@@ -1963,8 +1874,6 @@ split_matrix_in_half <- function(x){
        x[(1+(nrow(x)/2)):nrow(x),])
 }
 
-<<<<<<< HEAD
-=======
 
 give_min_pert <- function(idx_sp, list_runs=diagRE_DMDL_nonexo_SP, logR_names_vec=logR_nonexo_notsorted_SP){
   .betas_SP <- data.frame(plot_betas(list_runs[[idx_sp]], names_cats= logR_names_vec[[idx_sp]],
@@ -2283,4 +2192,25 @@ comparison_randomintercepts_models <- function(model_fullRE_DMSL_list, model_dia
 give_first_col <- function(i){
   if(is.null(dim(i))){i[1]}else{i[,1]}
 }
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
+
+give_pairs_with_mvn <- function(mat_mvn){
+  require(car)
+  dataEllipse(mat_mvn[,1], mat_mvn[,2], levels=c(0.95), xlim=c(min(mat_mvn[,1])-1,max(mat_mvn[,1])+1),
+              ylim=c(min(mat_mvn[,2])-1,max(mat_mvn[,2])+1))
+}
+
+remove_all_NA <- function(i) i[!(colSums(apply(i, 1, is.na)) > 0),]
+
+give_pairs_with_mvn_wrapper <- function(exposures_arg, zero_to_NA=F){
+  if(zero_to_NA){
+    exposures_arg[exposures_arg == 0] <- NA
+  }
+  par(mfrow=c(ncol(exposures_arg), ncol(exposures_arg)), mar=c(0,0,0,0))
+  for(ii in 1:ncol(exposures_arg)){
+    for(jj in 1:ncol(exposures_arg)){
+      if(ii != jj){
+        give_pairs_with_mvn(remove_all_NA(exposures_arg[,c(ii, jj)]))
+      }else{plot.new()}
+    }
+  }
+}
