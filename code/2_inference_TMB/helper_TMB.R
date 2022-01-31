@@ -1155,9 +1155,13 @@ give_amalgamated_exposures_TMBobj = function(sig_obj, list_groupings){
 }
   
 
-give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
+give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove, remove_zero_rows=T){
   sig_obj$Y = sig_obj$Y[,!(colnames(sig_obj$Y) %in% sigs_to_remove)]
-  keep_obs = rowSums(sig_obj$Y) > 0
+  if(remove_zero_rows){
+    keep_obs = rowSums(sig_obj$Y) > 0
+  }else{
+    keep_obs <- 1:nrow(sig_obj$Y)
+  }
   sig_obj$Y = sig_obj$Y[keep_obs,]
   sig_obj$x = sig_obj$x[keep_obs,]
   sig_obj$z = sig_obj$z[keep_obs,]
@@ -1165,12 +1169,33 @@ give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
 }
 
 give_subset_samples_TMBobj = function(sig_obj, samples_to_remove){
-  keep_samps <- !(rownames(sig_obj$Y) %in% samples_to_remove)
+  if(is.null(rownames(sig_obj$Y))){
+    keep_samps <- (1:nrow(sig_obj$Y))[-samples_to_remove]
+  }else{
+    keep_samps <- !(rownames(sig_obj$Y) %in% samples_to_remove)
+  }
   sig_obj$Y = sig_obj$Y[keep_samps,]
   sig_obj$x = sig_obj$x[keep_samps,]
   sig_obj$z = sig_obj$z[keep_samps,]
   sig_obj$z <- sig_obj$z[,colSums(sig_obj$z)>0]
+  sig_obj$num_individuals <- ncol(sig_obj$z)
   return(sig_obj)
+}
+
+TMBobj_partialILR_remove_single_obs <- function(sig_obj){
+  which_remove <- rowSums(sig_obj$Y == 0) >= (ncol(sig_obj$Y)-1)
+  give_subset_samples_TMBobj(sig_obj, rownames(sig_obj$Y)[which_remove])
+}
+
+give_subset_samples_TMBobj_2 <- function(TMB_data_obj, selected_rows_obs){
+  ## very similar to give_subset_samples_TMBobj, but with samples to keep, not to remove
+  TMB_data_obj$Y <- TMB_data_obj$Y[selected_rows_obs,]
+  TMB_data_obj$n <- length(selected_rows_obs)
+  TMB_data_obj$x <- TMB_data_obj$x[selected_rows_obs,]
+  TMB_data_obj$z <- TMB_data_obj$z[selected_rows_obs,]
+  TMB_data_obj$z <- TMB_data_obj$z[,colSums(TMB_data_obj$z >= 1)]
+  TMB_data_obj$num_individuals <- ncol(TMB_data_obj$z)
+  return(TMB_data_obj)
 }
 
 normalise_rw <- function(x){
@@ -2166,4 +2191,26 @@ comparison_randomintercepts_models <- function(model_fullRE_DMSL_list, model_dia
 
 give_first_col <- function(i){
   if(is.null(dim(i))){i[1]}else{i[,1]}
+}
+
+give_pairs_with_mvn <- function(mat_mvn){
+  require(car)
+  dataEllipse(mat_mvn[,1], mat_mvn[,2], levels=c(0.95), xlim=c(min(mat_mvn[,1])-1,max(mat_mvn[,1])+1),
+              ylim=c(min(mat_mvn[,2])-1,max(mat_mvn[,2])+1))
+}
+
+remove_all_NA <- function(i) i[!(colSums(apply(i, 1, is.na)) > 0),]
+
+give_pairs_with_mvn_wrapper <- function(exposures_arg, zero_to_NA=F){
+  if(zero_to_NA){
+    exposures_arg[exposures_arg == 0] <- NA
+  }
+  par(mfrow=c(ncol(exposures_arg), ncol(exposures_arg)), mar=c(0,0,0,0))
+  for(ii in 1:ncol(exposures_arg)){
+    for(jj in 1:ncol(exposures_arg)){
+      if(ii != jj){
+        give_pairs_with_mvn(remove_all_NA(exposures_arg[,c(ii, jj)]))
+      }else{plot.new()}
+    }
+  }
 }
