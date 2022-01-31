@@ -10,9 +10,10 @@ if(local){
   ## multiple runs
   # generation = "GenerationJnorm"
   # generation = "GenerationK"
-  # generation = "GenerationK2"
+  # generation = "GenerationK2"weightedaccuracy_with_d_boxplot.pdf
   # generation = "generationFnorm"
   # generation = "GenerationCnorm"
+  generation = "GenerationJnorm" ##20220131
   # generation = "GenerationJnorm2"
   # generation = "GenerationJnorm3"
   # generation = "GenerationJnormTwoLambdas"
@@ -23,7 +24,7 @@ if(local){
   # generation = "GenerationJnormBTwoLambdasOneChangingBeta"
   # generation = "GenerationMixturePCAWG"
   # generation = "GenerationMixturefewersignaturesPCAWG"
-  generation = "GenerationMixturefewersignaturespairedKidneyRCCPCAWG"
+  # generation = "GenerationMixturefewersignaturespairedKidneyRCCPCAWG"
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -137,7 +138,6 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
                                                 rownames(runs_diagREDM)),])
 
 sort(unique(gsub("\\..*","",rownames(joint_df))))
-
 
 # if(generation %in% c( "GenerationMixturefewersignaturesPCAWG")){
 #   for(col_beta_gamma in colnames(joint_df)[grepl('beta_gamma_shape', colnames(joint_df))]){
@@ -592,6 +592,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
                      # )+
     scale_color_manual(values=colours_models)+guides(col=FALSE, lty='none')+
     ggtitle(gsub("Generation", "", gsub("generation", "", generation)))#+facet_wrap(.~model)
+    # ggtitle(generation)#+facet_wrap(.~model)
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_names.pdf"),
          height = 3.0, width = 3.5)
   ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model,
@@ -1081,39 +1082,39 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   # table(gsub(".*_", "", rownames(runs_fullREM0)))
   # 
   # length(runs_ttest_props)
-  # # ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
-  # #   scale_color_manual(values=colours_models)+guides(col=FALSE)+ggtitle(generation)+
-  # #   geom_label_repel(data = varying_n_all_converged %>% dplyr::filter(n == max(n)),
-  # #              aes(x=n, y=WeightedAccuracy, label=model), alpha=0.6, size=3)
-  # # ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_annotated.pdf"),
-  # #        height = 3.0, width = 4.0)
+  # ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
+  #   scale_color_manual(values=colours_models)+guides(col=FALSE)+ggtitle(generation)+
+  #   geom_label_repel(data = varying_n_all_converged %>% dplyr::filter(n == max(n)),
+  #              aes(x=n, y=WeightedAccuracy, label=model), alpha=0.6, size=3)
+  # ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_annotated.pdf"),
+  #        height = 3.0, width = 4.0)
   # # 
   # # ggplot(varying_d, aes(x=model, y = AUC, group=model, col=d))+geom_boxplot()+geom_jitter()+theme_bw()
   # # ggplot(varying_n, aes(x=model, y = AUC, group=model, col=n))+geom_boxplot()+geom_jitter()+theme_bw()
   # 
   # 
-  # sort_first_col_by_second <- function(x) unlist(x[order(x[,2], decreasing = T),1])
-  # sort_first_col_by_second(varying_n %>% dplyr::group_by(model) %>% dplyr::summarise(median(WeightedAccuracy)))
+  sort_first_col_by_second <- function(x) unlist(x[order(x[,2], decreasing = T),1])
+  sort_first_col_by_second(varying_n %>% dplyr::group_by(model) %>% dplyr::summarise(median(WeightedAccuracy)))
   # 
-  # ggplot(varying_n, aes(x=factor(model,
-  #                                levels=sort_first_col_by_second(varying_n %>%
-  #                                        dplyr::group_by(model) %>%
-  #                                        dplyr::summarise(median(WeightedAccuracy, na.rm = T)))),
-  #                       y = WeightedAccuracy, group=model, col=model))+geom_boxplot()+geom_jitter()+theme_bw()+
-  #   scale_color_manual(values=colours_models)+ggtitle(generation)+guides(col=FALSE)+
-  #   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
-  # ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_n_boxplot.pdf"),
-  #        height = 3.0, width = 4)
-  # 
-  # ggplot(varying_d, aes(x=factor(model,
-  #                                levels=sort_first_col_by_second(varying_d %>%
-  #                                                                  dplyr::group_by(model) %>%
-  #                                                                  dplyr::summarise(median(WeightedAccuracy, na.rm = T)))),
-  #                       y = WeightedAccuracy, group=model, col=model))+geom_boxplot()+geom_jitter()+theme_bw()+
-  #   scale_color_manual(values=colours_models)+ggtitle(generation)+guides(col=FALSE)+
-  #   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
-  # ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_d_boxplot.pdf"),
-  #        height = 3.0, width = 4)
+  ggplot(varying_n, aes(x=factor(model,
+                                 levels=sort_first_col_by_second(varying_n %>%
+                                         dplyr::group_by(model) %>%
+                                         dplyr::summarise(median(WeightedAccuracy, na.rm = T)))),
+                        y = WeightedAccuracy, group=model, col=model))+geom_boxplot()+geom_jitter()+theme_bw()+
+    scale_color_manual(values=colours_models)+ggtitle(generation)+guides(col=FALSE)+
+    theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_n_boxplot.pdf"),
+         height = 3.0, width = 4)
+
+  ggplot(varying_d, aes(x=factor(model,
+                                 levels=sort_first_col_by_second(varying_d %>%
+                                                                   dplyr::group_by(model) %>%
+                                                                   dplyr::summarise(median(WeightedAccuracy, na.rm = T)))),
+                        y = WeightedAccuracy, group=model, col=model))+geom_boxplot()+geom_jitter()+theme_bw()+
+    scale_color_manual(values=colours_models)+ggtitle(generation)+guides(col=FALSE)+
+    theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_d_boxplot.pdf"),
+         height = 3.0, width = 4)
   # 
   # 
   # ##'  only for GenerationJnormTwoLambdasOneChangingBeta: looking at individual betas

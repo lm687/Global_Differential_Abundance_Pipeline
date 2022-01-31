@@ -139,7 +139,7 @@ if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefe
     i
   })
 }else{
-  if(grepl('Mixture', generation)){
+  if(grepl('Mixture', opt$dataset_generation)){
     stop('Are you sure you are using probabilities beta_gamma_shape for and not log-ratios?\n')
   }
 }
