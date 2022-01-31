@@ -88,10 +88,15 @@ echo "beta_gamma_shape_generationC:
 - 0.0005
 - 0.00075
 <<<<<<< HEAD
+<<<<<<< HEAD
 - 0.001
 - 0.002
 =======
 >>>>>>> 0e79d9d627c98691d22abede410a2d9e060b8d0b
+=======
+- 0.001
+- 0.002
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
 - 0.005
 - 0.001
 - 0.002
@@ -225,7 +230,9 @@ echo "simulation_lambda_generationF:
 - 50
 - 80
 " >> $name_config
-
+ 
+##########################################################################################
+##########################################################################################
 
 ## Generation G of simulations
 echo "\nsimulation_n_generationG:
@@ -258,6 +265,166 @@ echo "simulation_lambda_generationG:
 - 80
 " >> $name_config
 
+##########################################################################################
+##########################################################################################
+
+## Generation Mixture1 of simulations
+echo "\nsimulation_n_generationMixture1:
+- 30
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_generationMixture1:
+- 0
+- 0.1
+- 0.3
+" >> $name_config
+
+echo "simulation_d_generationMixture1:
+- 3
+- 4
+- 5
+" >> $name_config
+
+echo "simulation_nlambda_generationMixture1:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_generationMixture1:
+- 0
+" >> $name_config
+
+##########################################################################################
+##########################################################################################
+
+## Generation GenerationJnormBTwoLambdasOneChangingBeta of simulations
+echo "\nsimulation_n_GenerationJnormBTwoLambdasOneChangingBeta:
+- 20
+- 30
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationJnormBTwoLambdasOneChangingBeta:
+- 0
+- 0.01
+- 0.1
+- 0.2
+- 0.3
+- 0.6
+- 4
+" >> $name_config
+
+echo "simulation_d_GenerationJnormBTwoLambdasOneChangingBeta:
+- 3
+- 4
+- 5
+- 6
+" >> $name_config
+
+echo "simulation_nlambda_GenerationJnormBTwoLambdasOneChangingBeta:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_GenerationJnormBTwoLambdasOneChangingBeta:
+- 80
+" >> $name_config
+
+
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturePCAWG:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturePCAWG:
+- -12
+- -10
+- -8
+- -4
+- -2
+" >> $name_config
+
+echo "simulation_d_GenerationMixturePCAWG:
+- 7
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturePCAWG:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturePCAWG:
+- 80
+" >> $name_config
+
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturefewersignaturesPCAWG:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturefewersignaturesPCAWG:
+- -999
+- -12
+- -10
+- -8
+- -4
+- -2
+" >> $name_config
+
+echo "simulation_d_GenerationMixturefewersignaturesPCAWG:
+- 4
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturefewersignaturesPCAWG:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturefewersignaturesPCAWG:
+- 80
+" >> $name_config
+
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturefewersignaturespairedstomachPCAWG:
+- -999
+- -12
+- -10
+- -8
+- -4
+- -2
+- -1
+- 0
+- 4
+- 8
+- 12
+" >> $name_config
+
+echo "simulation_d_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 4
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturefewersignaturespairedstomachPCAWG:
+- 80
+" >> $name_config
 
 ## Generation Mixture1 of simulations
 echo "\nsimulation_n_generationMixture1:

@@ -32,6 +32,8 @@ all_runs_m_grouped_d = all_runs_m %>%
   mutate(sensitivity=sum(type == 'TRUETRUE')/sum(type %in% c('TRUETRUE', 'TRUEFALSE')),
          specificity=sum(type == 'FALSEFALSE')/sum(type %in% c('FALSETRUE', 'FALSEFALSE')))
 
+cat('Line 35\n')
+
 ggplot(all_runs_m_grouped_n, aes(x=1-specificity, y=sensitivity, col=n, shape=(L1), label=interaction(L1, L2)))+
   geom_point()+facet_wrap(.~L2)+geom_label_repel()+
   scale_color_jcolors_contin("pal3", reverse = TRUE, bias = 2.25)+labs(col = "Number of samples", shape="Simulation type")+

@@ -167,3 +167,17 @@ par(mfrow=c(1,2), mar=c(0,0,0,0))
 sapply(split_matrix_in_half(W_SIGMAd_OVERDISPd), plot_ternary, legend_on=F, plot_points=F)
 dev.off()
 
+<<<<<<< HEAD
+=======
+
+## why we need two betas
+beta[2,] <- c(0,0)
+logR <- x %*% beta + z %*% u
+probs <- softmax(cbind(logR, 0))
+alpha_OVERDISPc <- give_DM(rep(c(800,30), each=n)*probs, Nm = rep(90, n*2))
+pdf(file = "../../../results/models_explanatory/DM_parameters_and_identifiability_why_differential_precision.pdf", heigh=3)
+par(mfrow=c(1,2), mar=c(0,0,0,0))
+sapply(split_matrix_in_half(alpha_OVERDISPc), plot_ternary, legend_on=F, plot_points=F)
+dev.off()
+
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6

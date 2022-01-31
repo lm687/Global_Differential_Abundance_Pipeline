@@ -4,8 +4,13 @@ setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 library(pheatmap)
 library(ComplexHeatmap)
 
+<<<<<<< HEAD
 x <- read.table("../../../../data/cosmic/active_signatures_PCAWGpaper.txt")
 x2 <- read.table("../../../../data/restricted/pcawg/PCAWG_sigProfiler_SBS_signatures_in_samples.csv", sep = ",", hea=T) ## for the name of the cancer types in correct upper/lower case
+=======
+x <- read.table("../../../data/cosmic/active_signatures_PCAWGpaper.txt")
+x2 <- read.table("../../../data/restricted/pcawg/PCAWG_sigProfiler_SBS_signatures_in_samples.csv", sep = ",", hea=T) ## for the name of the cancer types in correct upper/lower case
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
 x2 <- x2$Cancer.Types
 
 for(i in 1:nrow(x)){
@@ -23,7 +28,25 @@ ht <- ComplexHeatmap::Heatmap(as(x, 'matrix'), cluster_columns = F, cluster_rows
                           nrow=1
                         ))
 
+<<<<<<< HEAD
 pdf("../../../../results/exploratory/about_cosmic_sigs/active_sigs_in_PCAWG.pdf", width = 10)
 draw(ht, heatmap_legend_side = "bottom")
 dev.off()
 
+=======
+pdf("../../../results/exploratory/about_cosmic_sigs/active_sigs_in_PCAWG.pdf", width = 10)
+draw(ht, heatmap_legend_side = "bottom")
+dev.off()
+
+## co-occurrence
+co_oc <- outer(1:ncol(x), 1:ncol(x), Vectorize(function(i, j){
+  sum(x[,i] & x[,j])/(sum(sum(x[,i] & x[,j]) + sum(x[,i] & !x[,j]) ))
+}))
+colnames(co_oc) <- rownames(co_oc) <- colnames(x)
+
+x[,c('SBS8', 'SBS39')]
+
+pdf("../../../results/exploratory/about_cosmic_sigs/active_sigs_in_PCAWG_co_occurrence.pdf", width = 10, height = 10)
+pheatmap(co_oc)
+dev.off()
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6

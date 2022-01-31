@@ -26,7 +26,7 @@ give_x_matrix = function(n_times_2){
 
 rsq = function (x, y) cor(x, y) ^ 2
 
-load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/", read_directly=FALSE, old_version_creating_X_Z=F){
+load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/", read_directly=FALSE, old_version_creating_X_Z=F, load_all_sigs=F){
   if(simulation | read_directly){
     fle = ct
     print(ct)
@@ -52,11 +52,14 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
   
   if(typedata %in% c("nucleotidesubstitution1", "simulation")){
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
-  }else if(typedata == "nucleotidesubstitution3"){
+  }else if( grepl("nucleotidesubstitution3", typedata)){
     objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
+    if( typedata == 'nucleotidesubstitution3MSE' ){
+      objects_sigs_per_CT_features = lapply(objects_sigs_per_CT_features, t) ## need to transpose output of MSE contexts
+    }
   }else if(grepl("signatures", typedata)){
-    if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0)){
-      ## no active signatures
+    if(is.null(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) | (length(attr(objects_sigs_per_CT_features,"count_matrices_active")[[1]]) == 0) | load_all_sigs){
+      ## no active signatures, or we want to load all signatures
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_all")
     }else{
       objects_sigs_per_CT_features = attr(objects_sigs_per_CT_features,"count_matrices_active")
@@ -77,7 +80,13 @@ load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/"
   if(all(rownames(objects_sigs_per_CT_features[[1]]) == rownames(objects_sigs_per_CT_features[[2]]))){
     old_version_creating_X_Z = T
   }else{
-    stop('Patients in input data are rearranged. Could not create matrices X and Z')
+    if(typedata %in% c("signaturesMSE", "nucleotidesubstitution3MSE")){
+      old_version_creating_X_Z = T
+      rownames(objects_sigs_per_CT_features[[1]]) <- gsub(".consensus.20160830.somatic.snv_mnv_SUBCLONAL.vcf.gz", "", rownames(objects_sigs_per_CT_features[[1]]))
+      rownames(objects_sigs_per_CT_features[[2]]) <- gsub(".consensus.20160830.somatic.snv_mnv_SUBCLONAL.vcf.gz", "", rownames(objects_sigs_per_CT_features[[2]]))
+    }else{
+      stop('Patients in input data are rearranged. Could not create matrices X and Z')
+    }
   }
   
   if(old_version_creating_X_Z){
@@ -699,12 +708,16 @@ wald_generalised = function(v, sigma){
   pchisq(q = chisqrt_stat, df = length(v), lower.tail = FALSE)
 }
 
-wald_TMB_wrapper = function(i, verbatim=TRUE){
+wald_TMB_wrapper = function(i, verbatim=TRUE, fail_non_converged=T){
   if(typeof(i) == "character"){
     return(NA)
   }else{
     idx_beta = select_slope_2(which(names(i$par.fixed) == "beta"), verbatim=verbatim)
+<<<<<<< HEAD
     if(!i$pdHess){
+=======
+    if(!i$pdHess & fail_non_converged){
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
       ## didn't converge
       NA
     }else{
@@ -732,6 +745,7 @@ wald_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
     if(!i$pdHess){
       ## didn't converge
       NA
+<<<<<<< HEAD
     }else{
       scaled_coefs <- scale(i$par.fixed[idx_beta], center = T, scale = F)
       wald_generalised(v = as.vector(scaled_coefs),
@@ -750,6 +764,26 @@ ttest_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
       ## didn't converge
       NA
     }else{
+=======
+    }else{
+      scaled_coefs <- scale(i$par.fixed[idx_beta], center = T, scale = F)
+      wald_generalised(v = as.vector(scaled_coefs),
+                       sigma = i$cov.fixed[idx_beta,idx_beta])
+    }
+  }
+}
+
+ttest_TMB_wrapper_overdisp = function(i, verbatim=TRUE){
+  ## wald test for the overdispersion parameter
+  if(typeof(i) == "character"){
+    return(NA)
+  }else{
+    idx_beta = which(names(i$par.fixed) == "log_lambda")
+    if(!i$pdHess){
+      ## didn't converge
+      NA
+    }else{
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
       .summary <- summary(i)
       loglambdas <- python_like_select_rownames(.summary, 'log_lambda')
       mean_coefs <- loglambdas[,1]
@@ -984,6 +1018,106 @@ fill_covariance_matrix = function(arg_d, arg_entries_var, arg_entries_cov, verbo
   return(.sigma)
 }
 
+extract_sigs_TMB_obj <- function(dataset_obj_trinucleotide, subset_signatures){
+  require(mutSigExtractor)
+  if(length(subset_signatures) == 1){
+    SBS_SIGNATURE_PROFILES_V3_subset <- select(SBS_SIGNATURE_PROFILES_V3, subset_signatures)
+  }else{
+    SBS_SIGNATURE_PROFILES_V3_subset <- SBS_SIGNATURE_PROFILES_V3[,subset_signatures,]
+  }
+  dataset_obj_trinucleotide
+  
+  if(length(subset_signatures) > 1){
+    SBS_SIGNATURE_PROFILES_V3_subset = SBS_SIGNATURE_PROFILES_V3_subset[match(colnames(dataset_obj_trinucleotide$Y), rownames(SBS_SIGNATURE_PROFILES_V3_subset)),]
+  }else{
+    SBS_SIGNATURE_PROFILES_V3_subset = as(SBS_SIGNATURE_PROFILES_V3_subset[match(colnames(dataset_obj_trinucleotide$Y), rownames(SBS_SIGNATURE_PROFILES_V3_subset)),], 'matrix')
+    colnames(SBS_SIGNATURE_PROFILES_V3_subset) <- subset_signatures
+    rownames(SBS_SIGNATURE_PROFILES_V3_subset) <- colnames(dataset_obj_trinucleotide$Y)
+  }
+  
+  dataset_obj_trinucleotide$Y[dataset_obj_trinucleotide$x[,2] == 0,]
+  
+  sigs <- fitToSignatures(
+    mut.context.counts=(dataset_obj_trinucleotide$Y), 
+    signature.profiles=SBS_SIGNATURE_PROFILES_V3_subset
+  )
+  
+  dataset_obj_new <- dataset_obj_trinucleotide
+  dataset_obj_new$Y = round(sigs)
+  return(dataset_obj_new)
+}
+
+compare_signaturefit_to_data <- function(tmb_obj_exposures, tmb_obj_trinucleotide, signature_defs, only_cosim=F){
+  require(lsa)
+  signature_defs
+  signature_defs <- signature_defs[match( colnames(tmb_obj_trinucleotide$Y), rownames(signature_defs)),]
+  
+  reconstructed_trinuc <- as(tmb_obj_exposures$Y, 'matrix') %*% t(as(signature_defs[,colnames(tmb_obj_exposures$Y)], 'matrix'))
+  
+  if(only_cosim){
+    cossim <- ( lsa::cosine(x = normalise_rw(colSums(tmb_obj_trinucleotide$Y)), y = normalise_rw(colSums(reconstructed_trinuc))))
+    return(cossim)
+  }else{
+    
+    rss <- sum( (tmb_obj_trinucleotide$Y - reconstructed_trinuc)**2)
+    rss_max <- max(rowSums( (tmb_obj_trinucleotide$Y - reconstructed_trinuc)**2))
+    rss_norm <- sum( (normalise_rw(tmb_obj_trinucleotide$Y) - normalise_rw(reconstructed_trinuc))**2)
+    rss_norm_max <- max(rowSums( (normalise_rw(tmb_obj_trinucleotide$Y) - normalise_rw(reconstructed_trinuc))**2))
+    cossim <- ( lsa::cosine(x = normalise_rw(colSums(tmb_obj_trinucleotide$Y)), y = normalise_rw(colSums(reconstructed_trinuc))))
+    
+    return(list(rss=rss, cossim=cossim, rss_max=rss_max, rss_norm=rss_norm, rss_norm_max=rss_norm_max))
+  }
+}
+
+
+
+give_plot_fits_wrapper <- function(list_tmb_obj_exposures,  tmb_obj_trinucleotide, signature_defs){
+  .fits_sigs <- sapply(list_tmb_obj_exposures, function(it){
+    compare_signaturefit_to_data(it, tmb_obj_trinucleotide, signature_defs)
+  })
+  colnames(.fits_sigs) <- lapply(list_tmb_obj_exposures, function(i) paste(colnames(i$Y), collapse = '_'))
+  .a <- t(.fits_sigs)
+
+  .a <- data.frame(RSS=unlist(.a[,'rss']), CosSim=unlist(.a[,'cossim']), rss_max=unlist(.a[,'rss_max']),
+                   rss_norm=unlist(.a[,'rss_norm']), rss_norm_max=unlist(.a[,'rss_norm_max']))
+  nm <- gsub("SBS", "", rownames(.a))
+  .a <- (melt(.a))
+  .a$sig <- nm
+  .a$sig <- factor(.a$sig, levels=nm)
+  ggplot(.a, aes(x=sig, y=value, col=sig))+facet_wrap(.~variable, scales="free_y")+geom_point()+
+    geom_line(aes(group=1), col='black')+theme_bw()+
+    theme(legend.position = "bottom")+
+    theme(axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank())+
+    #guides(col=guide_legend(ncol=1,byrow=TRUE))+
+    labs(col='Signature subset')
+}
+
+give_ggplot_sig_cor_TMB <- function(tmb_obj_1, tmb_obj_2, ct_it='', no_guides=F){
+  mat1 <- tmb_obj_1$Y
+  mat2 <- tmb_obj_2$Y
+  mat2 <- mat2[,remove_na(match(colnames(mat1), colnames(mat2)))]
+  mat1 <- mat1[,remove_na(match(colnames(mat2), colnames(mat1)))]
+  
+  if(! not_same_sigs){
+    if(nrow(mat1) != nrow(mat2)){
+      return(ggplot()+ggtitle('Not the same number of samples\n'))
+    }
+    title=paste0('All sigs\n', ct_it, '\n Not the same number of sigs')
+  }else{
+    title <- paste0('All sigs\n', ct_it)
+  }
+  
+  df_MSE_comparison <- data.frame(MSE=as.vector(mat1), QP=as.vector(mat2),
+                                  sig=rep(colnames(mat1), each=nrow(mat1)))
+  plt <- ggplot(df_MSE_comparison, aes(x=MSE, y=QP, col=sig))+
+    geom_abline(intercept = 0, slope = 1, lty='dashed')+
+    geom_point()+theme_bw()+ggtitle(title)+labs(x='Exposures method 1', y='Exposures method 2', col='Signatures')
+  if(no_guides) plt+ guides(col=F)
+  print(plt)
+}
+
 give_subset_sigs = function(sig_obj, sigs_to_remove){
   
   if(typedata %in% c("nucleotidesubstitution1", "nucleotidesubstitution3", "simulation")){
@@ -1052,6 +1186,15 @@ give_subset_sigs_TMBobj = function(sig_obj, sigs_to_remove){
   sig_obj$Y = sig_obj$Y[keep_obs,]
   sig_obj$x = sig_obj$x[keep_obs,]
   sig_obj$z = sig_obj$z[keep_obs,]
+  return(sig_obj)
+}
+
+give_subset_samples_TMBobj = function(sig_obj, samples_to_remove){
+  keep_samps <- !(rownames(sig_obj$Y) %in% samples_to_remove)
+  sig_obj$Y = sig_obj$Y[keep_samps,]
+  sig_obj$x = sig_obj$x[keep_samps,]
+  sig_obj$z = sig_obj$z[keep_samps,]
+  sig_obj$z <- sig_obj$z[,colSums(sig_obj$z)>0]
   return(sig_obj)
 }
 
@@ -1199,7 +1342,7 @@ is_slope = function(v){
   bool_isbetaslope
 }
 
-give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, ...){
+give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, plot=T, ...){
   a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')
   b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')
   c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')
@@ -1211,15 +1354,23 @@ give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2
     d <- d+guides(fill=F)
   }
   if(legend_bottom){
-    a <- a+theme(legend.position='bottom', legend.text = element_text(size = 6))
-    b <- b+theme(legend.position='bottom', legend.text = element_text(size = 6))
-    c <- c+theme(legend.position='bottom', legend.text = element_text(size = 6))
-    d <- d+theme(legend.position='bottom', legend.text = element_text(size = 6))
+    a <- a+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
+    b <- b+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
+    c <- c+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
+    d <- d+theme(legend.position='bottom', legend.text = element_text(size = 6), legend.key.size = unit(.2, 'cm'))
   }
   if(only_normalised){
-    grid.arrange(c, d, top=title, nrow=nrow_plot)
+    if(plot){
+      grid.arrange(c, d, top=title, nrow=nrow_plot)
+    }else{
+      cowplot::as_grob(grid.arrange(c, d, top=title, nrow=nrow_plot))
+    }
   }else{
-    grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+    if(plot){
+      grid.arrange(a, b, c, d, top=title, nrow=nrow_plot)
+    }else{
+      cowplot::as_grob(grid.arrange(a, b, c, d, top=title, nrow=nrow_plot))
+    }
   }
 }
 
@@ -1337,7 +1488,7 @@ give_interval_plots = function(df_rank, data_object, loglog=F){
   return(a)
 }
 
-give_interval_plots_2 = function(df_rank, data_object,loglog=F, title, theme_bw=F){
+give_interval_plots_2 = function(df_rank, data_object,loglog=F, title, theme_bw=T){
   xx = melt(df_rank, id.vars=c('sorted_value', 'rank_number'))
   xx_summary = xx %>% group_by(rank_number) %>% mutate(min_interval=quantile(sorted_value, probs = c(0.025)),
                                                        max_interval=quantile(sorted_value, probs = c(0.975)),
@@ -1372,7 +1523,11 @@ give_betas <- function(TMB_obj){
 
 
 plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
+<<<<<<< HEAD
                        line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL){
+=======
+                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F, sort_by_slope=F){
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1400,10 +1555,24 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
       }
       .summary_betas$LogR = names_cats[.summary_betas$LogR]
     }
+<<<<<<< HEAD
     plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
     
     if(line_zero) plt <- plt + geom_hline(yintercept = 0, lty='dashed', col='blue')
       
+=======
+    if(sort_by_slope){
+      .summary_betas$LogR <- factor( .summary_betas$LogR,
+                                     levels=.summary_betas[.summary_betas$type_beta == 'Slope','LogR'][order(.summary_betas[.summary_betas$type_beta == 'Slope','Estimate'])])
+    }
+    plt <- ggplot(.summary_betas, aes(x=LogR, y=`Estimate`))
+    
+    if(line_zero) plt <- plt + geom_hline(yintercept = 0, lty='dashed', col='blue')
+    if(add_median) { plt <- plt +
+      geom_hline(yintercept = median(c(0,.summary_betas$Estimate[.summary_betas$type_beta == 'Slope'])),
+                 lty='dashed', col='red') }
+    
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
     plt <- plt +
       geom_point()+
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
@@ -1429,6 +1598,7 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     }
     
     if(!TMB_obj$pdHess){
+<<<<<<< HEAD
       plt <- plt + annotate("text", x = 0, y=.5, label="not PD")+geom_point(col='red')
       if(plot) print(plt)
     }else{
@@ -1504,6 +1674,83 @@ plot_estimates_TMB <- function(TMB_obj, parameter_name, return_df=F, plot=T, ver
     if(return_df){
       return(.summary_param)
     }else{
+=======
+      plt <- plt + annotate("text", x = -Inf, y=Inf, label="not PD", vjust=1, hjust=-.2)+geom_point(col='red')
+      if(plot) print(plt)
+    }else{
+      if(plot) print(plt)
+    }
+  }
+  
+  if(return_df){
+    .summary_betas
+  }else{
+    if(return_plot & return_df){stop('<return_plot=T> and <return_df=T> are incompatible')}
+    plot_list <- list(plt)
+    class(plot_list) <- c("quiet_list", class(plot_list))
+    if(return_plot){
+      return(cowplot::as_grob(plt))
+    }else if(return_ggplot){
+      return(plt)
+    }
+  }
+}
+
+
+plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
+  
+  lambdas_df <- python_like_select_rownames(summary(TMB_obj), 'log_lambda')
+  if(!is.null(dim(lambdas_df))){
+    .summary_lambda <- cbind.data.frame(data.frame(lambdas_df),
+                                        name=c('Lambda 1', 'Lambda 2'))
+  }else{
+    .summary_lambda <- cbind.data.frame(t(lambdas_df), name='Lambda 1')
+    colnames(.summary_lambda) <- make.names(colnames(.summary_lambda))
+  }
+  
+  plt <- (ggplot(.summary_lambda, aes(x=name, y=`Estimate`))+
+            geom_point()+
+            geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
+  if(plot){
+    print(plt)
+  }
+  
+  if(return_df){
+    return(.summary_lambda)
+  }else{
+    return(plt)
+  }
+}
+
+plot_estimates_TMB <- function(TMB_obj, parameter_name, return_df=F, plot=T, verbatim=T){
+  if(verbatim) cat('Consider the other functions <plot_betas> and <plot_lambdas>\n')
+  
+  
+  parameter_df <- python_like_select_rownames(summary(TMB_obj), parameter_name)
+  if(length(parameter_df) == 0){
+    ## there is no parameter
+    return(cbind.data.frame(Estimate=NA, `Std..Error`=NA, name=NA))
+  }else{
+    if(!is.null(dim(parameter_df))){
+      .summary_param <- cbind.data.frame(data.frame(parameter_df),
+                                          name=paste0(parameter_name, 1:nrow(parameter_df)))
+    }else{
+      ## single parameter
+      .summary_param <- cbind.data.frame(t(parameter_df), name=paste0(parameter_name, '1'))
+      colnames(.summary_param) <- make.names(colnames(.summary_param))
+    }
+  
+    plt <- (ggplot(.summary_param, aes(x=name, y=`Estimate`))+
+              geom_point()+
+              geom_errorbar(aes(ymin=`Estimate`-`Std..Error`, ymax=`Estimate`+`Std..Error`), width=.1)+theme_bw())
+    if(plot){
+      print(plt)
+    }
+  
+    if(return_df){
+      return(.summary_param)
+    }else{
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
       return(plt)
     }
   }
@@ -1517,102 +1764,100 @@ give_length_cov <- function(dim1_covmat){
 give_sim_from_estimates <- function(ct, typedata = "signatures", sigs_to_remove="", model="sparseRE_DM",
                                     bool_nonexo=TRUE, bool_give_PCA, sig_of_interest='SBS8',
                                     path_to_data= "../../../data/", tmb_object=NULL, obj_data=NULL,
-                                    nrow_pca_plot=2){
+                                    nrow_pca_plot=2, integer_overdispersion_param=1){
+  warning('<fullRE_DMSL> and <fullRE_DM> used be to used interchangeably')
   
   if(is.null(tmb_object)){
     if(model == "fullRE_M"){
       if(!bool_nonexo)    list_estimates <- fullRE_M
       if(bool_nonexo)    list_estimates <- fullRE_M_nonexo
-    }else if(model == "fullRE_DM"){
+    }else if(model == "fullRE_DMSL"){
       if(!bool_nonexo)    list_estimates <- fullRE_DMSL
       if(bool_nonexo)    list_estimates <- fullRE_DMSL_nonexo
     }else if(model == "sparseRE_DM"){
       if(bool_nonexo)    list_estimates <- sparseRE_DMSL_nonexo
+    }else{
+      stop('Add <tmb_object> or specify another model')
     }
   }else{
     list_estimates <- list()
     list_estimates[[ct]] <- tmb_object
   }
-  
+
   if(is.null(obj_data)){
     warning('WARNING! Here I am sorting the columns of TMB, I should not in all cases. Specify <obj_data> if needed')
     obj_data <- sort_columns_TMB(give_subset_sigs_TMBobj(load_PCAWG(ct = ct, typedata = typedata, path_to_data =path_to_data),
                                                        sigs_to_remove = sigs_to_remove))
   }
   dmin1 <- ncol(obj_data$Y)-1
-  cov_vec = rep(0, (dmin1**2-dmin1)/2)
-  
+
   if(model %in% c("fullRE_M", "fullRE_DM", "fullRE_DMSL")){
-    cov_vec = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE')
-    ###**** I AM NOT SURE ABOUT THIS BIT BELOW! ARE THEY SD OR VAR???*****###
-    ### implementing them as though they were sd ###
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+    ### implementing var_vec as though they were sd ###
+    cov_mat = L_to_cov(python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_par_RE'), d=dmin1)
   }else if(model == "sparseRE_DM"){
+    cov_vec = rep(0, (dmin1**2-dmin1)/2)
     cov_vec[as.numeric(strsplit(subset_sigs_sparse_cov_idx_nonexo[subset_sigs_sparse_cov_idx_nonexo$V1 == ct,"V2"], ',')[[1]])] = python_like_select_name(list_estimates[[ct]]$par.fixed, 'cov_RE_part')
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
-  }else if(model %in% c("diagRE_M", "diagRE_DM", "diagRE_DMSL")){
+    cov_mat = L_to_cov(cov_vec, d=dmin1)
+  }else if(model %in% c("diagRE_M", "diagRE_DMSL", "diagRE_DMDL")){
     cov_vec = rep(0, give_length_cov(length(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))))
-    var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
-    var_vec_v2 = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))
+    cov_mat = L_to_cov(cov_vec, d=dmin1)
   }else{
     stop('Specify correct <model>')
   }
-  
-  cov_mat <- fill_covariance_matrix(arg_d = dmin1,
-                                    arg_entries_var = var_vec,
-                                    arg_entries_cov = cov_vec)
-  cov_mat_v2 <- fill_covariance_matrix(arg_d = dmin1,
-                                       arg_entries_var = var_vec_v2,
-                                       arg_entries_cov = cov_vec)
-  # cov_matb <- fill_covariance_matrix(arg_d = dmin1,
-  #                                   arg_entries_var = var_vec**2,
-  #                                   arg_entries_cov = cov_vec)
-  
+  var_vec = exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'logs_sd_RE'))**2
+  diag(cov_mat) <- var_vec
+
   beta_mat = matrix(python_like_select_name(list_estimates[[ct]]$par.fixed, 'beta'), nrow=2)
-  
+
   n_sim = 1000
   x_sim = cbind(1, rep(c(0,1), n_sim))
   u_sim = mvtnorm::rmvnorm(n = n_sim, mean = rep(0,dmin1), sigma = cov_mat)
-  
+
   theta = x_sim %*% beta_mat + (give_z_matrix(n_sim*2)) %*% u_sim
-  
+
   if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
-    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))
+    ## single overdispersion parameter
+    alpha = softmax(cbind(theta, 0))*exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))*integer_overdispersion_param
   }else if(model %in% c("fullRE_M")){
+    ## no overdispersion parameter
     alpha = softmax(cbind(theta, 0))
+  }else if(model %in% c('fullRE_DMDL', 'diagRE_DMDL')){
+    ## two overdispersion parameters
+    alpha = softmax(cbind(theta, 0))*c(exp(python_like_select_name(list_estimates[[ct]]$par.fixed, 'log_lambda'))[rep(c(1,2), each=n_sim)]*integer_overdispersion_param)
   }else{
-    stop('Check softmax step')
+      stop('Check softmax step')
   }
-  
-  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL')){
+
+  if(model %in% c('sparseRE_DM', 'fullRE_DM', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DMDL')){
     probs = t(apply(alpha, 1, MCMCpack::rdirichlet, n=1))
   }else if(model %in% c("fullRE_M")){
     probs = alpha
   }else{
       stop('Check probabilities step')
     }
-  
+
   probs_obs = normalise_rw(obj_data$Y)
   all_probs = rbind(probs_obs, probs)
-  
+
   if(bool_give_PCA){
+    # pca <- prcomp(as(compositions::clr(all_probs), 'matrix'))
     pca <- prcomp(all_probs)
     
     if(! (sig_of_interest %in% colnames(all_probs))){stop('Specify a <sig_of_interest> present in the dataset')}
-    
+
     df_pca <- cbind.data.frame(pca=pca$x[,1:2], col=c(rep('Observed', nrow(probs_obs)), rep('Simulated',nrow(probs))),
                                sig_of_interest=all_probs[,sig_of_interest],
                                group=c(rep(c('early','late')[obj_data$x[,2]+1]),
                                        rep(c('early','late'), n_sim)))
     return(list(df_pca, ggplot(df_pca, aes(x=pca.PC1, y=pca.PC2, col=sig_of_interest))+labs(col=sig_of_interest)+
-                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group),nrow=nrow_pca_plot)))
+                  geom_point(alpha=0.7)+facet_wrap(.~interaction(col,group),nrow=nrow_pca_plot)+theme_bw()))
   }else{
     return(all_probs)
   }
   
 }
+
+select_self <- function(i) i[i]
 
 vector_cats_to_logR <- function(i){paste0(i[-length(i)], '/', i[length(i)])}
 
@@ -1718,3 +1963,324 @@ split_matrix_in_half <- function(x){
        x[(1+(nrow(x)/2)):nrow(x),])
 }
 
+<<<<<<< HEAD
+=======
+
+give_min_pert <- function(idx_sp, list_runs=diagRE_DMDL_nonexo_SP, logR_names_vec=logR_nonexo_notsorted_SP){
+  .betas_SP <- data.frame(plot_betas(list_runs[[idx_sp]], names_cats= logR_names_vec[[idx_sp]],
+                                     return_df=T, plot=F))
+  
+  .slopes_minpert_SP <- .betas_SP %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+  # print(.slopes_minpert_SP)
+  ## check if the CI of the betas touches this median value
+  .summary_betas_slope_SP <- python_like_select_rownames(summary(list_runs[[idx_sp]]), 'beta')[c(F,T),]
+  nrow(.summary_betas_slope_SP)
+  
+  minimal_change_baseline <- median(c(.slopes_minpert_SP, 0))
+  # print(.summary_betas_slope_SP)
+  # print(logR_nonexo_notsorted_SP[[idx_sp]])
+  # print(dim(.summary_betas_slope_SP))
+  if(!is.null(dim(.summary_betas_slope_SP))){
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[,1],
+                                       vec_stderr=.summary_betas_slope_SP[,2],
+                                       vec_true=rep(minimal_change_baseline, nrow(.summary_betas_slope_SP)))
+  }else{
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[1],
+                                       vec_stderr=.summary_betas_slope_SP[2],
+                                       vec_true=minimal_change_baseline)
+  }
+  .params_in_ci <- sapply(1:length(.params_in_ci), function(i){
+    ## for the ones in which there is a change, say whether it's up- or down-regulated
+    if(!.params_in_ci[i]){
+      ## if there is a change: not in confidence interval
+      if(is.null(dim(.summary_betas_slope_SP))){
+        ## one-dim
+        if(.summary_betas_slope_SP[1] > minimal_change_baseline){
+          'increase'
+        }else{
+          'decrease'
+        }
+      }else{
+        ## multi-dim
+        if(.summary_betas_slope_SP[i,1] > minimal_change_baseline){
+          'increase'
+        }else{
+          'decrease'
+        }
+      }
+    }else{
+      'FALSE'
+    }
+  })
+  names(.params_in_ci) <- sapply(logR_names_vec[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
+  .baseline <- strsplit(logR_names_vec[[idx_sp]][[1]], '/')[[1]][2]
+  return(list(betas_perturbed=.params_in_ci, baseline=.baseline))
+}
+
+comparison_betas_models <- function(model_fullRE_DMSL_list, model_diagRE_DMSL_list, model_fullRE_M_list ){
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_beta_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_diagRE_DMSL <- try(python_like_select_name(model_diagRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.fixed, "beta"))
+    if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMSL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_betas <- list(x_beta_fullRE_DMSL, x_beta_diagRE_DMSL, x_beta_fullRE_M)
+      typeofs_of_betas <- sapply(list_betas, typeof)
+      if( all(typeofs_of_betas == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_betas[1] == "character"){
+          x_beta_fullRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[2] == "character"){
+          x_beta_diagRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[3] == "character"){
+          x_beta_fullRE_M <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMSL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    cbind.data.frame(rbind.data.frame(
+      cbind.data.frame(fullRE_DMSL=select_slope_2(x_beta_fullRE_DMSL),
+                       diagRE_DMSL=select_slope_2(x_beta_diagRE_DMSL),
+                       fullRE_M=select_slope_2(x_beta_fullRE_M),
+                       beta_type='Slope'),
+      cbind.data.frame(fullRE_DMSL=select_intercept(x_beta_fullRE_DMSL),
+                       diagRE_DMSL=select_intercept(x_beta_diagRE_DMSL),
+                       fullRE_M=select_intercept(x_beta_fullRE_M),
+                       beta_type='Intercept')),
+      ct=ct)
+  }
+  ))
+  
+  ## if something hasn't converged, remove the value
+  bad_ct_fullRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_fullRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples,
+                                                function(ct)  try(model_fullRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_diagRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_diagRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples, function(ct)  try(model_diagRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_fullRE_M <- c(enough_samples[sapply(enough_samples,
+                                             function(ct) (typeof(model_fullRE_M_list[[ct]])) == 'character')],
+                       enough_samples[sapply(enough_samples, function(ct)  try(model_fullRE_M_list[[ct]]$pdHess)) != "TRUE"])
+  
+  .x$fullRE_DMSL[(.x$ct %in% bad_ct_fullRE_DMSL)] = NA
+  .x$diagRE_DMSL[(.x$ct %in% bad_ct_diagRE_DMSL)] = NA
+  .x$fullRE_M[(.x$ct %in% bad_ct_fullRE_M)] = NA
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+
+comparison_betas_models2 <- function(model_fullRE_DMSL_list, model_diagRE_DMDL_list, model_fullRE_M_list ){
+  
+  ## with model_diagRE_DMDL_list instead of model_diagRE_DMSL_list
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_beta_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.fixed, "beta"))
+    x_beta_diagRE_DMDL <- try(python_like_select_name(model_diagRE_DMDL_list[[ct]]$par.fixed, "beta"))
+    x_beta_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.fixed, "beta"))
+    if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMDL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_betas <- list(x_beta_fullRE_DMSL, x_beta_diagRE_DMDL, x_beta_fullRE_M)
+      typeofs_of_betas <- sapply(list_betas, typeof)
+      if( all(typeofs_of_betas == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_betas[1] == "character"){
+          x_beta_fullRE_DMSL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[2] == "character"){
+          x_beta_diagRE_DMDL <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if(typeofs_of_betas[3] == "character"){
+          x_beta_fullRE_M <- rep(NA, length(list_betas[[which(typeofs_of_betas == "double")[1]]]))
+        }
+        
+        if( (length(x_beta_fullRE_DMSL) != length(x_beta_diagRE_DMDL)) | (length(x_beta_fullRE_DMSL) != length(x_beta_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    cbind.data.frame(rbind.data.frame(
+      cbind.data.frame(fullRE_DMSL=select_slope_2(x_beta_fullRE_DMSL),
+                       diagRE_DMDL=select_slope_2(x_beta_diagRE_DMDL),
+                       fullRE_M=select_slope_2(x_beta_fullRE_M),
+                       beta_type='Slope'),
+      cbind.data.frame(fullRE_DMSL=select_intercept(x_beta_fullRE_DMSL),
+                       diagRE_DMDL=select_intercept(x_beta_diagRE_DMDL),
+                       fullRE_M=select_intercept(x_beta_fullRE_M),
+                       beta_type='Intercept')),
+      ct=ct)
+  }
+  ))
+  
+  ## if something hasn't converged, remove the value
+  bad_ct_fullRE_DMSL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_fullRE_DMSL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples,
+                                                function(ct)  try(model_fullRE_DMSL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_diagRE_DMDL <- c(enough_samples[sapply(enough_samples,
+                                                function(ct) (typeof(model_diagRE_DMDL_list[[ct]])) == 'character')],
+                          enough_samples[sapply(enough_samples, function(ct)  try(model_diagRE_DMDL_list[[ct]]$pdHess)) != "TRUE"])
+  bad_ct_fullRE_M <- c(enough_samples[sapply(enough_samples,
+                                             function(ct) (typeof(model_fullRE_M_list[[ct]])) == 'character')],
+                       enough_samples[sapply(enough_samples, function(ct)  try(model_fullRE_M_list[[ct]]$pdHess)) != "TRUE"])
+  
+  .x$fullRE_DMSL[(.x$ct %in% bad_ct_fullRE_DMSL)] = NA
+  .x$diagRE_DMDL[(.x$ct %in% bad_ct_diagRE_DMDL)] = NA
+  .x$fullRE_M[(.x$ct %in% bad_ct_fullRE_M)] = NA
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+
+L_to_cov <- function(cov_vector, d){
+  L <- fill_covariance_matrix(arg_d = d, arg_entries_var = rep(1, d), arg_entries_cov = cov_vector)
+  D <- diag(L%*%t(L))
+  diag((D)**(-1/2)) %*% L %*% t(L) %*% diag((D)**(-1/2))
+}
+
+
+comparison_randomintercepts_models <- function(model_fullRE_DMSL_list, model_diagRE_DMDL_list, model_fullRE_M_list ){
+  
+  .x <- do.call('rbind.data.frame', lapply(enough_samples, function(ct){
+    x_RE_fullRE_DMSL <- try(python_like_select_name(model_fullRE_DMSL_list[[ct]]$par.random, "u_large"))
+    x_RE_diagRE_DMDL <- try(python_like_select_name(model_diagRE_DMDL_list[[ct]]$par.random, "u_large"))
+    x_RE_fullRE_M <- try(python_like_select_name(model_fullRE_M_list[[ct]]$par.random, "u_large"))
+    if( (length(x_RE_fullRE_DMSL) != length(x_RE_diagRE_DMDL)) | (length(x_RE_fullRE_DMSL) != length(x_RE_fullRE_M)) ){
+      ## if we don't have results for any, remove from the analysis
+      list_RE <- list(x_RE_fullRE_DMSL, x_RE_diagRE_DMDL, x_RE_fullRE_M)
+      typeofs_of_RE <- sapply(list_RE, typeof)
+      if( all(typeofs_of_RE == "character")  ){
+        return(NULL)
+      }else{
+        ## if we do have results for some, replace the error message by an NA string
+        ## replace using the length of the first double entry
+        
+        if(typeofs_of_RE[1] == "character"){
+          x_RE_fullRE_DMSL <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if(typeofs_of_RE[2] == "character"){
+          x_RE_diagRE_DMSL <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if(typeofs_of_RE[3] == "character"){
+          x_RE_fullRE_M <- rep(NA, length(list_RE[[which(typeofs_of_RE == "double")[1]]]))
+        }
+        
+        if( (length(x_RE_fullRE_DMSL) != length(x_RE_diagRE_DMDL)) | (length(x_RE_fullRE_DMSL) != length(x_RE_fullRE_M)) ){
+          warning(paste0(ct, ': the number of log-ratios is not consistent'))
+          return(NULL)
+        }
+      }
+      
+    }
+    
+    ## put the coefficients in matrix form
+    ## get the number of log-ratios, d-1
+    dmin1 <- (names(table(sapply(list(model_fullRE_DMSL_list, model_diagRE_DMDL_list, model_fullRE_M_list), function(i)    as.numeric(try(length(python_like_select_name(i[[ct]]$par.fixed, 'beta'))/2))))))
+    if(length(dmin1) == 1){
+      ## there should only be one, shared, d-1
+      dmin1 <- as.numeric(dmin1)
+    }else{
+      stop(paste0('Models do not agree on number of log-ratios. CT: ', ct))
+    }
+    
+    x_RE_fullRE_DMSL <- matrix(x_RE_fullRE_DMSL, ncol=dmin1, byrow=F)
+    x_RE_diagRE_DMDL <- matrix(x_RE_diagRE_DMDL, ncol=dmin1, byrow=F)
+    x_RE_fullRE_M <- matrix(x_RE_fullRE_M, ncol=dmin1, byrow=F)
+    
+    bad_fullRE_DMSL=F
+    bad_diagRE_DMDL=F
+    bad_fullRE_M=F
+    ## if something hasn't converged, set all the random coefficients to NA
+    if((typeof(model_fullRE_DMSL_list[[ct]]) == "character") ){
+      bad_fullRE_DMSL=T
+    }else{
+      if(try(!(model_fullRE_DMSL_list[[ct]]$pdHess))){
+        bad_fullRE_DMSL=T
+      }
+    }
+    if(bad_fullRE_DMSL){
+      x_RE_fullRE_DMSL <- matrix(NA, nrow = nrow(x_RE_fullRE_DMSL), ncol=ncol(x_RE_fullRE_DMSL))
+    }
+    #----
+    if((typeof(model_diagRE_DMDL_list[[ct]]) == "character") ){
+      bad_diagRE_DMDL=T
+    }else{
+      if(try(!(model_diagRE_DMDL_list[[ct]]$pdHess))){
+        bad_diagRE_DMDL=T
+      }
+    }
+    if(bad_diagRE_DMDL){
+      x_RE_diagRE_DMDL <- matrix(NA, nrow = nrow(x_RE_diagRE_DMDL), ncol=ncol(x_RE_diagRE_DMDL))
+    }
+    #-----
+    if((typeof(model_fullRE_M_list[[ct]]) == "character") ){
+      bad_fullRE_M=T
+    }else{
+      if(try(!(model_fullRE_M_list[[ct]]$pdHess))){
+        bad_fullRE_M=T
+      }
+    }
+    if(bad_fullRE_M){
+      x_RE_fullRE_M <- matrix(NA, nrow = nrow(x_RE_fullRE_M), ncol=ncol(x_RE_fullRE_M))
+    }
+    
+    ## for each patient using the x_RE_fullRE_DMSL intercepts, get the distance to the intercepts of the other two models
+    dist_DMSLs <- sapply(1:nrow(x_RE_fullRE_DMSL), function(i){
+      if(all(is.na(x_RE_fullRE_DMSL[i,])) | all(is.na(x_RE_diagRE_DMDL[i,]))){
+        NA
+      }else{
+        dist(rbind(x_RE_fullRE_DMSL[i,], x_RE_diagRE_DMDL[i,]))
+      }
+    })
+    dist_fullREs <- sapply(1:nrow(x_RE_fullRE_DMSL), function(i){
+      if(all(is.na(x_RE_fullRE_DMSL[i,])) | all(is.na(x_RE_fullRE_M[i,]))){
+        NA
+      }else{
+        dist(rbind(x_RE_fullRE_DMSL[i,], x_RE_fullRE_M[i,]))
+      }
+    })
+    
+    cbind.data.frame(melt(list(dist_DMSLs=dist_DMSLs, dist_fullREs=dist_fullREs)),
+                     ct=ct)
+  }
+  ))
+  
+  .x$ct2=renaming_pcawg[,2][match(.x$ct, renaming_pcawg[,1])]
+  
+  return(.x)
+  
+}
+
+give_first_col <- function(i){
+  if(is.null(dim(i))){i[1]}else{i[,1]}
+}
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6

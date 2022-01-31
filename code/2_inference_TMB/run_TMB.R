@@ -10,6 +10,21 @@ source("2_inference/helper/helper_DA_stan.R") ## for normalise_rw
 source("2_inference_TMB/mm_multinomial/helper_functions.R")
 source("2_inference_TMB/helper_TMB.R")
 
+debug <- F
+if(debug){
+  opt <- list()
+  opt$input = '../data/roo/Liver-HCC_signaturesMSE_ROO.RDS'
+  opt$output = '../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDM_Liver-HCC_signaturesMSE.RDS'
+  opt$model = 'diagREDM' 
+  opt$feature_type = 'signaturesMSE' 
+  opt$optimiser = 'nlminb' 
+  opt$simulation_bool = F 
+  opt$read_directly = T 
+  opt$use_previous_run_startingvals  = T
+  
+}
+
+
 option_list = list(
   make_option(c("--model"), type="character", default=NA,
               help="Which model to use for inference", metavar="character"),
@@ -48,6 +63,7 @@ cat('Using nlminb:', use_nlminb, '\n')
 cat('Simulation boolean:', simulation_bool, '\n')
 
 if(opt$nonexo_bool | grepl('nonexo', opt$output)){
+  opt$model <- gsub("wSBS1SBS5nonexo", "", opt$model)
   opt$model <- gsub("nonexo", "", opt$model)
 }
 cat('Model:', opt$model, '\n')
@@ -108,9 +124,16 @@ dataset = load_PCAWG(ct = opt$input, typedata = opt$feature_type, simulation = s
                      path_to_data = NA, read_directly=opt$read_directly)
 
 if(opt$nonexo_bool | grepl('nonexo', opt$output)){
-  ## select only nonexogenous signatures
-  nonexogenous = read.table("../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t",
-                            comment.char = "#", fill = F)
+  if(grepl('wSBS1SBS5nonexo', opt$output)){
+    ## including SBS1, SBS5
+    nonexogenous = read.table("../data/cosmic/exogenous_signatures_SBS_withSBS1SBS5.txt", sep = "\t",
+                              comment.char = "#", fill = F)
+  }else{
+    ## select only nonexogenous signatures
+    ## not including SBS1, SBS5
+    nonexogenous = read.table("../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t",
+                              comment.char = "#", fill = F)
+  }
   dataset <- give_subset_sigs_TMBobj(dataset, sigs_to_remove = nonexogenous$V1)
 }
 
@@ -262,8 +285,13 @@ if(opt$use_previous_run_startingvals){
     
     if(num_tries_for_convergence[which_num_tries,2] > threshold_num_tries){
       if(typeof(results_inference) == "character"){
+<<<<<<< HEAD
         ## if it was an <error> run: do not save unless it's the first run
         if(num_tries_for_convergence[which_num_tries,2] == 0){
+=======
+        ## if it was an <error> run: do not save unless it's the first run or the last one
+        if((num_tries_for_convergence[which_num_tries,2] == 0) | (num_tries_for_convergence[which_num_tries,2] >= threshold_num_tries)){
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
           saveRDS(object = results_inference, file = opt$output)
         }
       }else{
