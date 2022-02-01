@@ -20,7 +20,8 @@ give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datase
 }
 
 put_vals_in_table <- function(.pvals){
-  rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM < 0.05),
+  warning('<fullREM> and <fullREDMSL> were interchanged until 20220201')
+  rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM <= 0.05),
         fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREDMSL <= 0.05),
         diagREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDMSL <= 0.05),
         diagREDM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDM <= 0.05),
@@ -33,11 +34,19 @@ put_vals_in_table <- function(.pvals){
         permutation=summarise_DA_detection(true = .pvals$true, predicted = .pvals$permutation <= 0.05))
 }
 
+# colours_models <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
+#                     fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
+#                     ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
+#                     pvals_chi_Harris= "#2A297A", ttest=  "#995533"   )
+# colours_models2 <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
+#                     fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
+#                     ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
+#                     chi_Harris= "#2A297A", ttest=  "#995533"   )
 colours_models <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
-                    fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
-                    ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
+                    fullREM= "#e69138", HMP= "#3CA437", HMP2= "#6B244C" ,
+                    ILR= "#6ACDC5", permutation= "#8fce00" , perturbation= "#BBB53E",
                     pvals_chi_Harris= "#2A297A", ttest=  "#995533"   )
 colours_models2 <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
-                    fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
-                    ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
-                    chi_Harris= "#2A297A", ttest=  "#995533"   )
+                     fullREM= "#e69138", HMP= "#3CA437", HMP2= "#6B244C" ,
+                     ILR= "#6ACDC5", permutation= "#8fce00" , perturbation= "#BBB53E",
+                     chi_Harris= "#2A297A", ttest=  "#995533"   )

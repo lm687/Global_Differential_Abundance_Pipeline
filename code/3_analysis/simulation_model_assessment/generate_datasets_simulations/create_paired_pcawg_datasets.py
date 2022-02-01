@@ -3,6 +3,10 @@ a = f.read()
 print(a)
 substitute='Stomach-AdenoCA'
 
+f2 = open ("template_GenerationMixturefewersmallsignaturespairedPCAWG.R", "r")
+a2 = f2.read()
+substitute2='Kidney-RCC.clearcell'
+
 
 
 dic = {"BoneOsteosarcPCAWG": "Bone-Osteosarc", "BreastAdenoCAPCAWG": "Breast-AdenoCA", "CNSGBMPCAWG": "CNS-GBM",\
@@ -16,10 +20,16 @@ dic = {"BoneOsteosarcPCAWG": "Bone-Osteosarc", "BreastAdenoCAPCAWG": "Breast-Ade
 
 for i in dic.keys():
     o = open ("GenerationMixturefewersignaturespaired"+i+".R", "w")
-    o.write(a.replace('Stomach-AdenoCA', dic[i]))
+    o.write(a.replace(substitute, dic[i]))
     o.close()
 
     o2 = open ("../../../../data/assessing_models_simulation/GenerationMixturefewersignaturespaired"+i, "w")
     o2.write('Generated automatically using /Users/morril01/Documents/PhD/GlobalDA/code/3_analysis/simulation_model_assessment/generate_datasets_simulations/create_paired_pcawg_datasets.py\n')
     o2.close()
+
+    ## signatures of lowest abundance
+    o3 = open ("GenerationMixturefewersmallsignaturespaired"+i+".R", "w")
+    o3.write(a2.replace(substitute2, dic[i]))
+    o3.close()
+
 print(dic.keys())

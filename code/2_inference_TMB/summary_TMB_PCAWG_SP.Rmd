@@ -405,6 +405,14 @@ ggplot(comparison_betas_models_rbind_cut, aes(x=fullRE_DMSL, y=fullRE_M, col=gsu
 # dev.off()
 ```
 
+Comparison of beta coefficients for fullRE M and DM
+```{r, fullRE_vs_DM, echo=F, dependson=c('beta_coef_differences_in_models_plots2'), fig.height=9}
+ggplot(comparison_betas_models_rbind_cut[comparison_betas_models_rbind_cut$sigs == 'All signatures',], aes(x=diagRE_DMDL, y=fullRE_M, col=gsub("\\..*", "", ct), shape=beta_type))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+
+  geom_point()+theme_bw()+facet_wrap(.~ct+beta_type, scales = "free")+
+  scale_color_manual(values = pcawg_palette)+guides(col=F)+
+  labs(shape='')+theme(legend.position = "bottom")
+```
 
 ```{r, beta_coef_differences_in_models_plots3, dependson=c('beta_coef_differences_in_models'), dev='tikz'}
 head(comparison_betas_models_rbind)

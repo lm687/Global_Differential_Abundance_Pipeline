@@ -30,45 +30,165 @@ generation <- c('GenerationMixturefewersignaturespairedKidneyRCCPCAWG')
 generation <- c('GenerationMixturefewersignaturespairedPCAWG')
 generation <- c('GenerationMixturefewersignaturespairedstomachPCAWG')
 generation <- c('GenerationMixturefewersignaturesPCAWG')
+generation <- c('GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG')
 
-a <- readRDS(paste0("../../../../data/assessing_models_simulation/summaries_synthetic_DA/", generation, ".RDS"))
-
-
-varying_betashape <-give_accuracies_with_varying_var(var = 'beta_gamma_shape',
-                                                     datasets_arg = a$datasets,
-                                                     pvals_data_frame_arg = a$pvals_data_frame)
-
-if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
+for(generation in c('GenerationMixturefewersignaturespairedKidneyRCCPCAWG', 'GenerationMixturefewersignaturespairedPCAWG',
+                    'GenerationMixturefewersignaturespairedstomachPCAWG', 'GenerationMixturefewersignaturesPCAWG',
+                    'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG')){
+  
+  a <- readRDS(paste0("../../../../data/assessing_models_simulation/summaries_synthetic_DA/", generation, ".RDS"))
+  
+  all_converged <- !apply(a$pvals_data_frame, 1, function(i) any(is.na(i)))
+  a$pvals_data_frame_adj <- a$pvals_data_frame
+  
+  a$pvals_data_frame_adj <- adjust_all(a$pvals_data_frame_adj)
+  varying_betashape <-give_accuracies_with_varying_var(var = 'beta_gamma_shape',
+                                                       datasets_arg = a$datasets,
+                                                       pvals_data_frame_arg = a$pvals_data_frame)
+  varying_betashape_adj <-give_accuracies_with_varying_var(var = 'beta_gamma_shape',
+                                                       datasets_arg = a$datasets,
+                                                       pvals_data_frame_arg = a$pvals_data_frame_adj)
+  varying_betashapeAC <-give_accuracies_with_varying_var(var = 'beta_gamma_shape',
+                                                       datasets_arg = a$datasets[all_converged],
+                                                       pvals_data_frame_arg = a$pvals_data_frame[all_converged,])
+  
+  varying_betashape_n_adj <-give_accuracies_with_varying_var(var = c('beta_gamma_shape', 'n'), two_var = T,
+                                                       datasets_arg = a$datasets,
+                                                       pvals_data_frame_arg = a$pvals_data_frame_adj)
+  
+  if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
+    varying_betashape$beta_gamma_shape <- signif(varying_betashape$beta_gamma_shape, 2)
+    varying_betashape_adj$beta_gamma_shape <- signif(varying_betashape_adj$beta_gamma_shape, 2)
+  }
+  
+  varying_betashape$model <- gsub("pvals_", "", varying_betashape$model)
+  varying_betashape_adj$model <- gsub("pvals_", "", varying_betashape_adj$model)
+  
+  .xx <- varying_betashape[which(varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape)),]
+  ## sometimes there are problems with numeric precision. if that is the case, select as the last value only one of the selected rows
+  .xx <- .xx[!duplicated(.xx$model),]
+  
+  remove_duplicated_rows <- function(.xx){
+    .xx <- .xx[!duplicated(.xx$model),]
+  }
+  
+  
+  if(generation == 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'){
+    title = 'Kidney-RCC (paired)'
+  }else if( generation == 'GenerationMixturefewersignaturespairedPCAWG'){
+    title = 'Liver-HCC (paired)'
+  }else if ( generation  == 'GenerationMixturefewersignaturespairedstomachPCAWG'){
+    title = 'Stomach-AdenoCa (paired)'
+  }else if( generation == 'GenerationMixturefewersignaturesPCAWG'){
+    title = 'Liver-HCC (not paired)'
+  }else if( generation == 'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG'){
+    title = 'Kidney-RCC (paired, small sigs)'
+  }
+  
   varying_betashape$beta_gamma_shape <- signif(varying_betashape$beta_gamma_shape, 2)
+  varying_betashape_adj$beta_gamma_shape <- signif(varying_betashape_adj$beta_gamma_shape, 2)
+  
+  ggplot(varying_betashape, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models2)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(title)+
+    geom_label_repel(data = .xx,
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashape$beta_gamma_shape)+2,
+                     size=2.5)+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashape$beta_gamma_shape))*1.5))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2_factorv2.pdf"),
+         height = 3.0, width = 4.0)
+  
+  ggplot(varying_betashape_adj, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models2)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(title)+
+    geom_label_repel(data = remove_duplicated_rows(varying_betashape_adj[which(varying_betashape_adj$beta_gamma_shape == max(varying_betashape_adj$beta_gamma_shape)),]),
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashape_adj$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashape_adj$beta_gamma_shape)+2,
+                     size=2.5)+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashape_adj$beta_gamma_shape))*1.5))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_adj_with_betagammashape_palette2_factorv2.pdf"),
+         height = 3.0, width = 4.0)
+  
+  
+  ggplot(varying_betashapeAC, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models2)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(title)+
+    geom_label_repel(data = .xx,
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashapeAC$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashapeAC$beta_gamma_shape)+2,
+                     size=2.5)+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashapeAC$beta_gamma_shape))*1.5))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+  
+  
+  varying_betashape_n_adj$beta_gamma_shape <- signif(varying_betashape_n_adj$beta_gamma_shape, 2)
+  ggplot(varying_betashape_n_adj, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models2)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(title)+
+    geom_label_repel(data = .xx,
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashape$beta_gamma_shape)+2,
+                     size=2.5)+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashape$beta_gamma_shape))*1.5))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+    facet_wrap(.~n)
+  
+  ggplot(varying_betashape_n_adj[varying_betashape_n_adj$model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM'),],
+         aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                      lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models2)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(title)+
+    geom_label_repel(data = .xx[varying_betashape_n_adj$model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM'),],
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashape$beta_gamma_shape)+2,
+                     size=2.5)+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashape$beta_gamma_shape))*1.5))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+    facet_wrap(.~n)
+  ggsave(paste0(flder_out, generation, "/summaries/accuracyADJ_with_betagammashape_palette2_factorv2_subset.pdf"),
+         height = 3.0, width = 6.6)
+  
+  ggplot(varying_betashape_n_adj[varying_betashape_n_adj$beta_gamma_shape == 0,],
+         aes(x=n, y = Accuracy, col=model, group=model, label=model,
+                                  lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models2)+labs(col='', x='Number of samples')+
+    guides(lty='none')+
+    ggtitle(title)+
+    geom_label_repel(data = remove_duplicated_rows(varying_betashape_n_adj[which(varying_betashape_n_adj$beta_gamma_shape == 0),]),
+                     max.overlaps = Inf, aes(x=(max(varying_betashape_n_adj$n))), direction = "y",
+                     # nudge_x=-(max(varying_betashape$n)+20),
+                     size=2.5)+
+    coord_cartesian(xlim = c(0, max(varying_betashape_n_adj$n)*1.5))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+  
+  pvals_noDA <- a$pvals_data_frame[as.vector(sapply(a$datasets, function(i) i$beta_gamma_shape)) == 0,]
+  plot(pvals_noDA$pvals_diagREDM, pvals_noDA$pvals_fullREM); abline(coef = c(0,1))
+  
+  table(pvals_noDA$pvals_diagREDM < 0.05)
+  table(pvals_noDA$pvals_fullREM < 0.05)
+  
+  hist(pvals_noDA$pvals_diagREDM, breaks = 20)
+  hist(pvals_noDA$pvals_fullREM, breaks = 20)
+  
+  pvals_noDA_adj <- a$pvals_data_frame_adj[as.vector(sapply(a$datasets, function(i) i$beta_gamma_shape)) == 0,]
+  plot(pvals_noDA_adj$pvals_diagREDM, pvals_noDA_adj$pvals_fullREM); abline(coef = c(0,1))
+  table(pvals_noDA_adj$pvals_diagREDM < 0.05)
+  table(pvals_noDA_adj$pvals_fullREDMSL < 0.05)
+  table(pvals_noDA_adj$pvals_fullREM < 0.05)
+  
+
+
 }
-
-varying_betashape$model <- gsub("pvals_", "", varying_betashape$model)
-
-.xx <- varying_betashape[which(varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape)),]
-## sometimes there are problems with numeric precision. if that is the case, select as the last value only one of the selected rows
-.xx <- .xx[!duplicated(.xx$model),]
-
-if(generation == 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG'){
-  title = 'Kidney-RCC (paired)'
-}else if( generation == 'GenerationMixturefewersignaturespairedPCAWG'){
-  title = 'Liver-HCC (paired)'
-}else if ( generation  == 'GenerationMixturefewersignaturespairedstomachPCAWG'){
-  title = 'Stomach-AdenoCa (paired)'
-}else if( generation == 'GenerationMixturefewersignaturesPCAWG'){
-  title = 'Liver-HCC (not paired)'
-}
-
-ggplot(varying_betashape, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
-                              lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
-  geom_point()+geom_line()+theme_bw()+
-  scale_color_manual(values=colours_models2)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
-  ggtitle(title)+
-  geom_label_repel(data = .xx,
-                   max.overlaps = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y",
-                   nudge_x=max(varying_betashape$beta_gamma_shape)+2,
-                   size=2.5)+
-  coord_cartesian(xlim = c(0, length(unique(varying_betashape$beta_gamma_shape))*1.5))+
-  theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
-ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2_factorv2.pdf"),
-       height = 3.0, width = 4.0)
-
