@@ -146,7 +146,7 @@ if(opt$use_previous_run_startingvals){
   ## the output file with the original name, instead of the _NC.RDS name.
   ## get the number of previous tries, and add one to the <num_tries_for_convergence> document
   
-  threshold_num_tries = 10
+  threshold_num_tries = 3 ###10
   header_num_tries='## Write down the number of tries of getting results that converge. If the number exceeds some limit, save the non-converged result\n'
 
   #file_num_tries <- "logs/num_tries_for_convergence.txt"
@@ -285,13 +285,8 @@ if(opt$use_previous_run_startingvals){
     
     if(num_tries_for_convergence[which_num_tries,2] > threshold_num_tries){
       if(typeof(results_inference) == "character"){
-<<<<<<< HEAD
-        ## if it was an <error> run: do not save unless it's the first run
-        if(num_tries_for_convergence[which_num_tries,2] == 0){
-=======
         ## if it was an <error> run: do not save unless it's the first run or the last one
         if((num_tries_for_convergence[which_num_tries,2] == 0) | (num_tries_for_convergence[which_num_tries,2] >= threshold_num_tries)){
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
           saveRDS(object = results_inference, file = opt$output)
         }
       }else{

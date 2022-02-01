@@ -221,10 +221,6 @@ if(!is.null(dim(datasets[[1]]$beta))){
   # print(rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1))
   # print(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))))
   
-<<<<<<< HEAD
-  
-  df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function(i) rep(NA, i$d-1))),
-=======
   make.names_allowing_hyphen <- function(i){
     for(j in unique(i)){
       i[i == j] = paste0(j, '.', 1:sum(i == j))
@@ -235,26 +231,16 @@ if(!is.null(dim(datasets[[1]]$beta))){
   #' in df_beta_recovery, as vector() added to unlist(), because with  opt$dataset_generation
   #' [1] "GenerationMixturePCAWG" I got a df_beta_recovery with matrices inside, i.e. many columns
   df_beta_recovery = cbind.data.frame(beta_true = as.vector(unlist(sapply(datasets, function(i) rep(NA, i$d-1)))),
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
                                       idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1),
                                       d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1),
                                       n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1),
                                       beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1),
-<<<<<<< HEAD
-                                      beta_est = unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
-                                      beta_stderr = unlist(sapply(runs, give_stderr)),
-                                      pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1),
-                                      DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
-                                      idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$d-1))))
-  
-=======
                                       beta_est = as.vector(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE)))),
                                       beta_stderr = as.vector(unlist(sapply(runs, give_stderr))),
                                       pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1),
                                       DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
                                       idx_within_dataset=as.vector(unlist(sapply(datasets, function(i) 1:(i$d-1)))))
   rownames(df_beta_recovery) <- make.names_allowing_hyphen(names(datasets)[df_beta_recovery$idx]) ## added 12 jan 2022
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
   df_beta_recovery$bool_zero_true_beta = factor(df_beta_recovery$beta_gamma_shape == 0, levels=c(TRUE, FALSE))
   df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(is.null((i))){FALSE}else{i})[df_beta_recovery$idx]
   
@@ -296,10 +282,7 @@ ggsave(paste0(folder_output, "recovery_betaslope_scatter_sepDA.pdf"))
 })
 
 #' ## Multinomial
-<<<<<<< HEAD
-=======
 filename_betarecovery1 = paste0(folder_output, "recovery_betaslope2.pdf")
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
 try({
   p <- ggplot(df_beta_recovery,
             aes(x=(beta_true), y=(beta_est), col=(pvals_adj<0.05)))+geom_point()+
@@ -310,10 +293,7 @@ ggsave(filename_betarecovery1)
 
 #' ## Looking at true zeros
 #' ## i.e. runs where all beta slopes are zero
-<<<<<<< HEAD
-=======
 filename_betarecovery2 = paste0(folder_output, "betaslopes_nonDA.pdf")
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
 try({
   ggplot(df_beta_recovery[!(df_beta_recovery$DA_bool),],
        aes(x=(beta_true), y=(beta_est), col=(pvals_adj<0.05)))+geom_point()+

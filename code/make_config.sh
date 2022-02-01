@@ -87,16 +87,8 @@ echo "beta_gamma_shape_generationC:
 - 0.0002
 - 0.0005
 - 0.00075
-<<<<<<< HEAD
-<<<<<<< HEAD
 - 0.001
 - 0.002
-=======
->>>>>>> 0e79d9d627c98691d22abede410a2d9e060b8d0b
-=======
-- 0.001
-- 0.002
->>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
 - 0.005
 - 0.001
 - 0.002
@@ -426,29 +418,5 @@ echo "simulation_lambda_GenerationMixturefewersignaturespairedstomachPCAWG:
 - 80
 " >> $name_config
 
-## Generation Mixture1 of simulations
-echo "\nsimulation_n_generationMixture1:
-- 30
-- 50
-- 100
-" >> $name_config
 
-echo "beta_gamma_shape_generationMixture1:
-- 0
-- 0.1
-- 0.3
-" >> $name_config
 
-echo "simulation_d_generationMixture1:
-- 3
-- 4
-- 5
-" >> $name_config
-
-echo "simulation_nlambda_generationMixture1:
-- 100
-" >> $name_config
-
-echo "simulation_lambda_generationMixture1:
-- 0
-" >> $name_config

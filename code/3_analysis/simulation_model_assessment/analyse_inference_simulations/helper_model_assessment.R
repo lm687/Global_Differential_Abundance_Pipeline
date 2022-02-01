@@ -20,8 +20,8 @@ give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datase
 }
 
 put_vals_in_table <- function(.pvals){
-  rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREDMSL < 0.05),
-        fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM <= 0.05),
+  rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM < 0.05),
+        fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREDMSL <= 0.05),
         diagREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDMSL <= 0.05),
         diagREDM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDM <= 0.05),
         pvals_chi_Harris=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_chi_Harris <= 0.05),
