@@ -7,6 +7,8 @@ f2 = open ("template_GenerationMixturefewersmallsignaturespairedPCAWG.R", "r")
 a2 = f2.read()
 substitute2='Kidney-RCC.clearcell'
 
+f3 = open ("template_GenerationMixturefewersignaturespairedObsNmPCAWG.R", "r")
+a3 = f3.read()
 
 
 dic = {"BoneOsteosarcPCAWG": "Bone-Osteosarc", "BreastAdenoCAPCAWG": "Breast-AdenoCA", "CNSGBMPCAWG": "CNS-GBM",\
@@ -31,5 +33,10 @@ for i in dic.keys():
     o3 = open ("GenerationMixturefewersmallsignaturespaired"+i+".R", "w")
     o3.write(a2.replace(substitute2, dic[i]))
     o3.close()
+
+    ## with number of mutations from observations
+    o4 = open ("GenerationMixturefewersignaturespairedObsNm"+i+".R", "w")
+    o4.write(a3.replace(substitute, dic[i]))
+    o4.close()
 
 print(dic.keys())

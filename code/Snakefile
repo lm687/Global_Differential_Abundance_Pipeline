@@ -36,7 +36,14 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
  'GenerationMixturefewersignaturespairedProstAdenoCAPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG', 'GenerationMixturefewersignaturespairedSkinMelanomacutaneousPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
  'GenerationMixturefewersignaturespairedStomachPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG', 'GenerationMixturefewersignaturespairedThyAdenoCAPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
  'GenerationMixturefewersignaturespairedUterusAdenoCAPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
- 'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG'}
+ 'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
+ 'GenerationMixturefewersignaturespairedObsNmBoneOsteosarcPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG'}
+
+for j in ['CNSGBMPCAWG', 'CNSMedulloPCAWG', 'CNSPiloAstroPCAWG',\
+      'ColoRectAdenoCAPCAWG', 'EsoAdenoCAPCAWG', 'HeadSCCPCAWG', 'KidneyChRCCPCAWG', 'KidneyRCCpapillaryPCAWG',\
+      'LungSCCPCAWG', 'LymphBNHLPCAWG', 'LymphCLLPCAWG', 'OvaryAdenoCAPCAWG', 'PancAdenoCAPCAWG', 'PancEndocrinePCAWG',\
+      'ProstAdenoCAPCAWG', 'SkinMelanomacutaneousPCAWG', 'ThyAdenoCAPCAWG', 'UterusAdenoCAPCAWG']:
+      datasetgeneration2_dict['GenerationMixturefewersignaturespairedObsNm'+j] = 'GenerationMixturefewersignaturespairedstomachPCAWG'
 
 numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3': 4, 'GenerationMixture1': 2,\
 'GenerationK': 1,\
@@ -54,7 +61,14 @@ numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3'
 'GenerationMixturefewersignaturespairedPancAdenoCAPCAWG': 20, 'GenerationMixturefewersignaturespairedPancEndocrinePCAWG': 20,\
 'GenerationMixturefewersignaturespairedProstAdenoCAPCAWG': 20, 'GenerationMixturefewersignaturespairedSkinMelanomacutaneousPCAWG': 20,\
 'GenerationMixturefewersignaturespairedStomachPCAWG': 20, 'GenerationMixturefewersignaturespairedThyAdenoCAPCAWG': 20,\
-'GenerationMixturefewersignaturespairedUterusAdenoCAPCAWG': 20, 'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG': 20}
+'GenerationMixturefewersignaturespairedUterusAdenoCAPCAWG': 20, 'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG': 20,
+'GenerationMixturefewersignaturespairedObsNmBoneOsteosarcPCAWG': 3}
+
+for j in ['CNSGBMPCAWG', 'CNSMedulloPCAWG', 'CNSPiloAstroPCAWG',\
+      'ColoRectAdenoCAPCAWG', 'EsoAdenoCAPCAWG', 'HeadSCCPCAWG', 'KidneyChRCCPCAWG', 'KidneyRCCpapillaryPCAWG',\
+      'LungSCCPCAWG', 'LymphBNHLPCAWG', 'LymphCLLPCAWG', 'OvaryAdenoCAPCAWG', 'PancAdenoCAPCAWG', 'PancEndocrinePCAWG',\
+      'ProstAdenoCAPCAWG', 'SkinMelanomacutaneousPCAWG', 'ThyAdenoCAPCAWG', 'UterusAdenoCAPCAWG']:
+      numreplicates['GenerationMixturefewersignaturespairedObsNm'+j] = 3
 
 config['simulation_n_generationMGnorm'] = 200
 
@@ -304,13 +318,13 @@ rule all:
       # 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG',\
       # ])
       ## run all PCAWG simulations of mixtures
-      expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
-      datasetgeneration=['GenerationMixturefewersignaturespaired'+x for x in [ # 'BoneOsteosarcPCAWG', 'BreastAdenoCAPCAWG',\
+      #expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      #datasetgeneration=['GenerationMixturefewersignaturespaired'+x for x in [ # 'BoneOsteosarcPCAWG', 'BreastAdenoCAPCAWG',\
       # 'CNSGBMPCAWG', 'CNSMedulloPCAWG', 'CNSPiloAstroPCAWG',\
       # 'ColoRectAdenoCAPCAWG', 'EsoAdenoCAPCAWG', 'HeadSCCPCAWG', 'KidneyChRCCPCAWG', 'KidneyRCCpapillaryPCAWG',\
       # 'LungSCCPCAWG', 'LymphBNHLPCAWG', 'LymphCLLPCAWG', 'OvaryAdenoCAPCAWG', 'PancAdenoCAPCAWG', 'PancEndocrinePCAWG',\
-      'ProstAdenoCAPCAWG', #'SkinMelanomacutaneousPCAWG', 'ThyAdenoCAPCAWG', 'UterusAdenoCAPCAWG' ## all ct in this line have been started in HPC
-      ]])
+      #'ProstAdenoCAPCAWG', #'SkinMelanomacutaneousPCAWG', 'ThyAdenoCAPCAWG', 'UterusAdenoCAPCAWG' ## all ct in this line have been started in HPC
+      #]])
       #expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
       #datasetgeneration=[ 'GenerationK'])
       # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
@@ -318,6 +332,12 @@ rule all:
       # datasetgeneration=['GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG'])
       # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
       # datasetgeneration=['GenerationMixturefewersignaturespaired'+x for x in ['CNSGBMPCAWG']])
+      # datasetgeneration=['GenerationMixturefewersignaturespaired'+x for x in ['ProstAdenoCAPCAWG']])
+      # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      # datasetgeneration=[ 'GenerationK'])
+      expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      datasetgeneration=['GenerationMixturefewersignaturespairedObsNm'+x for x in ['BoneOsteosarcPCAWG',  'LymphCLLPCAWG', 'OvaryAdenoCAPCAWG', 'PancAdenoCAPCAWG']])
+      
 
 # "/Users/morril01/Documents/PhD/GlobalDA/data/restrictsummaries_synthetic_DAed/pcawg/annovar_annotation/02917220-6a7a-46a1-8656-907e96bef88e.consensus.20160830.somatic.snv_mnv.vcf.annovar"
 # expand(['/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/'+x.strip('.gz')+'.annovar' for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/') if re.search('.gz$', x)])
