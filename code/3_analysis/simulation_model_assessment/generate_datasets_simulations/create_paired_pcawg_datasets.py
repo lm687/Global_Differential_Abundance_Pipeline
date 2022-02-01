@@ -21,22 +21,26 @@ dic = {"BoneOsteosarcPCAWG": "Bone-Osteosarc", "BreastAdenoCAPCAWG": "Breast-Ade
 "StomachPCAWG": "Stomach-AdenoCA", "ThyAdenoCAPCAWG": "Thy-AdenoCA", "UterusAdenoCAPCAWG": "Uterus-AdenoCA" }
 
 for i in dic.keys():
-    o = open ("GenerationMixturefewersignaturespaired"+i+".R", "w")
-    o.write(a.replace(substitute, dic[i]))
-    o.close()
+    # o = open ("GenerationMixturefewersignaturespaired"+i+".R", "w")
+    # o.write(a.replace(substitute, dic[i]))
+    # o.close()
 
-    o2 = open ("../../../../data/assessing_models_simulation/GenerationMixturefewersignaturespaired"+i, "w")
-    o2.write('Generated automatically using /Users/morril01/Documents/PhD/GlobalDA/code/3_analysis/simulation_model_assessment/generate_datasets_simulations/create_paired_pcawg_datasets.py\n')
-    o2.close()
+    # o2 = open ("../../../../data/assessing_models_simulation/GenerationMixturefewersignaturespaired"+i, "w")
+    # o2.write('Generated automatically using /Users/morril01/Documents/PhD/GlobalDA/code/3_analysis/simulation_model_assessment/generate_datasets_simulations/create_paired_pcawg_datasets.py\n')
+    # o2.close()
 
-    ## signatures of lowest abundance
-    o3 = open ("GenerationMixturefewersmallsignaturespaired"+i+".R", "w")
-    o3.write(a2.replace(substitute2, dic[i]))
-    o3.close()
+    # ## signatures of lowest abundance
+    # o3 = open ("GenerationMixturefewersmallsignaturespaired"+i+".R", "w")
+    # o3.write(a2.replace(substitute2, dic[i]))
+    # o3.close()
 
     ## with number of mutations from observations
     o4 = open ("GenerationMixturefewersignaturespairedObsNm"+i+".R", "w")
     o4.write(a3.replace(substitute, dic[i]))
     o4.close()
+
+    # o4 = open ("../../../../data/assessing_models_simulation/GenerationMixturefewersignaturespairedObsNm"+i, "w")
+    # o4.write('Generated automatically using /Users/morril01/Documents/PhD/GlobalDA/code/3_analysis/simulation_model_assessment/generate_datasets_simulations/create_paired_pcawg_datasets.py\n')
+    # o4.close()
 
 print(dic.keys())

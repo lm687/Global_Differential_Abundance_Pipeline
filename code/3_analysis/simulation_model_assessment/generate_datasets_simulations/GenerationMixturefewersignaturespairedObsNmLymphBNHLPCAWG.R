@@ -99,11 +99,11 @@ if(nrow(ct1) < (2*n)){
 }
 
 W <- rbind(t(sapply(1:n, function(id_patient){
-  rmultinom(1, sum(ct1[id_patient,]), normalise_rw(ct1[sample_ids[id_patient],]))
+  rmultinom(1, sum(ct1[sample_ids[id_patient],]), normalise_rw(ct1[sample_ids[id_patient],]))
 })),
 t(sapply(c(1:n), function(id_patient){
-  rmultinom(1, round(sum(ct2[id_patient,])*props_mix1[1]), normalise_rw(ct1[sample_ids[id_patient],]))+
-    rmultinom(1, round(sum(ct2[id_patient,])*props_mix1[2]), normalise_rw(ct2[sample_ids[id_patient],]))
+  rmultinom(1, round(sum(ct2[sample_ids[id_patient],])*props_mix1[1]), normalise_rw(ct1[sample_ids[id_patient],]))+
+    rmultinom(1, round(sum(ct2[sample_ids[id_patient],])*props_mix1[2]), normalise_rw(ct2[sample_ids[id_patient],]))
 })))
 
 ## Save as object so that we can perform the inference

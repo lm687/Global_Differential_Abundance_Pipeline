@@ -40,6 +40,12 @@ sh make_config.sh
 
 `make_config` contains the arguments (i.e. parameters, for the most part) for the different Simulation Generations. Note using `bash make_config.sh` will throw an error - use sh instead.
 
+## copying
+scp lm687@login-cpu.hpc.cam.ac.uk:/home/lm687/Global_Differential_Abundance_Pipeline/data/assessing_models_simulation/datasets/multiple_GenerationMixturefewersignaturespairedProstAdenoCAPCAWG* data/assessing_models_simulation/datasets/
+
+scp lm687@login-cpu.hpc.cam.ac.uk:/home/lm687/Global_Differential_Abundance_Pipeline/data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationMixturefewersignaturespairedProstAdenoCAPCAWG* data/assessing_models_simulation/inference_results/TMB/nlminb/
+
+
 ## Synthetic datasets
 - Generation A: 20200625. There is a beta intercept of zero
 
