@@ -146,7 +146,7 @@ if(opt$use_previous_run_startingvals){
   ## the output file with the original name, instead of the _NC.RDS name.
   ## get the number of previous tries, and add one to the <num_tries_for_convergence> document
   
-  threshold_num_tries = 10
+  threshold_num_tries = 7
   header_num_tries='## Write down the number of tries of getting results that converge. If the number exceeds some limit, save the non-converged result\n'
 
   #file_num_tries <- "logs/num_tries_for_convergence.txt"

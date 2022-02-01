@@ -228,7 +228,8 @@ datasets_files = datasets_files[match((sapply(rownames(joint_df[joint_df$fullRE_
 length(datasets_files)
 
 datasets = lapply(datasets_files, readRDS)
-if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
+
+if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation)  | grepl('GenerationMixturefewersmallsignaturespaired', generation) ){
   cat('Transforming beta gamma shape from logR to probability')
   datasets <- lapply(datasets, function(i){
     if(i$beta_gamma_shape == -999){
@@ -381,7 +382,7 @@ if(length(pvals_fullREDMSL) != length(datasets)){
   stop('The number of runs is not the number of datasets')
 }
 
-## p-values from my models are not adjusted for MT
+## p-values from my models are not adjusted for MT (below they are in adj)
 pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   pvals_fullREM=pvals_fullREM,
                                   pvals_diagREDMSL=pvals_diagREDMSL,
@@ -420,6 +421,8 @@ pvals_data_frame_all_converged = cbind.data.frame(pvals_fullREDMSL=pvals_fullRED
                                                   perturbation=pvals_perturbation[!is.na(DA_bool_all_converged)],
                                                   permutation=pvals_permutation[!is.na(DA_bool_all_converged)],
                                                   true=DA_bool_all_converged[!is.na(DA_bool_all_converged)])
+pvals_data_frame_adj <- adjust_all(pvals_data_frame)
+pvals_data_frame_all_converged_adj <- pvals_data_frame_adj[!is.na(DA_bool_all_converged),] ## remove after MT correction
 
 give_res_all <- function(pvals_df){
   rbind(fullREM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREDMSL < 0.05),
@@ -480,10 +483,16 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   varying_n <-give_accuracies_with_varying_var('n')
   varying_n_all_converged <-give_accuracies_with_varying_var('n', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
                                                pvals_data_frame_arg = pvals_data_frame_all_converged)
+  varying_n_adj <-give_accuracies_with_varying_var('n', pvals_data_frame_arg = pvals_data_frame_adj)
+  varying_n_all_converged_adj <-give_accuracies_with_varying_var('n', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
+                                                             pvals_data_frame_arg = pvals_data_frame_all_converged_adj)
   varying_betashape <-give_accuracies_with_varying_var('beta_gamma_shape')
   varying_betashape_all_converged <-give_accuracies_with_varying_var('beta_gamma_shape', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
                                                                      pvals_data_frame_arg = pvals_data_frame_all_converged)
-  
+  varying_betashape_adj <-give_accuracies_with_varying_var('beta_gamma_shape', pvals_data_frame_arg = pvals_data_frame_adj)
+  varying_betashape_all_converged_adj <-give_accuracies_with_varying_var('beta_gamma_shape', datasets_arg = datasets[!is.na(DA_bool_all_converged)],
+                                                                     pvals_data_frame_arg = pvals_data_frame_all_converged_adj)
+
   try({varying_n_d <-give_accuracies_with_varying_var(var = c('d', 'n'), two_var = T)})
   try({varying_n_betashape <-give_accuracies_with_varying_var(var = c('n', 'beta_gamma_shape'), two_var = T)})
   try({varying_d_betashape <-give_accuracies_with_varying_var(var = c('d', 'beta_gamma_shape'), two_var = T)})
@@ -603,7 +612,17 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     ggtitle(gsub("Generation", "", gsub("generation", "", generation)))#+facet_wrap(.~model)
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_all_converged_palette2_lty.pdf"),
          height = 3.0, width = 3.0)
-  
+
+  ggplot(varying_n_all_converged_adj, aes(x=n, y = WeightedAccuracy, col=model, group=model,
+                                      lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM'),
+                                      label=model))+
+    geom_point()+ geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+guides(col=FALSE, lty='none')+
+    ggtitle(gsub("Generation", "", gsub("generation", "", generation)))#+facet_wrap(.~model)
+  ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_adj_with_N_all_converged_palette2_lty.pdf"),
+         height = 3.0, width = 3.0)
+
+    
   ggplot(varying_n, aes(x=n, y = WeightedAccuracy, col=model, group=model))+geom_point()+geom_line()+theme_bw()+
     scale_color_manual(values=colours_models)+labs(col='')+guides(col=FALSE)+ggtitle(generation)#+facet_wrap(.~model)
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_N_palette2.pdf"),
@@ -633,6 +652,17 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     lims(x=c(min(varying_betashape$beta_gamma_shape), max(varying_betashape$beta_gamma_shape)*1.5))
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2.pdf"),
          height = 3.0, width = 4.0)
+  ggplot(varying_betashape_adj, aes(x=beta_gamma_shape, y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+labs(col='')+guides(col='none', lty='none')+
+    ggtitle(generation)+#+facet_wrap(.~model)
+    geom_label_repel(data = varying_betashape_adj[varying_betashape_adj$beta_gamma_shape == max(varying_betashape_adj$beta_gamma_shape),],
+                     max.overlaps = Inf, aes(x=max(varying_betashape_adj$beta_gamma_shape)), direction = "y", nudge_x=max_n*0.3,force=100,
+                     size=3)+
+    lims(x=c(min(varying_betashape_adj$beta_gamma_shape), max(varying_betashape_adj$beta_gamma_shape)*1.5))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_adj_with_betagammashape_palette2.pdf"),
+         height = 3.0, width = 4.0)
   
   ggplot(varying_betashape_all_converged, aes(x=beta_gamma_shape, y = Accuracy, col=model, group=model, label=model,
                                 lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
@@ -647,7 +677,20 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_all_converged_palette2.pdf"),
          height = 3.0, width = 4.0)
   
-  if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) ){
+  ggplot(varying_betashape_all_converged_adj, aes(x=beta_gamma_shape, y = Accuracy, col=model, group=model, label=model,
+                                              lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+labs(col='')+guides(col='none', lty='none')+
+    ggtitle(generation)+#+facet_wrap(.~model)
+    geom_label_repel(data = varying_betashape_all_converged_adj[varying_betashape_all_converged_adj$beta_gamma_shape == max(varying_betashape_all_converged$beta_gamma_shape),],
+                     max.overlaps = Inf, aes(x=max(varying_betashape_all_converged_adj$beta_gamma_shape)), direction = "y",
+                     nudge_x= max(varying_betashape_all_converged_adj$beta_gamma_shape)*0.3,force=100,
+                     size=3)+
+    lims(x=c(min(varying_betashape_all_converged_adj$beta_gamma_shape), max(varying_betashape_all_converged_adj$beta_gamma_shape)*1.5))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_adj_with_betagammashape_all_converged_palette2.pdf"),
+         height = 3.0, width = 4.0)
+  
+  if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) | grepl('GenerationMixturefewersmallsignaturespaired', generation)){
     varying_betashape$beta_gamma_shape <- signif(varying_betashape$beta_gamma_shape, 2)
   }
   
@@ -664,6 +707,21 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
     # lims(x=c(min(varying_betashape$beta_gamma_shape), max(varying_betashape$beta_gamma_shape)*1.5))
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_with_betagammashape_palette2_factor.pdf"),
+         height = 3.0, width = 4.0)
+  
+  ggplot(varying_betashape_adj, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
+                                lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
+    geom_point()+geom_line()+theme_bw()+
+    scale_color_manual(values=colours_models)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    ggtitle(generation)+#+facet_wrap(.~model)
+    geom_label_repel(data = varying_betashape_adj[varying_betashape_adj$beta_gamma_shape == max(varying_betashape_adj$beta_gamma_shape),],
+                     max.overlaps = Inf, aes(x=factor(max(varying_betashape_adj$beta_gamma_shape))), direction = "y",
+                     nudge_x=max(varying_betashape_adj$beta_gamma_shape)+1,
+                     size=3)+
+    coord_cartesian(xlim = c(0, length(unique(varying_betashape_adj$beta_gamma_shape))*1.3))+
+    theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
+  # lims(x=c(min(varying_betashape_adj$beta_gamma_shape), max(varying_betashape_adj$beta_gamma_shape)*1.5))
+  ggsave(paste0(flder_out, generation, "/summaries/accuracy_adj_with_betagammashape_palette2_factor.pdf"),
          height = 3.0, width = 4.0)
   
   

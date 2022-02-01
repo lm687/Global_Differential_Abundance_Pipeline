@@ -128,7 +128,7 @@ if(opt$multiple_runs){
 
 datasets = lapply(datasets_files, readRDS)
 
-if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', opt$dataset_generation) ){
+if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', opt$dataset_generation) | grepl('GenerationMixturefewersmallsignaturespaired', opt$dataset_generation) ){
   cat('Transforming beta gamma shape from logR to probability')
   datasets <- lapply(datasets, function(i){
     if(i$beta_gamma_shape == -999){

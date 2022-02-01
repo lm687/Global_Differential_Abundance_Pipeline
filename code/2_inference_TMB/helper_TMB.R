@@ -26,6 +26,12 @@ give_x_matrix = function(n_times_2){
 
 rsq = function (x, y) cor(x, y) ^ 2
 
+L_to_cov_wrapper_TMB <- function(TMB_obj, name_cov_par='cov_RE'){
+  .x <- summary(TMB_obj)
+  L_to_cov(python_like_select_rownames(.x, name_cov_par)[,1], d = nrow(python_like_select_rownames(.x, 'beta'))/2)
+}
+
+
 load_PCAWG = function(ct, typedata, simulation=FALSE, path_to_data="../../data/", read_directly=FALSE, old_version_creating_X_Z=F, load_all_sigs=F){
   if(simulation | read_directly){
     fle = ct
@@ -1523,7 +1529,8 @@ give_betas <- function(TMB_obj){
 
 
 plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remove_SBS=T, only_slope=F, return_df=F, plot=T,
-                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F, sort_by_slope=F){
+                       line_zero=T, add_confint=F, return_plot=T, return_ggplot=F, title=NULL, add_median=F, sort_by_slope=F,
+                       size_title=NULL, size_logR=NULL){
   if(typeof(TMB_obj) == 'character'){
     .summary_betas <- NA
     if(theme_bw){
@@ -1580,6 +1587,13 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     
     if(rotate_axis){
       plt <- plt + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+    }
+    if(!is.null(size_title)){
+      plt <- plt + theme(plot.title = element_text(size=size_title))
+    }
+    
+    if(!is.null(size_logR)){
+      plt <- plt + theme(axis.text.x = element_text(size=size_logR))
     }
     
     if(!is.null(title)){
@@ -2193,24 +2207,34 @@ give_first_col <- function(i){
   if(is.null(dim(i))){i[1]}else{i[,1]}
 }
 
-give_pairs_with_mvn <- function(mat_mvn){
+give_pairs_with_mvn <- function(mat_mvn, lims=NULL){
   require(car)
-  dataEllipse(mat_mvn[,1], mat_mvn[,2], levels=c(0.95), xlim=c(min(mat_mvn[,1])-1,max(mat_mvn[,1])+1),
-              ylim=c(min(mat_mvn[,2])-1,max(mat_mvn[,2])+1))
+  if(is.null(lims)){
+    dataEllipse(mat_mvn[,1], mat_mvn[,2], levels=c(0.95), xlim=c(min(mat_mvn[,1])-1,max(mat_mvn[,1])+1),
+                ylim=c(min(mat_mvn[,2])-1,max(mat_mvn[,2])+1)) 
+  }else{
+    dataEllipse(mat_mvn[,1], mat_mvn[,2], levels=c(0.95), xlim=lims,
+                ylim=lims)
+  }
 }
 
 remove_all_NA <- function(i) i[!(colSums(apply(i, 1, is.na)) > 0),]
 
-give_pairs_with_mvn_wrapper <- function(exposures_arg, zero_to_NA=F){
+give_pairs_with_mvn_wrapper <- function(exposures_arg, zero_to_NA=F, common_lims=F){
   if(zero_to_NA){
     exposures_arg[exposures_arg == 0] <- NA
   }
+  common_lims <- c(min(exposures_arg), max(exposures_arg))
   par(mfrow=c(ncol(exposures_arg), ncol(exposures_arg)), mar=c(0,0,0,0))
   for(ii in 1:ncol(exposures_arg)){
     for(jj in 1:ncol(exposures_arg)){
       if(ii != jj){
-        give_pairs_with_mvn(remove_all_NA(exposures_arg[,c(ii, jj)]))
+        give_pairs_with_mvn(remove_all_NA(exposures_arg[,c(ii, jj)]), lims=common_lims)
       }else{plot.new()}
     }
   }
+}
+
+adjust_all <- function(i){
+  cbind.data.frame(apply(i[,-ncol(i)], 2, p.adjust), true=i[,ncol(i)])
 }
