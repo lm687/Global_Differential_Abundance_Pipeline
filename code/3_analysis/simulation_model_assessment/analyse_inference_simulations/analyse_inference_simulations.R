@@ -128,7 +128,7 @@ if(opt$multiple_runs){
 
 datasets = lapply(datasets_files, readRDS)
 
-if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', opt$dataset_generation) | grepl('GenerationMixturefewersmallsignaturespaired', opt$dataset_generation) ){
+if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', opt$dataset_generation) | grepl('signaturespaired', opt$dataset_generation) ){
   cat('Transforming beta gamma shape from logR to probability')
   datasets <- lapply(datasets, function(i){
     if(i$beta_gamma_shape == -999){
@@ -158,7 +158,8 @@ names(runs) <- opt$input_list
 bool_has_not_converged <- sapply(runs, function(i) try(give_summary_per_sample(i))) != "Good"
 runs[bool_has_not_converged] = NA
 for(j in which(sapply(runs, typeof) %in% c("logical", "character"))){
-  runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
+  # runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
+  runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(ncol(datasets[[j]]$W)-1)))) ## *2 for slope and intercept
 }
 pvals = as.numeric(sapply(runs, function(i) try(wald_TMB_wrapper(i, verbatim=FALSE))))
 
@@ -228,18 +229,32 @@ if(!is.null(dim(datasets[[1]]$beta))){
     i
   }
 
+  cat('Number of datasets: ', length(datasets), '\n')
+  cat('Number of runs: ', length(runs), '\n')
+  print(sapply(runs, function(i) length(i$par.fixed)))
+  print(names(runs)[sapply(runs, function(i) length(i$par.fixed)) == 6 ])
+  print((runs)[sapply(runs, function(i) length(i$par.fixed)) == 6 ])
+  
+  print(datasets[[1]]$d)
+  print(dim(datasets[[1]]$W))
+  print(runs[[1]])
+  
+  
+  ### i$d changed to ncol(i$W) because otherwise there could be some problems in datasets that were incorrectly created
   #' in df_beta_recovery, as vector() added to unlist(), because with  opt$dataset_generation
   #' [1] "GenerationMixturePCAWG" I got a df_beta_recovery with matrices inside, i.e. many columns
-  df_beta_recovery = cbind.data.frame(beta_true = as.vector(unlist(sapply(datasets, function(i) rep(NA, i$d-1)))),
-                                      idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1),
-                                      d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1),
-                                      n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1),
-                                      beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1),
+  df_beta_recovery = cbind.data.frame(beta_true = as.vector(unlist(sapply(datasets, function(i) rep(NA, ncol(i$W)-1)))),
+                                      idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) ncol(i$W)))-1),
+                                      d =  rep(unlist(sapply(datasets, function(i) ncol(i$W))), unlist(sapply(datasets, function(i) ncol(i$W)))-1),
+                                      n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) ncol(i$W)))-1),
+                                      beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) ncol(i$W)))-1),
                                       beta_est = as.vector(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE)))),
                                       beta_stderr = as.vector(unlist(sapply(runs, give_stderr))),
-                                      pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1),
-                                      DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
-                                      idx_within_dataset=as.vector(unlist(sapply(datasets, function(i) 1:(i$d-1)))))
+                                      beta_intercept_est = unlist(sapply(runs, function(i) select_intercept(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))), ## new 20220210
+                                      beta_intercept_stderr = unlist(sapply(runs, give_stderr, only_slopes=F)[c(T,F)]), ## new 20220210
+                                      pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) ncol(i$W)))-1),
+                                      DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) ncol(i$W)))-1),
+                                      idx_within_dataset=as.vector(unlist(sapply(datasets, function(i) 1:(ncol(i$W)-1)))))
   rownames(df_beta_recovery) <- make.names_allowing_hyphen(names(datasets)[df_beta_recovery$idx]) ## added 12 jan 2022
   df_beta_recovery$bool_zero_true_beta = factor(df_beta_recovery$beta_gamma_shape == 0, levels=c(TRUE, FALSE))
   df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(is.null((i))){FALSE}else{i})[df_beta_recovery$idx]

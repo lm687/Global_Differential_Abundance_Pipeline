@@ -1,3 +1,5 @@
+### Note: all of this is redundant. See Rmd instead.
+
 rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
@@ -22,12 +24,18 @@ nonexogenous = read.table("../../../data/cosmic/exogenous_signatures_SBS.txt", s
 subset_sigs_sparse_cov_idx_nonexo <- read.table("../../../current/subset_sigs_sparse_cov_idx_nonexo.txt", stringsAsFactors = F, fill = T)
 
 fles_roo <- list.files("../../../data/roo/", full.names = T)
-fles_active <- fles_roo[grepl('_signatures_', fles_roo)]
+fles_active <- fles_roo[grepl('_signaturesPCAWG_', fles_roo)]
 fles_active <- fles_active[!grepl('subset_signatures', fles_active)]
 signature_roo0 <- sapply(fles_active, readRDS)
-signature_roo_active <- sapply(signature_roo0, function(i) try(slot(i, 'count_matrices_active')))
-names(signature_roo_active) <- gsub("_signatures_ROO.RDS", "", basename(fles_active[grepl('_signatures_', fles_active)]))
-signature_roo_active <- signature_roo_active[match(enough_samples, names(signature_roo_active))]
+names(signature_roo0) <- gsub("_signaturesPCAWG_ROO.RDS", "", basename(fles_active[grepl('_signaturesPCAWG_', fles_active)]))
+signature_roo0 <- signature_roo0[match(enough_samples, names(signature_roo0))]
+signature_roo_active <- lapply(signature_roo0, function(i) try(slot(i, 'count_matrices_active')))
+names(signature_roo_active) <- enough_samples
+
+# signature_roo0 = lapply(enough_samples, function(ct){
+#   load_PCAWG(ct = ct, typedata = "signaturesPCAWG", path_to_data = "../../../data/", load_all_sigs = T)})
+# signature_roo_active = lapply(enough_samples, function(ct){
+#   load_PCAWG(ct = ct, typedata = "signaturesPCAWG", path_to_data = "../../../data/")})
 
 signature_roo_active_nonexo <- lapply(signature_roo_active, function(j){
   lapply(j, function(i) i[,!(colnames(i) %in% nonexogenous$V1)])
@@ -119,12 +127,21 @@ HMP_res_sigs <- lapply(signature_roo_active, function(signature_roo_it){
                           t(signature_roo_it[[2]]))))
 })
 
-
 ##2+ Sample Means w/o Reference Vector	
 HMP_res_sigs_2 <- lapply(signature_roo_active, function(signature_roo_it){
   try(HMP::Xmcupo.sevsample(list(t(signature_roo_it[[1]]),
                               t(signature_roo_it[[2]]))))
 })
+
+HMP_res_estimates <- lapply(signature_roo_active, function(signature_roo_it){
+  try(lapply(list((signature_roo_it[[1]]),
+                              (signature_roo_it[[2]])), HMP::DM.MoM))
+})
+saveRDS(HMP_res_estimates, "../../../data/restricted/pcawg/pcawg_HMP_estimation_results.RDS")
+HMP::Dirichlet.multinomial(Nrs = 30, shape = HMP_res_estimates$`Bone-Osteosarc`[[1]]$pi*HMP_res_estimates$`Bone-Osteosarc`[[1]]$theta)
+length(HMP_res_estimates$`Bone-Osteosarc`[[1]]$pi)
+(HMP_res_estimates$`Bone-Osteosarc`[[1]]$theta)
+(HMP_res_estimates$`Bone-Osteosarc`[[2]]$theta)
 
 HMP_res_sigs_nonexo <- lapply(signature_roo_active_nonexo, function(signature_roo_it){
   try(HMP::Xdc.sevsample(list(t(signature_roo_it[[1]]),

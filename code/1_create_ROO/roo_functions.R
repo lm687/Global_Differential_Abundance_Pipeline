@@ -921,14 +921,16 @@ permutation_test_fun = function(objects_sigs_per_CT_features_arg, nbootstraps, v
 }
 
 give_total_perturbation = function(object_roo, add_pseudocounts=TRUE, slot_name="count_matrices_all"){
+  warning('This function was wrong until 20220208, as it assumed that the zero perturbation was 1/6, i.e. hardcoded for d=6')
   if(add_pseudocounts){
     slot(object_roo, slot_name)[[1]] =     slot(object_roo, slot_name)[[1]] + 1
     slot(object_roo, slot_name)[[2]] =     slot(object_roo, slot_name)[[2]] + 1
   }
+  d = ncol(slot(object_roo, slot_name)[[1]])
   # sum(apply(slot(give_perturbation_ROOSigs(object_roo, slot_name = slot_name), name = slot_name)[[1]],
   # 1, function(i) sqrt(sum((i-1/6)**2))))/nrow(slot(object_roo, slot_name)[[1]])
   mean(apply(slot(give_perturbation_ROOSigs(object_roo, slot_name = slot_name), name = slot_name)[[1]],
-             1, function(i) sqrt(sum((i-1/6)**2))))
+             1, function(i) sqrt(sum((i-rep(1/d, d))**2))))
 }
 
 aitchison_perturbation_test_alt_v2 <- function(object, slot_name, addone=T){
@@ -956,6 +958,7 @@ aitchison_perturbation_test_alt_v2 <- function(object, slot_name, addone=T){
 }
 
 iterative_chisqrt <- function(S1, S2){
+  warning('This function was incorrect until 20220208. It was hardcoded for 96 categories')
   ## copied from forward_variable_selection.R
   ## where S1 and S2 are datasets, in which the columns are the categories
   ## 1. compute 96 independent chi-sqrt tests, for each of the categories
@@ -979,13 +982,14 @@ iterative_chisqrt <- function(S1, S2){
     ordered_pvals[i] = chisq.test(rbind(c(sum(S1[,i]), sum(S1[,(i+1):ncats])),
                                         c(sum(S2[,i]), sum(S2[,(i+1):ncats]))))$p.value
   }
-  ordered_pvals[96] = chisq.test(rbind(c(sum(S1[,i]), sum(S1[,ncats-1])),
+  ## here it used to be ordered_pvals[96]
+  ordered_pvals[ncats] = chisq.test(rbind(c(sum(S1[,i]), sum(S1[,ncats-1])),
                                        c(sum(S2[,i]), sum(S2[,ncats-1]))))$p.value
   
   # plot(unordered_pvals[rank], ordered_pvals)
   # plot(unordered_pvals, sapply(1:96, function(idx) ordered_pvals[which(rank == idx)]))
   ## 4. Order, again, the p-values
-  sapply(1:ncats, function(idx) ordered_pvals[which(rank == idx)])
+  (sapply(1:ncats, function(idx) ordered_pvals[which(rank == idx)])) ## added padjust in 20220208
 }
 
 

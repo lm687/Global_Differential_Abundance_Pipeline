@@ -13,18 +13,35 @@ if(local){
   # generation = "GenerationK2"weightedaccuracy_with_d_boxplot.pdf
   # generation = "generationFnorm"
   # generation = "GenerationCnorm"
-  generation = "GenerationJnorm" ##20220131
   # generation = "GenerationJnorm2"
   # generation = "GenerationJnorm3"
   # generation = "GenerationJnormTwoLambdas"
   # generation = "GenerationInoREtwolambdas"
   # generation = "generationHnormtwolambdas"
   # generation = "GenerationMixture1"
-  # generation = "GenerationJnormTwoLambdasOneChangingBeta"
+  generation = "GenerationJnormTwoLambdasOneChangingBeta"
   # generation = "GenerationJnormBTwoLambdasOneChangingBeta"
   # generation = "GenerationMixturePCAWG"
   # generation = "GenerationMixturefewersignaturesPCAWG"
+  # generation <- 'GenerationMixturefewersignaturespairedPCAWG'
   # generation = "GenerationMixturefewersignaturespairedKidneyRCCPCAWG"
+  # generation <- 'GenerationMixturefewersignaturespairedstomachPCAWG'
+  # generation <- 'GenerationMixturefewersmallsignaturespairedKidneyRCCPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedProstAdenoCAPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedCNSGBMPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmPancEndocrinePCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmUterusAdenoCAPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmGaussianVarPCAWGCNSGBMPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmPoissonSigPCAWGColoRectAdenoCAPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmInvPCAWGColoRectAdenoCAPCAWG'
+  # generation <- 'GenerationJnormBTwoLambdasOneChangingBeta'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmInvPCAWGCNSGBMPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMColoRectAdenoCAPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMCNSGBMPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMEsoAdenoCAPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMHeadSCCPCAWG'
+  # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMKidneyChRCCPCAWG'
+  # generation <- 'GenerationMixtureallsignaturespairedObsNmCNSGBMPCAWG'
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -53,11 +70,16 @@ source("helper_model_assessment.R")
 
 library(grid)
 library(gridExtra)
-library(ggpubr)
+#library(ggpubr)
 library(reshape2)
 library(jcolors)
 library(cowplot)
 library(ggrepel)
+library(dplyr)
+
+####
+warning('Note: despite the name, pvals_adj are not adjusted for multiple-testing')
+
 require( tikzDevice )
 
 if(multiple_runs){
@@ -67,6 +89,7 @@ if(multiple_runs){
   flder_out <- "../../../../results/results_TMB/simulated_datasets/mixed_effects_models/"
   flder_in <- "../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/summaries/"
 }
+
 
 manual = F
 if(manual){
@@ -113,7 +136,6 @@ image(cbind(runs_fullREM0=((runs_fullREM0$converged)),
 #           runs_fullREDMSL0=((runs_fullREDMSL0$converged)),
 #           runs_diagREDMSL0=((runs_diagREDMSL0$converged)),
 #           runs_diagREDM0=((runs_diagREDM0$converged)))))
-
 
 runs_fullREM <- runs_fullREM0[runs_fullREM0$converged,]
 runs_fullREDMSL <- runs_fullREDMSL0[runs_fullREDMSL0$converged,]
@@ -169,6 +191,7 @@ do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMS
     # theme(text=element_text(family="LM Roman 10", size=20))
 }), nrow=1))
 dev.off()})
+
 
 try({pdf(paste0(flder_out, generation, "/summaries/betas_scatterplots_colour.pdf"), height = 2.5)
 do.call( 'grid.arrange', c(grobs=lapply(c('fullRE_M', 'fullRE_DMSL', 'diagRE_DMSL', 'diagRE_DM'), function(it_model){
@@ -229,7 +252,7 @@ length(datasets_files)
 
 datasets = lapply(datasets_files, readRDS)
 
-if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation)  | grepl('GenerationMixturefewersmallsignaturespaired', generation) ){
+if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation)  | grepl('signaturespaired', generation) ){
   cat('Transforming beta gamma shape from logR to probability')
   datasets <- lapply(datasets, function(i){
     if(i$beta_gamma_shape == -999){
@@ -266,7 +289,7 @@ pvals_perturbation =  unlist(sapply(lapply(datasets_files, function(i){.x <- rea
 aitchison_perturbation_test_alt_v2(.x$objects_counts, slot_name = "count_matrices_all")}), `[`, 'pval'))
 pvals_permutation = unlist(lapply(datasets_files,  function(i){.x <- readRDS(i);
 permutation_test_fun_wrapper(.x$objects_counts, nbootstraps=40)}))
-pvals_chi_Harris <- sapply(datasets, function(i) iterative_chisqrt_wrapper(i$objects_counts) )
+Harris_chi <- sapply(datasets, function(i) iterative_chisqrt_wrapper(i$objects_counts) )
 
 length(pvals_runs_HMP) == length(pvals_perturbation)
 length(pvals_runs_HMP) == length(pvals_permutation)
@@ -388,7 +411,7 @@ pvals_data_frame=cbind.data.frame(pvals_fullREDMSL=pvals_fullREDMSL,
                                   pvals_diagREDMSL=pvals_diagREDMSL,
                                   pvals_diagREDM=pvals_diagREDM,
                                   ttest_props=unlist(runs_ttest_props),
-                                  pvals_chi_Harris=pvals_chi_Harris,
+                                  Harris_chi=Harris_chi,
                                   ttest_ilr_adj=pvals_ttest_ilr_adj,
                                   HMP=unlist(pvals_runs_HMP),
                                   HMP2=unlist(pvals_runs_HMP2),
@@ -405,7 +428,7 @@ print(runs_diagREDM)
 ## select only runs that have converged for all models
 DA_bool_all_converged <- DA_bool
 DA_bool_all_converged[!(!is.na(pvals_fullREDMSL) & !is.na(pvals_fullREM) & !is.na(pvals_diagREDMSL) &
-                          !is.na(pvals_diagREDM) & !is.na(pvals_chi_Harris) & !is.na(runs_ttest_props) &
+                          !is.na(pvals_diagREDM) & !is.na(Harris_chi) & !is.na(runs_ttest_props) &
                           !is.na(pvals_ttest_ilr_adj) & !is.na(pvals_runs_HMP) & !is.na(pvals_runs_HMP2) &
                           !is.na(pvals_perturbation) & !is.na(pvals_permutation))] <- NA
 table(is.na(DA_bool_all_converged))
@@ -414,7 +437,7 @@ pvals_data_frame_all_converged = cbind.data.frame(pvals_fullREDMSL=pvals_fullRED
                                                   pvals_diagREDMSL=pvals_diagREDMSL[!is.na(DA_bool_all_converged)],
                                                   pvals_diagREDM=pvals_diagREDM[!is.na(DA_bool_all_converged)],
                                                   ttest_props=unlist(runs_ttest_props)[!is.na(DA_bool_all_converged)],
-                                                  pvals_chi_Harris=pvals_chi_Harris[!is.na(DA_bool_all_converged)],
+                                                  Harris_chi=Harris_chi[!is.na(DA_bool_all_converged)],
                                                   ttest_ilr_adj=pvals_ttest_ilr_adj[!is.na(DA_bool_all_converged)],
                                                   HMP=unlist(pvals_runs_HMP)[!is.na(DA_bool_all_converged)],
                                                   HMP2=unlist(pvals_runs_HMP2)[!is.na(DA_bool_all_converged)],
@@ -423,21 +446,6 @@ pvals_data_frame_all_converged = cbind.data.frame(pvals_fullREDMSL=pvals_fullRED
                                                   true=DA_bool_all_converged[!is.na(DA_bool_all_converged)])
 pvals_data_frame_adj <- adjust_all(pvals_data_frame)
 pvals_data_frame_all_converged_adj <- pvals_data_frame_adj[!is.na(DA_bool_all_converged),] ## remove after MT correction
-
-give_res_all <- function(pvals_df){
-  rbind(fullREM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREDMSL < 0.05),
-      fullREDMSL=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREM <= 0.05),
-      diagREDMSL=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_diagREDMSL <= 0.05),
-      diagREDM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_diagREDM <= 0.05),
-      pvals_chi_Harris=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_chi_Harris <= 0.05),
-      ttest=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_props <= 0.05),
-      ILR=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_ilr_adj <= 0.05),
-      HMP=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP <= 0.05),
-      HMP2=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP2 <= 0.05),
-      perturbation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$perturbation <= 0.05),
-      permutation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$permutation <= 0.05))
-}
-
 
 cat('Creating <res_all> table')
 res_all = give_res_all(pvals_data_frame)
@@ -690,14 +698,19 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggsave(paste0(flder_out, generation, "/summaries/accuracy_adj_with_betagammashape_all_converged_palette2.pdf"),
          height = 3.0, width = 4.0)
   
-  if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) | grepl('GenerationMixturefewersmallsignaturespaired', generation)){
+  if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignaturesPCAWG", "GenerationMixturefewersignaturespairedPCAWG")) | grepl('GenerationMixturefewersignaturespaired', generation) | grepl('signaturespaired', generation)){
     varying_betashape$beta_gamma_shape <- signif(varying_betashape$beta_gamma_shape, 2)
   }
   
+  if(grepl('Mixture', generation)){
+    title_x <- 'Percentage of mixture'
+  }else{
+    title_x <- 'Gamma'
+  }
   ggplot(varying_betashape, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
                                 lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
     geom_point()+geom_line()+theme_bw()+
-    scale_color_manual(values=colours_models)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    scale_color_manual(values=colours_models)+labs(col='', x=title_x)+guides(col='none', lty='none')+
     ggtitle(generation)+#+facet_wrap(.~model)
     geom_label_repel(data = varying_betashape[varying_betashape$beta_gamma_shape == max(varying_betashape$beta_gamma_shape),],
                      max.overlaps = Inf, aes(x=factor(max(varying_betashape$beta_gamma_shape))), direction = "y",
@@ -712,7 +725,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggplot(varying_betashape_adj, aes(x=factor(beta_gamma_shape), y = Accuracy, col=model, group=model, label=model,
                                 lty=model%in% c('fullREM', 'fullREDMSL', 'diagREDMSL', 'diagREDM')))+
     geom_point()+geom_line()+theme_bw()+
-    scale_color_manual(values=colours_models)+labs(col='', x='Percentage of mixture')+guides(col='none', lty='none')+
+    scale_color_manual(values=colours_models)+labs(col='', x=title_x)+guides(col='none', lty='none')+
     ggtitle(generation)+#+facet_wrap(.~model)
     geom_label_repel(data = varying_betashape_adj[varying_betashape_adj$beta_gamma_shape == max(varying_betashape_adj$beta_gamma_shape),],
                      max.overlaps = Inf, aes(x=factor(max(varying_betashape_adj$beta_gamma_shape))), direction = "y",
@@ -742,7 +755,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   cat('Plotting varying_betashape\n')
   ggplot(varying_betashape[varying_betashape$beta_gamma_shape == 0,],
          aes(y=FPR, x=factor(model, levels=c("fullREM", "fullREDMSL", "diagREDMSL", "diagREDM", "HMP", "HMP2",
-                                             "pvals_chi_Harris",  "permutation", "perturbation", "ttest", "ILR"))))+
+                                             "Harris_chi",  "permutation", "perturbation", "ttest", "ILR"))))+
            geom_point()+labs(x="")+
     theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
   ggsave(paste0(flder_out, generation, "/summaries/FDR_nonDA.pdf"),
@@ -751,7 +764,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   try({
   ggplot(varying_n_betashape[varying_n_betashape$beta_gamma_shape == 0,],
          aes(y=FPR, x=factor(model, levels=c("fullREM", "fullREDMSL", "diagREDMSL", "diagREDM", "HMP", "HMP2",
-                                             "pvals_chi_Harris",  "permutation", "perturbation", "ttest", "ILR")),
+                                             "Harris_chi",  "permutation", "perturbation", "ttest", "ILR")),
              col=n))+geom_violin()+
     geom_point()+labs(x="")+
     theme_bw()+theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))
@@ -1122,7 +1135,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
                       pvals_ttest_ilr=pvals_ttest_ilr,
                       pvals_perturbation=pvals_perturbation,
                       pvals_permutation=pvals_permutation,
-                      pvals_chi_Harris=pvals_chi_Harris,
+                      Harris_chi=Harris_chi,
                       joint_df=joint_df,
                       datasets=datasets,
                       pvals_data_frame=pvals_data_frame)
@@ -1173,85 +1186,105 @@ if(sum(!is.na(DA_bool_all_converged))>0){
     theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_d_boxplot.pdf"),
          height = 3.0, width = 4)
-  # 
-  # 
-  # ##'  only for GenerationJnormTwoLambdasOneChangingBeta: looking at individual betas
-  # ##'  we want to see if there are more false negatives in samples where the beta_i is lower
-  # ggplot(data = runs_diagREDM[runs_diagREDM$beta_true != 0,c('beta_true', 'pvals_adj')],
-  #        aes(x=beta_true, y=pvals_adj))+geom_point()+theme_bw()
-  # runs_diagREDM$beta_est
-  # 
-  # 
-  # ## this should be normalised by the abundance of the last category which serves as baseline
-  # ## reminder: it is always the first log-ratio which is not different from zero
-  # table(runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]$beta_true)
-  # table(runs_diagREDM[runs_diagREDM$idx_within_dataset != 1,]$beta_true)
-  # 
-  # only_logR_with_change <- runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]
-  # 
-  # plot(density(only_logR_with_change$beta_true))
-  # 
-  # ##' I would expectL for the same beta gamma shape (or, equivalently, the same beta slope true)
-  # ##' there are more false negatives the lower beta intercept true
-  # ggplot(data = only_logR_with_change,
-  #        aes(x=beta_true, y=beta_intercept_true, col=pvals_adj))+geom_point()+theme_bw()
-  # 
-  # ggplot(data = only_logR_with_change,
-  #        aes(x=beta_true, y=beta_intercept_true, col=pvals_adj < 0.05))+geom_point()+theme_bw()
-  # ## there is no trend in GenerationJnormTwoLambdasOneChangingBeta
-  # 
-  # only_logR_with_change$cut_beta_intercept_true <- cut(only_logR_with_change$beta_intercept_true, breaks = seq(-1, 1, length.out = 10))
-  # only_logR_with_change_summarised <- only_logR_with_change %>% group_by(beta_true, cut_beta_intercept_true) %>%
-  #   dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
-  # ggplot(data = only_logR_with_change,
-  #        aes(x=beta_true, y=cut_beta_intercept_true,
-  #            col=pvals_adj < 0.05))+geom_point()+theme_bw()
-  # ggplot(data = only_logR_with_change,
-  #        aes(x=beta_true, y=cut_beta_intercept_true,
-  #            col=pvals_adj < 0.05))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")
-  # ggplot(data = only_logR_with_change_summarised,
-  #        aes(x=beta_true, y=cut_beta_intercept_true,
-  #            fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+scale_x_continuous(trans = "log2") ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
-  # 
-  # ## we compute the absolute abundance (in proportion) of the first category
-  # idx_dataset_it = 1
-  # 
-  # abundances_in_prob <- lapply(unique(runs_diagREDM$idx), function(idx_dataset_it){
-  #   softmax(c(runs_diagREDM[runs_diagREDM$idx == idx_dataset_it,]$beta_intercept_true, 0)) ## abundance of first cat
-  # })
-  # 
-  # abundances_first_cat <- sapply(abundances_in_prob, `[`, 1)
-  # abundances_last_cat <- sapply(abundances_in_prob, function(i) i[length(i)]) ## not used
-  # 
-  # length(abundances_first_cat)
-  # dim(only_logR_with_change)
-  # only_logR_with_change$abundance_first_cat <- abundances_first_cat
-  # only_logR_with_change$cut_abundances_first_cat <- cut(only_logR_with_change$abundance_first_cat,
-  #                                                       breaks = seq(0, max(only_logR_with_change$abundance_first_cat), length.out = 5))
-  # only_logR_with_change_summarised_2 <- only_logR_with_change %>% group_by(beta_true, cut_abundances_first_cat) %>%
-  #   dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
-  # 
-  # ggplot(data = only_logR_with_change,
-  #        aes(x=beta_true, y=abundances_first_cat,
-  #            col=pvals_adj < 0.05))+geom_point()+theme_bw()
-  # 
-  # tikz(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
-  #      height = 3.5, width = 6)
-  # ggplot(data = only_logR_with_change_summarised_2,
-  #        aes(x=factor(beta_true), y=cut_abundances_first_cat,
-  #            fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
-  #   scale_fill_jcolors_contin(palette = "pal2")+
-  #   labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
-  # # ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
-  # dev.off()
-  # 
-  # ggplot(data = only_logR_with_change_summarised_2,
-  #        aes(x=factor(beta_true), y=cut_abundances_first_cat,
-  #            fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
-  #   scale_fill_jcolors_contin(palette = "pal2")+
-  #   labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
-  # ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
-  #        height = 3.5, width = 6)
+  
+  if(generation %in% c("GenerationJnormTwoLambdasOneChangingBeta", "GenerationJnormBTwoLambdasOneChangingBeta")){
+  ##'  only for GenerationJnormTwoLambdasOneChangingBeta: looking at individual betas
+  ##'  we want to see if there are more false negatives in samples where the beta_i is lower
+  ggplot(data = runs_diagREDM[runs_diagREDM$beta_true != 0,c('beta_true', 'pvals_adj')],
+         aes(x=beta_true, y=pvals_adj))+geom_point()+theme_bw()
+  runs_diagREDM$beta_est
+
+
+  ## this should be normalised by the abundance of the last category which serves as baseline
+  ## reminder: it is always the first log-ratio which is not different from zero
+  table(runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]$beta_true)
+  table(runs_diagREDM[runs_diagREDM$idx_within_dataset != 1,]$beta_true)
+
+  only_logR_with_change <- runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]
+
+  plot(density(only_logR_with_change$beta_true))
+
+  ##' I would expectL for the same beta gamma shape (or, equivalently, the same beta slope true)
+  ##' there are more false negatives the lower beta intercept true
+  ggplot(data = only_logR_with_change,
+         aes(x=beta_true, y=beta_intercept_true, col=pvals_adj))+geom_point()+theme_bw()
+
+  ggplot(data = only_logR_with_change,
+         aes(x=beta_true, y=beta_intercept_true, col=pvals_adj < 0.05))+geom_point()+theme_bw()
+  ## there is no trend in GenerationJnormTwoLambdasOneChangingBeta
+
+  only_logR_with_change$cut_beta_intercept_true <- cut(only_logR_with_change$beta_intercept_true, breaks = seq(-1, 1, length.out = 10))
+  only_logR_with_change_summarised <- only_logR_with_change %>% group_by(beta_true, cut_beta_intercept_true) %>%
+    dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+  ggplot(data = only_logR_with_change,
+         aes(x=factor(beta_true), y=cut_beta_intercept_true,
+             col=pvals_adj < 0.05))+geom_point()+theme_bw()
+  ggplot(data = only_logR_with_change,
+         aes(x=beta_true, y=cut_beta_intercept_true,
+             col=pvals_adj < 0.05))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")
+  ggplot(data = only_logR_with_change_summarised,
+         aes(x=factor(beta_true), y=cut_beta_intercept_true,
+             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw() ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+
+  ## we compute the absolute abundance (in proportion) of the first category
+  idx_dataset_it = 1
+
+  abundances_in_prob <- lapply(unique(runs_diagREDM$idx), function(idx_dataset_it){
+    softmax(c(runs_diagREDM[runs_diagREDM$idx == idx_dataset_it,]$beta_intercept_true, 0)) ## abundance of first cat
+  })
+
+  abundances_first_cat <- sapply(abundances_in_prob, `[`, 1)
+  abundances_last_cat <- sapply(abundances_in_prob, function(i) i[length(i)]) ## not used
+
+  length(abundances_first_cat)
+  dim(only_logR_with_change)
+  only_logR_with_change$abundance_first_cat <- abundances_first_cat
+  only_logR_with_change$cut_abundances_first_cat <- cut(only_logR_with_change$abundance_first_cat,
+                                                        breaks = seq(0, max(only_logR_with_change$abundance_first_cat), length.out = 4))
+  only_logR_with_change$cut_abundances_first_catV2 <- cut(only_logR_with_change$abundance_first_cat,
+                                                          breaks = quantile(only_logR_with_change$abundance_first_cat, probs = c(0, 0.25, 0.5, 0.75, 1)), include.lowest = T)
+  sum(is.na(only_logR_with_change$cut_abundances_first_catV2)) ## should be 0
+  
+  only_logR_with_change_summarised_2 <- only_logR_with_change %>%
+    group_by(beta_true, cut_abundances_first_cat) %>%
+    dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+
+  only_logR_with_change_summarised_V2 <- only_logR_with_change %>%
+    group_by(beta_true, cut_abundances_first_catV2) %>%
+    dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+  
+  ggplot(data = only_logR_with_change,
+         aes(x=factor(beta_true), y=abundances_first_cat,
+             col=pvals_adj < 0.05))+geom_point()+theme_bw()
+
+  tikz(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
+       height = 3.5, width = 6)
+  ggplot(data = only_logR_with_change_summarised_2,
+         aes(x=factor(beta_true), y=cut_abundances_first_cat,
+             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+    scale_fill_jcolors_contin(palette = "pal2")+
+    labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+  # ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+  dev.off()
+
+  ggplot(data = only_logR_with_change_summarised_2,
+         aes(x=factor(beta_true), y=cut_abundances_first_cat,
+             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+    scale_fill_jcolors_contin(palette = "pal3")+
+    labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+  ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvals.pdf"),
+         height = 3.5, width = 6)
+ 
+  ## different categorisation
+  ggplot(data = only_logR_with_change_summarised_V2,
+         aes(x=factor(beta_true), y=cut_abundances_first_catV2,
+             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+    scale_fill_jcolors_contin(palette = "pal3")+
+    labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+  ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvalsV2.pdf"),
+         height = 3.5, width = 6)
+  
+  }
   # 
   # table(only_logR_with_change$beta_true)
   # 
@@ -1285,3 +1318,5 @@ if(sum(!is.na(DA_bool_all_converged))>0){
           file = paste0("../../../../data/assessing_models_simulation/summaries_synthetic_DA/",
                         generation, ".RDS"))
 }
+
+

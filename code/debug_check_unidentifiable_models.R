@@ -292,7 +292,10 @@ for(xx in fles){
                            fullDMSL=results_inference_fullDMSL$par.random,
                            fullDMDLonefixedslambda=results_inference_fullDMDLonefixedslambda$par.random),
           main=name_plots, pch=19, col=scales::alpha('black', 0.2))
+<<<<<<< HEAD
+=======
       
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
   }else{
     pairs(cbind.data.frame(diagDMDL=results_inference_diagDMDL$par.random,
                            fullDMDLnoscaling=results_inference_fullDMDLnoscaling$par.random,
@@ -300,6 +303,9 @@ for(xx in fles){
                            fullDMDLonefixedslambda=results_inference_fullDMDLonefixedslambda$par.random),
           main=name_plots, pch=19, col=scales::alpha('black', 0.2))
   }
+<<<<<<< HEAD
+  
+=======
   ## checking results more throroughly
   ## what are these lines of diagDMDL == 0?
   rm(dmin1)
@@ -314,6 +320,7 @@ for(xx in fles){
   
   # pheatmap(matrix(results_inference_fullDMSL$par.random, ncol=dmin1))
   # pheatmap(matrix(results_inference_diagDMDL$par.random, ncol=dmin1))
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6
 }
 dev.off()
 

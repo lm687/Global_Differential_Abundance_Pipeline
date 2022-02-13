@@ -19,13 +19,29 @@ give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datase
   }
 }
 
+give_res_all <- function(pvals_df){
+  warning("This was wrong until 20220202. fullM and fullREDMSL were exchanged")
+  rbind(fullREM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREM <= 0.05),
+        fullREDMSL=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_fullREDMSL <= 0.05),
+        diagREDMSL=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_diagREDMSL <= 0.05),
+        diagREDM=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$pvals_diagREDM <= 0.05),
+        Harris_chi=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$Harris_chi <= 0.05),
+        ttest=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_props <= 0.05),
+        ILR=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$ttest_ilr_adj <= 0.05),
+        HMP=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP <= 0.05),
+        HMP2=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$HMP2 <= 0.05),
+        perturbation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$perturbation <= 0.05),
+        permutation=summarise_DA_detection(true = pvals_df$true, predicted = pvals_df$permutation <= 0.05))
+}
+
+
 put_vals_in_table <- function(.pvals){
   warning('<fullREM> and <fullREDMSL> were interchanged until 20220201')
   rbind(fullREM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREM <= 0.05),
         fullREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_fullREDMSL <= 0.05),
         diagREDMSL=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDMSL <= 0.05),
         diagREDM=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_diagREDM <= 0.05),
-        pvals_chi_Harris=summarise_DA_detection(true = .pvals$true, predicted = .pvals$pvals_chi_Harris <= 0.05),
+        Harris_chi=summarise_DA_detection(true = .pvals$true, predicted = .pvals$Harris_chi <= 0.05),
         ttest=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_props <= 0.05),
         ILR=summarise_DA_detection(true = .pvals$true, predicted = .pvals$ttest_ilr_adj <= 0.05),
         HMP=summarise_DA_detection(true = .pvals$true, predicted = .pvals$HMP <= 0.05),
@@ -37,16 +53,16 @@ put_vals_in_table <- function(.pvals){
 # colours_models <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
 #                     fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
 #                     ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
-#                     pvals_chi_Harris= "#2A297A", ttest=  "#995533"   )
+#                     Harris_chi= "#2A297A", ttest=  "#995533"   )
 # colours_models2 <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
 #                     fullREM= "#5B6DC8", HMP= "#3CA437", HMP2= "#6B244C" ,
 #                     ILR= "#6ACDC5", permutation= "#DE1A1A" , perturbation= "#BBB53E",
-#                     chi_Harris= "#2A297A", ttest=  "#995533"   )
+#                     Harris_chi= "#2A297A", ttest=  "#995533"   )
 colours_models <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
                     fullREM= "#e69138", HMP= "#3CA437", HMP2= "#6B244C" ,
                     ILR= "#6ACDC5", permutation= "#8fce00" , perturbation= "#BBB53E",
-                    pvals_chi_Harris= "#2A297A", ttest=  "#995533"   )
+                    Harris_chi= "#2A297A", ttest=  "#995533"   )
 colours_models2 <- c(diagREDM= "#943CB4", diagREDMSL= "#194D44", fullREDMSL=  "#C6CF6E",
                      fullREM= "#e69138", HMP= "#3CA437", HMP2= "#6B244C" ,
                      ILR= "#6ACDC5", permutation= "#8fce00" , perturbation= "#BBB53E",
-                     chi_Harris= "#2A297A", ttest=  "#995533"   )
+                     Harris_chi= "#2A297A", ttest=  "#995533"   )

@@ -1622,6 +1622,24 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
   }
 }
 
+nan_to_zero <- function(m){
+  m[is.nan(m)] <- 0
+}
+
+rm_na_rows <- function(m){
+  m[!(apply(m, 1, function(i) any(is.na(i)))),]
+}
+
+give_ternary <- function(probs, add_par=T, opacity=0.2, col='red', pch='.', cex=5, ...){
+  require(Ternary)
+  mar=c(0,0,0,0)
+  TernaryPlot(atip = colnames(probs)[1], btip = colnames(probs)[2], ctip = colnames(probs)[3], grid.lines = 0, grid.col = NULL, ...)
+  dens <- TernaryDensity(probs, resolution = 10L)
+  
+  cls_legend = rbind(viridisLite::viridis(48L, alpha = 0.6),
+                     seq(from = 0, to = 47, by=1))
+  TernaryPoints(probs, col = alpha(col, opacity), pch = pch, cex=cex)
+}
 
 plot_lambdas <- function(TMB_obj, return_df=F, plot=T){
   

@@ -167,6 +167,8 @@ par(mfrow=c(1,2), mar=c(0,0,0,0))
 sapply(split_matrix_in_half(W_SIGMAd_OVERDISPd), plot_ternary, legend_on=F, plot_points=F)
 dev.off()
 
+<<<<<<< HEAD
+=======
 
 ## why we need two betas
 beta[2,] <- c(0,0)
@@ -178,3 +180,4 @@ par(mfrow=c(1,2), mar=c(0,0,0,0))
 sapply(split_matrix_in_half(alpha_OVERDISPc), plot_ternary, legend_on=F, plot_points=F)
 dev.off()
 
+>>>>>>> b7516544d6581da5bf0a960e309788c1fba6dff6

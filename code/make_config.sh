@@ -419,3 +419,39 @@ echo "simulation_lambda_GenerationMixturefewersignaturespairedstomachPCAWG:
 " >> $name_config
 
 
+##########################################################################################
+##########################################################################################
+
+echo "\nsimulation_n_GenerationMixturePCAWG2:
+- 50
+- 100
+- 200
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationMixturePCAWG2:
+- -999
+- -12
+- -10
+- -8
+- -4
+- -2
+- -1
+- 0
+- 4
+- 8
+" >> $name_config
+
+echo "simulation_d_GenerationMixturePCAWG2:
+- 4
+" >> $name_config
+
+echo "simulation_nlambda_GenerationMixturePCAWG2:
+- 200
+" >> $name_config
+
+echo "simulation_lambda_GenerationMixturePCAWG2:
+- 80
+" >> $name_config
+
+
+

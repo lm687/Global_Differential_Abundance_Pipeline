@@ -1,4 +1,79 @@
+##-----------------------------------------------------------------------------------------------------##
+rm(list = ls())
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+##-----------------------------------------------------------------------------------------------------##
+
+##-----------------------------------------------------------------------------------------------------##
+source("../../2_inference_TMB/helper_TMB.R")
+source("../../../../CDA_in_Cancer/code/functions/meretricious/pretty_plots/prettySignatures.R")
+source("../../3_analysis/recovery_COSMIC_signatures/recover_COSMIC_signatures.R")
+
+library(mutSigExtractor)
+##-----------------------------------------------------------------------------------------------------##
+
+##-----------------------------------------------------------------------------------------------------##
+enough_samples = read.table("../../../data/restricted/pcawg/CT_sufficient_samples.txt", comment.char='#')[,1]
+##-----------------------------------------------------------------------------------------------------##
+
+##-----------------------------------------------------------------------------------------------------##
+rel_path <- "../"
+read_info <- function(ct){
+  .x <- list(fullRE_M_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREM_", ct, "_signaturesPCAWG.RDS"))),
+             # fullRE_DMSL_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMsinglelambda_", ct, "_signaturesPCAWG.RDS"))),
+             # fullRE_M_nonexo_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREMnonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # fullRE_DMSL_nonexo_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMsinglelambdanonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # diagRE_DMDL_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDM_", ct, "_signaturesPCAWG.RDS"))),
+             # diagRE_DMDL_nonexo_SP =  try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDMnonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # diagRE_DMDL_wSBS1SBS5nonexo_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDMwSBS1SBS5nonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # fullREDMnoscaling_SP_nonexo =  try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # fullREDMnoscaling_SP_nonexo_subsets_and_amalgamations <- try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMnoscalingnonexosubset_", ct, "_signaturesPCAWG.RDS"))),
+             # fullREDMonefixedlambdanonexo_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambdanonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # fullREDMonefixedlambda2nonexo_SP = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambda2nonexo_", ct, "_signaturesPCAWG.RDS"))),
+             # fullREDMonefixedlambdanonexo_SPSaA = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDMonefixedlambdanonexo_", ct, "_signaturesPCAWGSaA.RDS"))),
+             # fullREM_MSE = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREM_", ct, "_signaturesMSE.RDS"))),
+             # fullREDM_MSE = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDM_", ct, "_signaturesMSE.RDS"))),
+             # fullREDM_nucleotide1 = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/fullREDM_", ct, "_nucleotidesubstitution1.RDS"))),
+             # diagREDM_MSE = try(readRDS(paste0(rel_path, "../../data/pcawg_robjects_cache/tmb_results/nlminb/diagREDM_", ct, "_signaturesMSE.RDS"))),
+             # dataset_all_sigs = load_PCAWG(ct = ct, typedata = "signaturesPCAWG", path_to_data = paste0(rel_path, "../../data/"), load_all_sigs = T),
+             # dataset_active_sigs = load_PCAWG(ct = ct, typedata = "signaturesPCAWG", path_to_data = paste0(rel_path, "../../data/")),
+             # dataset_nucleotidesubstitution1 = load_PCAWG(ct = ct, typedata = "nucleotidesubstitution1", path_to_data = paste0(rel_path, "../../data/")),
+             dataset_nucleotidesubstitution3 = load_PCAWG(ct = ct, typedata = "nucleotidesubstitution3", path_to_data = paste0(rel_path, "../../data/"))
+             # dataset_nucleotidesubstitution3MSE = load_PCAWG(ct = ct, typedata = "nucleotidesubstitution3MSE", path_to_data =paste0(rel_path, "../../data/")),
+             # dataset_active_sigs_MSE = load_PCAWG(ct = ct, typedata = "signaturesMSE", path_to_data = paste0(rel_path, "../../data/"), load_all_sigs = F),
+             # DMM = list(z_DMM=lapply(1:8, function(k) try(read.table(paste0(rel_path, "../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_all", k, "_dmm.z"), sep = ',', skip = 1))),
+             #            fit_DMM = lapply(1:8, function(k) try(read.table(paste0(rel_path, "../../data/roo_for_DMM_SPpcawg/DMM_output/", ct, "_signaturesPCAWG_all", k, "_dmm.fit"), sep = ' '))))
+  )
+  # .x$dataset_nonexo <- give_subset_sigs_TMBobj(.x$dataset_active_sigs, nonexogenous$V1)
+  # .x$dataset_nonexoSBS1SBS5 <- give_subset_sigs_TMBobj(.x$dataset_active_sigs, nonexogenouswSBS1SBS5$V1)
+  # .x$colnames_notsorted_SP <- try(colnames(.x$dataset_active_sigs$Y))
+  # .x$logR_notsorted_SP <- try(vector_cats_to_logR(.x$colnames_notsorted_SP))
+  # 
+  # .x$colnames_nonexo_notsorted_SP <- try(colnames(.x$dataset_nonexo$Y))
+  # .x$logR_nonexo_notsorted_SP <- try(vector_cats_to_logR(.x$colnames_nonexo_notsorted_SP))
+  # 
+  # ## nonexo, with SBS1 and SBS5
+  # .x$colnames_wSBS1SBS5nonexo_notsorted_SP <- try(colnames(.x$dataset_nonexoSBS1SBS5$Y))
+  # .x$logR_wSBS1SBS5nonexo_notsorted_SP <- try(vector_cats_to_logR(.x$colnames_wSBS1SBS5nonexo_notsorted_SP))
+  return(.x)
+}
+
+read_info_list <- lapply(enough_samples, read_info)
+names(read_info_list) <- enough_samples
+##-----------------------------------------------------------------------------------------------------##
+
+##-----------------------------------------------------------------------------------------------------##
+
+
+## based on cosine similarity or other metrics, find which subsets of signatures fit the data best
+
+created_files <- list.files("../../../results/exploratory/refitting_cosmic_sigs/")
+created_files <- created_files[grepl('cossim_fall_plot.RDS', created_files)]
+
+enough_samples <- enough_samples[ !(enough_samples %in% gsub("cossim_fall_plot.RDS", "", created_files)) ]
+
 for(ct in enough_samples){
+  out_RDS <- paste0("../../../results/exploratory/refitting_cosmic_sigs/", ct, "cossim_fall_plot.RDS")
+  
   initial_nuc3 <- read_info_list[[ct]]$dataset_nucleotidesubstitution3
   initial_nuc3$Y
   
@@ -65,10 +140,11 @@ for(ct in enough_samples){
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
     labs(x='Removed signature', y='Cosine similarity to observed trinucleotides')+
     ggtitle(ct)+guides(col=F)
-  ggsave(paste0("../../results/exploratory/refitting_cosmic_sigs/", ct, "cossim_fall_plot.pdf"), height = 3, width = 10)
+  ggsave(paste0("../../../results/exploratory/refitting_cosmic_sigs/", ct, "cossim_fall_plot.pdf"), height = 3, width = 10)
+  
+  ## save object
   saveRDS(list(cossims_mat=cossims_mat, current_sigs=current_sigs, best_removes=best_removes, cossims_mat_losses=cossims_mat_losses,
-               which_new_nas=which_new_nas),
-          paste0("../../results/exploratory/refitting_cosmic_sigs/", ct, "cossim_fall_plot.RDS"))
+               which_new_nas=which_new_nas), out_RDS)
 
 }
 

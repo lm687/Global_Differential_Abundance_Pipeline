@@ -91,6 +91,7 @@ renaming_pcawg <- read.table("../../data/other/short_names_pcawg.txt", sep = "\t
 enough_samples = read.table("../../data/restricted/pcawg/CT_sufficient_samples.txt", comment.char='#')[,1]
 nonexogenous = read.table("../../data/cosmic/exogenous_signatures_SBS.txt", sep = "\t",
                           comment.char = "#", fill = F)
+
 nonexogenouswSBS1SBS5 = read.table("../../data/cosmic/exogenous_signatures_SBS_withSBS1SBS5.txt", sep = "\t",
                           comment.char = "#", fill = F)
 subset_sigs_sparse_cov_idx_nonexo <- read.table("../../current/subset_sigs_sparse_cov_idx_nonexo.txt", stringsAsFactors = F, fill = T)
@@ -98,7 +99,16 @@ fles_roo <- list.files("../../data/roo/", full.names = T)
 
 ```
 
+```{r, load_sigs_cosmic}
+sigs_cosmic0 <- read.table(paste0( "../../data/cosmic/sigProfiler_SBS_signatures_2019_05_22.csv"),
+                          stringsAsFactors = FALSE, sep = ',', header = TRUE)
+rownames(sigs_cosmic0) <- paste0(substr(sigs_cosmic0$SubType, 1, 1),'[',
+                                 sigs_cosmic0$Type, ']', substr(sigs_cosmic0$SubType, 3, 3))
+sigs_cosmic0 <- sigs_cosmic0[-c(1,2)];
+sigs_cosmic <- colnames(sigs_cosmic0)
+```
 
+\section{Using subset of active signatures from the PCAWG paper}
 ```{r, sigs_from_paper, warning=F, echo=F}
 cts_for_PCAWG <- gsub("_signaturesPCAWG_ROO.RDS", "",
                                 basename(fles_roo[grepl('_signaturesPCAWG_',
@@ -108,6 +118,7 @@ signatures_PCAWG <- sapply(cts_for_PCAWG,
        path_to_data = "../../data/")
 names(signatures_PCAWG) <- cts_for_PCAWG
 ```
+
 
 ```{r, colour_palette}
 pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", enough_samples), scheme = "tumour.subtype")
@@ -120,7 +131,7 @@ pcawg_palette[names(pcawg_palette) == 'Lung-SCC'] <- '#ffff29'# #a8a800
 sapply(cts_for_PCAWG, function(i){
   try(print(give_barplot_from_obj(obj = signatures_PCAWG[[i]], legend_on = T,
                         nrow=1, verbose=F,
-                        only_normalised=T, title=i)))})
+                        only_normalised=T, title=i, levels_signatures=sigs_cosmic)))})
 
 ```
 
@@ -239,7 +250,6 @@ colnames(all_betas_SP_nonexo) <- c('fullRE_M_nonexo_SP','fullRE_DMSL_nonexo_SP',
                                    'diagRE_DMDL_nonexo_SP', 'fullREDMnoscaling_SP_nonexo')
 pairs(all_betas_SP_nonexo)
 ```
-
 
 
 ```{r, beta_coef_differences_in_models_plots, echo=F, dependson=c('beta_coef_differences_in_models')}
@@ -786,8 +796,57 @@ dev.off()
 \subsection{Minimal perturbation in diagRE_DMDL_nonexo_S}
 ```{r, minimalperturbation_diagRE_DMDL_nonexo_S, dependson=c('load_runs_signaturesPCAWG')}
 
+perturbed_betas_diagRE_DMDL_nonexo_SP <- lapply(names(diagRE_DMDL_nonexo_SP), try(function(idx_sp){
+  .betas_SP <- data.frame(plot_betas(diagRE_DMDL_nonexo_SP[[idx_sp]], names_cats= logR_nonexo_notsorted_SP[[idx_sp]],
+                             return_df=T, plot=F))
+  
+  .slopes_minpert_SP <- .betas_SP %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+  # print(.slopes_minpert_SP)
+  ## check if the CI of the betas touches this median value
+  .summary_betas_slope_SP <- python_like_select_rownames(summary(diagRE_DMDL_nonexo_SP[[idx_sp]]), 'beta')[c(F,T),]
+  nrow(.summary_betas_slope_SP)
+  
+  minimal_change_baseline <- median(c(.slopes_minpert_SP, 0))
+  # print(.summary_betas_slope_SP)
+  # print(logR_nonexo_notsorted_SP[[idx_sp]])
+  # print(dim(.summary_betas_slope_SP))
+  if(!is.null(dim(.summary_betas_slope_SP))){
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[,1],
+                      vec_stderr=.summary_betas_slope_SP[,2],
+                      vec_true=rep(minimal_change_baseline, nrow(.summary_betas_slope_SP)))
+  }else{
+    .params_in_ci <- give_params_in_CI(vec_est=.summary_betas_slope_SP[1],
+                      vec_stderr=.summary_betas_slope_SP[2],
+                      vec_true=minimal_change_baseline)
+  }
+  .params_in_ci <- sapply(1:length(.params_in_ci), function(i){
+      ## for the ones in which there is a change, say whether it's up- or down-regulated
+      if(!.params_in_ci[i]){
+        ## if there is a change: not in confidence interval
+        if(is.null(dim(.summary_betas_slope_SP))){
+          ## one-dim
+          if(.summary_betas_slope_SP[1] > minimal_change_baseline){
+            'increase'
+          }else{
+            'decrease'
+          }
+        }else{
+          ## multi-dim
+          if(.summary_betas_slope_SP[i,1] > minimal_change_baseline){
+            'increase'
+          }else{
+            'decrease'
+          }
+        }
+      }else{
+        'FALSE'
+      }
+    })
+  names(.params_in_ci) <- sapply(logR_nonexo_notsorted_SP[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
+  .baseline <- strsplit(logR_nonexo_notsorted_SP[[idx_sp]][[1]], '/')[[1]][2]
+  return(list(betas_perturbed=.params_in_ci, baseline=.baseline))
+}))
 perturbed_betas_diagRE_DMDL_nonexo_SP <- lapply(names(diagRE_DMDL_nonexo_SP), try(give_min_pert))
-
 
 ```
 
@@ -818,6 +877,26 @@ ggplot(reshape2::melt(lapply(perturbed_betas_diagRE_DMDL_nonexo_SP, `[`, 'betas_
 
 ```
 
+```{r, minimalperturbation_diagRE_DMDL_nonexo_S_3_V2a, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG'), dev='tikz', fig.height=4, fig.width=5}
+names(perturbed_betas_diagRE_DMDL_nonexo_SP) <- names(diagRE_DMDL_nonexo_SP)
+ggplot(reshape2::melt(lapply(perturbed_betas_diagRE_DMDL_nonexo_SP, `[`, 'betas_perturbed')),
+       aes(x=L1, fill=factor(value, levels=c('increase', 'decrease', 'FALSE'))))+geom_bar(col='black', size=0.001)+theme_bw()+
+        scale_fill_manual(values=c('#b1d8b7', '#f08080', '#e7feff'))+theme(legend.position = "bottom")+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+labs(x='Cancer type',
+                                                                         y='Number of putatively perturbed\n and unperturbed signatures',  fill='Perturbed')
+```
+
+```{r, minimalperturbation_diagRE_DMDL_nonexo_S_3_V2b, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG'), dev='tikz', fig.height=3.5, fig.width=5}
+
+ggplot(perturbed_betas_diagRE_DMDL_nonexo_SP_df, aes(x=factor(sig, levels=gtools::mixedsort(unique(sig))),
+                                                     fill=factor(perturbed, levels=c('increase', 'decrease', 'FALSE'))))+
+  geom_bar(col='black', size=0.001)+theme_bw()+
+  scale_fill_manual(values=c( '#b1d8b7', '#f08080', '#e7feff'))+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1), legend.position = "bottom")+
+  labs(x='Signatures', y='Number of putatively perturbed\n and unperturbed signatures', fill='Perturbed')
+
+```
+
 Table of perturbed signatures
 ```{r, table_minimal_pert, dependson=c('minimalperturbation_diagRE_DMDL_nonexo_S', 'load_runs_signaturesPCAWG')}
 relevel_perturbation <- cbind(c('increase', 'decrease'), c('+', '-'))
@@ -836,6 +915,7 @@ for(i in names(perturbed_betas_diagRE_DMDL_nonexo_SP)){
 }
 
 ```
+
 
 ```{r, plot_betas_signaturesPCAWG_minimal_pert, echo=F, fig.height=3.5, warning=FALSE, dependson=c('load_runs_signaturesPCAWG', 'signaturesPCAWG_names_sigs')}
 
@@ -977,18 +1057,18 @@ names(num_samples) <- enough_samples
 
 ```
 
-
-```{r, effectsize1_SP_2, dependson=c('load_objects_all', 'load_runs_signaturesPCAWG', 'p_vals_SP'), echo=F, fig.height=4.5, fig.width=4}
+Effect sizes:
+```{r, effectsize1_SP_2, dependson=c('load_objects_all', 'load_runs_signaturesPCAWG', 'p_vals_SP'), echo=F, fig.height=4.0, fig.width=3.5, dev='tikz'}
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3nonexo_SP),
-                        num_samples=as.numeric(num_samples[match(enough_samples, names(num_samples_nonexo_SP))]),
+                        nsamples=as.numeric(num_samples[match(enough_samples, names(num_samples_nonexo_SP))]),
                         minlogpval=-log(as.numeric(pvals_diagRE_DMDL_nonexo_SP[match(enough_samples,
                                                                                      names(pvals_diagRE_DMDL_nonexo_SP))])),
                         label=enough_samples),
        aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
            label=label))+
   theme_bw()+
-  geom_point(aes(col=log(num_samples)))+geom_label_repel(alpha=0.4)+
+  geom_point(aes(col=(nsamples)))+geom_label_repel(alpha=0.4)+
   theme(legend.position = "bottom")+ggtitle('Total perturbation\nnon-exogenous signatures')+
   jcolors::scale_color_jcolors_contin("pal3", reverse = TRUE, bias = 2.25)+
     labs(x='Effect size', y='Negative log p-value')+
@@ -999,31 +1079,34 @@ effect_size3_SP
 pvals_diagRE_DMDL_SP
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3_SP),
                         num_sigs=as.numeric(num_sigs_SP[match(enough_samples, names(num_sigs_SP))]),
+                        ct=names(effect_size3_SP),
                         minlogpval=-log(as.numeric(pvals_diagRE_DMDL_SP[match(enough_samples,
                                                                               names(pvals_diagRE_DMDL_SP))])),
                         label=enough_samples),
-       aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
+       aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05, col=ct,
            label=label))+
   theme_bw()+
-  geom_point(aes(col=num_sigs))+geom_label_repel(alpha=0.4, size=3)+
+  geom_point(aes(size=num_sigs))+geom_label_repel(alpha=0.4, size=3)+
   theme(legend.position = "bottom")+#ggtitle('Total perturbation\nnon-exogenous signatures')+
   jcolors::scale_color_jcolors_contin("pal3", reverse = TRUE)+
-    labs(x='Effect size', y='Negative log p-value (all signatures)', col='Number of signatures')+
-  guides(shape=F)
+    labs(x='Effect size', y='Negative log p-value (all signatures)', size='N. signatures')+
+  scale_color_manual(values = pcawg_palette)+guides(col=F, shape=F)
+
+
 
 ggplot(cbind.data.frame(effect_size=as.numeric(effect_size3nonexo_SP),
+                        ct=names(effect_size3nonexo_SP),
                         num_sigs=as.numeric(num_sigs_nonexo_SP[match(enough_samples, names(num_sigs_nonexo_SP))]),
                         minlogpval=-log(as.numeric(pvals_diagRE_DMDL_nonexo_SP[match(enough_samples,
                                                                                      names(pvals_diagRE_DMDL_nonexo_SP))])),
                         label=enough_samples),
-       aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05,
-           label=label))+
+       aes(x=effect_size, y=minlogpval, shape=exp(-minlogpval)<0.05, col=ct, label=label))+
   theme_bw()+
-  geom_point(aes(col=num_sigs))+geom_label_repel(alpha=0.4, size=3)+
+  geom_point(aes(size=num_sigs))+geom_label_repel(alpha=0.4, size=3)+
   theme(legend.position = "bottom")+#ggtitle('Total perturbation\nnon-exogenous signatures')+
-  jcolors::scale_color_jcolors_contin("pal3", reverse = TRUE)+
-    labs(x='Effect size', y='Negative log p-value (non-exogenous signatures)', col='Number of signatures')+
-  guides(shape=F)
+  scale_color_manual(values = pcawg_palette)+guides(col=F, shape=F)+
+  labs(x='Effect size', y='Negative log p-value\n(non-exogenous signatures)', size='N. signatures')
+
 ```
 
 \section{HMP}
@@ -1269,6 +1352,7 @@ grid.draw(legend_ct)
 # dev.off()
 ```
 
+
 ```{r, tracksig_table,dependson=c('tracksig_comparison')}
 tracksig
 ```
@@ -1285,6 +1369,7 @@ gerstung_changing_sigs_clonalsubclonal <- readxl::read_excel("/Users/morril01/Do
 # gerstung_constant_sigs
 
 gerstung_changing_sigs_earlylate <- gerstung_changing_sigs_early_late #gerstung_changing_sigs[gerstung_changing_sigs$time == "early-late",]
+
 # gerstung_changing_sigs_clonalsubclonal <- gerstung_changing_sigs_clonal_subclonal #gerstung_changing_sigs[gerstung_changing_sigs$time == "clonal-subclonal",]
 
 gerstung_changing_sigs_earlylate$signature[(gerstung_changing_sigs_earlylate$signature == "SBS6.14.15.20.21.26.44")] = "SBS6+"
@@ -1425,18 +1510,47 @@ ggplot(gerstung_changing_sigs_clonalsubclonal_var,
   labs(x='Variance of log2 fold change in cancer type', y='Number of observations')
 ```
 
-```{r, gerstung5, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=4.5}
+Gerstung: comparison with minimal perturbation
+```{r, gerstung5, dev='tikz', dependson=c('gerstung'), fig.height=3, fig.width=3}
 
+perturb_to_vals <- function(i){
+  sapply(i, function(j){
+    if(j == 'FALSE'){
+      0
+    }else if(j == 'increase'){
+      1
+    }else if(j == 'decrease'){
+      -1
+    }else{
+      stop('Wrong perturbation value')
+    }
+  })
+}
 perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary <- perturbed_betas_diagRE_DMDL_nonexo_SP_df %>% dplyr::group_by(sig) %>%
-  summarise(meanperturbed=mean( !(perturbed == 'FALSE')))
+  summarise(meanperturbed=mean( !(perturbed == 'FALSE')),
+            mean_direction_perturb = mean(perturb_to_vals(perturbed)))
 
 perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary
 comparison_with_gerstung_earlylate <- cbind.data.frame(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary,
                                                             df_changes_el[match(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary$sig,
                                                                                 df_changes_el$signature),])
+comparison_with_gerstung_clonalsubclonal <- cbind.data.frame(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary,
+                                                            df_changes_cs[match(perturbed_betas_diagRE_DMDL_nonexo_SP_df_summary$sig,
+                                                                                df_changes_cs$signature),])
 comparison_with_gerstung_earlylate
 comparison_with_gerstung_earlylate$medianlog2fcearlylate = comparison_with_gerstung_earlylate$median
+comparison_with_gerstung_clonalsubclonal$medianlog2fcclonalsubclonal = comparison_with_gerstung_clonalsubclonal$median
+
 ggplot(comparison_with_gerstung_earlylate, aes(x=medianlog2fcearlylate, y=meanperturbed, label=signature))+geom_point()+geom_label_repel()+theme_bw()+
+  labs(x='Median of log2-fold change of\nsignatures in cancer type', y='Fraction of cancer types with\nsignature perturbed (minimal p.)')
+
+comparison_with_gerstung_clonalsubclonal[order(comparison_with_gerstung_clonalsubclonal$medianlog2fcclonalsubclonal),]
+ggplot(comparison_with_gerstung_clonalsubclonal, aes(x=medianlog2fcclonalsubclonal, y=meanperturbed, label=signature))+
+  geom_point()+geom_label_repel()+theme_bw()+
+  labs(x='Median of log2-fold change of\nsignatures in cancer type', y='Fraction of cancer types with\nsignature perturbed (minimal p.)')
+
+ggplot(comparison_with_gerstung_clonalsubclonal, aes(x=medianlog2fcclonalsubclonal, y=mean_direction_perturb, label=signature))+
+  geom_point()+geom_label_repel()+theme_bw()+
   labs(x='Median of log2-fold change of\nsignatures in cancer type', y='Fraction of cancer types with\nsignature perturbed (minimal p.)')
 
 ```
@@ -1447,13 +1561,13 @@ Barplots of cancer types with and without differential abundance
 ```{r, barplots_SP_thesis, fig.height=3, dev='tikz'}
 give_barplot_from_obj(obj = signatures_PCAWG[['CNS-Medullo']], legend_on = F,
                         nrow=1, verbose=F,
-                        only_normalised=T)
+                        only_normalised=T, levels_signatures=sigs_cosmic)
 give_barplot_from_obj(obj = signatures_PCAWG[['Uterus-AdenoCA']], legend_on = F,
                         nrow=1, verbose=F,
-                        only_normalised=T)
+                        only_normalised=T, levels_signatures=sigs_cosmic)
 give_barplot_from_obj(obj = signatures_PCAWG[['Ovary-AdenoCA']], legend_on = F,
                         nrow=1, verbose=F,
-                        only_normalised=T)
+                        only_normalised=T, levels_signatures=sigs_cosmic)
 ```
 
 \section{Correlations of cancer types and of signatures based on betas}
@@ -1500,6 +1614,7 @@ dev.off()
 
 ```
 
+
 ```{r, correlations_from_beta_slopes_softmax, dependson=c('load_runs_signaturesPCAWG', 'names_logR_SP'), fig.height=6.5, echo=F}
 
 aaa_softmax <- lapply(aaa, function(i) cbind.data.frame(Estimate=softmax(c(i$Estimate[i$type_beta == 'Slope'], 0)),
@@ -1545,10 +1660,11 @@ cors_softmax_melt <- cbind.data.frame(cors_softmax=melt(cors_softmax),
 ```
 
 
-```{r, correlations_from_beta_slopes_softmax2, dependson=c('correlations_from_beta_slopes_softmax', 'names_logR_SP'), fig.height=6.5, echo=F}
+```{r, correlations_from_beta_slopes_softmax2, dependson=c('correlations_from_beta_slopes_softmax', 'names_logR_SP'), fig.height=6, fig.width=5.5, echo=F}
 head(cors_softmax_melt)
 hclust_correlation_betas <- hclust(dist(cors_softmax0))
 
+cors_softmax_meltv2 <- cors_softmax_melt[!is.na(cors_softmax_melt$cors_softmax.value),]
 ggplot(cors_softmax_melt, aes(x=factor(num_common_sigs.Var1, levels = hclust_correlation_betas$labels[hclust_correlation_betas$order]),
                               y=factor(num_common_sigs.Var2, levels=hclust_correlation_betas$labels[hclust_correlation_betas$order]),
                                          col=cors_softmax.value, size=num_common_sigs.value))+
@@ -1557,10 +1673,24 @@ ggplot(cors_softmax_melt, aes(x=factor(num_common_sigs.Var1, levels = hclust_cor
   labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
 ggsave("../../results/results_TMB/pcawg/correlation_cancertypes_from_betaslopes_softmax_2.pdf")
 
+ggplot(cors_softmax_meltv2, aes(x=factor(num_common_sigs.Var1, levels = hclust_correlation_betas$labels[hclust_correlation_betas$order]),
+                              y=factor(num_common_sigs.Var2, levels=hclust_correlation_betas$labels[hclust_correlation_betas$order]),
+                                         col=cors_softmax.value, size=num_common_sigs.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1),
+          # legend.position = c(.2,-.45),
+          legend.direction = "horizontal", legend.box="vertical", legend.position = "bottom")+
+          # plot.margin = unit(c(0,0,15,0), "lines"))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+  # guides(size=guide_legend(  title.vjust = 2.5, label.vjust =2.5),
+  #        col=guide_legend(  title.vjust = 2.5, label.vjust = 2.5))
+ggsave("../../results/results_TMB/pcawg/correlation_cancertypes_from_betaslopes_softmax_2v2.pdf")
+
 
 ```
 
-```{r, correlations_from_beta_slopes_sigs, dependson=c('correlations_from_beta_slopes_softmax'), fig.height=7.5, echo=F}
+Correlation of signatures based on betas (softmaxed betas)
+```{r, correlations_from_beta_slopes_sigs, dependson=c('correlations_from_beta_slopes_softmax'), fig.height=5, echo=F, fig.width=4}
 
 cors_softmax_sigs <- outer(1:nrow(aaa_dcast_softmax), 1:nrow(aaa_dcast_softmax), Vectorize(function(i,j){
   try(cor(x = unlist(aaa_dcast_softmax[i,]), y = unlist(aaa_dcast_softmax[j,]), use = "pairwise.complete.obs"))}))
@@ -1585,15 +1715,24 @@ cors_softmax0_sigs <- cors_softmax_sigs
 cors_softmax0_sigs[is.na(cors_softmax0_sigs)] = 0
 hclust_correlation_betas_sigs <- hclust(dist(cors_softmax0_sigs))
 
-head(cors_softmax_melt_sigs)
+cors_softmax_melt_sigs$num_common_samples.Var1 <- factor(cors_softmax_melt_sigs$num_common_samples.Var1,
+                                                         levels=hclust_correlation_betas_sigs$labels[hclust_correlation_betas_sigs$order])
+cors_softmax_melt_sigs$num_common_samples.Var2 <- factor(cors_softmax_melt_sigs$num_common_samples.Var2,
+                                                         levels=hclust_correlation_betas_sigs$labels[hclust_correlation_betas_sigs$order])
+cors_softmax_melt_sigs <- cors_softmax_melt_sigs[!is.na(cors_softmax_melt_sigs$cors_softmax.value),]
+cors_softmax_melt_sigs <- cors_softmax_melt_sigs[!is.na(cors_softmax_melt_sigs$num_common_samples.value),]
+# cors_softmax_melt_sigs$num_common_samples.Var1 <- relevel(cors_softmax_melt_sigs$num_common_samples.Var1)
+# cors_softmax_melt_sigs$num_common_samples.Var2 <- relevel(cors_softmax_melt_sigs$num_common_samples.Var2 )
 
-ggplot(cors_softmax_melt_sigs, aes(x=factor(num_common_samples.Var1,
-                                            levels=hclust_correlation_betas_sigs$labels[hclust_correlation_betas_sigs$order]),
-                              y=factor(num_common_samples.Var2, levels=hclust_correlation_betas_sigs$labels[hclust_correlation_betas_sigs$order]),
-                                         col=cors_softmax.value, size=num_common_samples.value))+
+cors_softmax_melt_sigs[cors_softmax_melt_sigs$num_common_samples.Var1 == 'SBS16',]
+
+ggplot(cors_softmax_melt_sigs, aes(x=factor(num_common_samples.Var1),
+                                   y=factor(num_common_samples.Var2),
+                                   col=cors_softmax.value, size=num_common_samples.value))+
   geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
     theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
   labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+
 
 ```
 
@@ -1861,39 +2000,39 @@ In some cases DMM says that there is an error with the input file - in this case
 
 system("mkdir -p ../../data/roo_for_DMM_SPpcawg/")
 
-roo_obj <- sapply(fles_roo[grepl('_signaturesPCAWG_', fles_roo)], readRDS)
-for(i in 1:length(roo_obj)){
-  if(!rlang::is_empty(attr(roo_obj[[i]], "count_matrices_active")[[1]])){
-    write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[1]])),
-                                 rbind.data.frame(rownames(attr(roo_obj[[i]],
-                                                                "count_matrices_active")[[1]]),
-                                                  round(t(attr(roo_obj[[i]], "count_matrices_active")[[1]])))),
-                file = paste0("../../data/roo_for_DMM_SPpcawg/", gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_early.csv"), sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
-    
-    write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[2]])),
-                                 rbind.data.frame(rownames(attr(roo_obj[[i]],
-                                                                "count_matrices_active")[[2]]),
-                                                  round(t(attr(roo_obj[[i]], "count_matrices_active")[[2]])))),
-                file = paste0("../../data/roo_for_DMM_SPpcawg/", gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_late.csv"), sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
-    
-    ## write all
-      write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[1]])),
-         rbind.data.frame(c(paste0(rownames(attr(roo_obj[[i]],
-                                                 "count_matrices_active")[[1]]), '-early'),
-                            paste0(rownames(attr(roo_obj[[i]],
-                                                 "count_matrices_active")[[2]]), '-late')),
-                          round(cbind.data.frame(t(attr(roo_obj[[i]],
-                                                        "count_matrices_active")[[1]]),
-                                                 t(attr(roo_obj[[i]],
-                                                        "count_matrices_active")[[2]]))))),
-         file = paste0("../../data/roo_for_DMM_SPpcawg/",
-                       gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_all.csv"),
-         sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
-              
-  }  
-}
+# roo_obj <- sapply(fles_roo[grepl('_signaturesPCAWG_', fles_roo)], readRDS)
+# for(i in 1:length(roo_obj)){
+#   if(!rlang::is_empty(attr(roo_obj[[i]], "count_matrices_active")[[1]])){
+#     write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[1]])),
+#                                  rbind.data.frame(rownames(attr(roo_obj[[i]],
+#                                                                 "count_matrices_active")[[1]]),
+#                                                   round(t(attr(roo_obj[[i]], "count_matrices_active")[[1]])))),
+#                 file = paste0("../../data/roo_for_DMM_SPpcawg/", gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_early.csv"), sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
+#     
+#     write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[2]])),
+#                                  rbind.data.frame(rownames(attr(roo_obj[[i]],
+#                                                                 "count_matrices_active")[[2]]),
+#                                                   round(t(attr(roo_obj[[i]], "count_matrices_active")[[2]])))),
+#                 file = paste0("../../data/roo_for_DMM_SPpcawg/", gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_late.csv"), sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
+#     
+#     ## write all
+#       write.table(cbind.data.frame(c('Taxa', colnames(attr(roo_obj[[i]], "count_matrices_active")[[1]])),
+#          rbind.data.frame(c(paste0(rownames(attr(roo_obj[[i]],
+#                                                  "count_matrices_active")[[1]]), '-early'),
+#                             paste0(rownames(attr(roo_obj[[i]],
+#                                                  "count_matrices_active")[[2]]), '-late')),
+#                           round(cbind.data.frame(t(attr(roo_obj[[i]],
+#                                                         "count_matrices_active")[[1]]),
+#                                                  t(attr(roo_obj[[i]],
+#                                                         "count_matrices_active")[[2]]))))),
+#          file = paste0("../../data/roo_for_DMM_SPpcawg/",
+#                        gsub("_ROO.RDS", "", basename(names(roo_obj)))[i], "_all.csv"),
+#          sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
+#               
+#   }  
+# }
 
-system("cd ../../data/roo_for_DMM_SPpcawg/; mkdir -p DMM_output; sh run_all.sh")
+# system("cd ../../data/roo_for_DMM_SPpcawg/; mkdir -p DMM_output; sh run_all.sh")
 
 ```
 
@@ -1977,3 +2116,4 @@ plot(t(matching_information_about_DMM_k2))
 #       apply(xxxx[grepl('_late', xxxx$V1),-1], 1, which.max))
 ```
 
+\end{document}

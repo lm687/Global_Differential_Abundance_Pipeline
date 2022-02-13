@@ -122,11 +122,21 @@ plot_scatter <- function(m){
   ggplot(m, aes(x=x1, y=x2))+geom_point()+theme_bw()+labs(x=names_sigs[1], y=names_sigs[2])
 }
 
-plot_covariance_mat <- function(TMB_obj, names_cats=NULL){
+plot_covariance_mat <- function(TMB_obj, names_cats=NULL, title='Covariances', arg_cluster_rows=T,
+                                arg_cluster_cols=T, lims=NULL){
   .x <- L_to_cov(python_like_select_name(TMB_obj$par.fixed, 'cov_par_RE'),
                  d=length(python_like_select_name(TMB_obj$par.fixed, 'beta'))/2)
   if(!is.null(names_cats))  colnames(.x) <- rownames(.x) <- names_cats
-  hm <- pheatmap::pheatmap(.x, main='Covariances')
+  if(!is.null(lims)){
+    require(RColorBrewer)
+    breaksList = seq(lims[1], lims[2], length.out = 10)
+    hm <- pheatmap::pheatmap(.x, main=title, cluster_rows = arg_cluster_rows,
+                             cluster_cols = arg_cluster_cols,
+                             color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(length(breaksList)),
+                             breaks = breaksList)
+  }else{
+    hm <- pheatmap::pheatmap(.x, main=title, cluster_rows = arg_cluster_rows, cluster_cols = arg_cluster_cols, )
+  }
   return(arrangeGrob(hm[[4]]))
 }
 
@@ -451,6 +461,26 @@ cowplot::plot_grid(cowplot::plot_grid(
                                 names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_6')]]$Y)))),
   nrow=6)
 dev.off()
+
+## Only 1,2,3,5,8
+new_sigs[[paste0(ct, '_select1')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                           subset_signatures = c('SBS1', 'SBS2', 'SBS3', 'SBS5', 'SBS8', 'SBS13', 'SBS30', 'SBS40'))
+new_sigs[[paste0(ct, '_select1')]] <- give_amalgamated_exposures_TMBobj((new_sigs[[paste0(ct, '_select1')]]),
+                           list_groupings = c(list(c('SBS2', 'SBS13')),
+                                              as.list(colnames(new_sigs[[paste0(ct, '_select1')]]$Y)[!(colnames(new_sigs[[paste0(ct, '_select1')]]$Y)
+                                               %in% c('SBS2', 'SBS13'))])))
+diagDM_newsigs[[paste0(ct, '_select1')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_select1')]],
+                                                            model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+
+new_sigs[[paste0(ct, '_select1')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                           subset_signatures = c('SBS1', 'SBS2', 'SBS13', 'SBS30', 'SBS5'))
+fullDM_newsigs[[paste0(ct, '_select1')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_select1')]],
+                                                            model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+diagDM_newsigs[[paste0(ct, '_select1')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_select1')]],
+                                                            model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(fullDM_newsigs[[paste0(ct, '_select1')]], names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_select1')]]$Y)))
+
+plot_betas(diagDM_newsigs[[paste0(ct, '_select1')]], names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_select1')]]$Y)))
 
 ##-----------------------------------------------------------------------------------------------------##
 ct <- "Breast-AdenoCA"
@@ -1602,6 +1632,21 @@ for(ct_it in  names(read_info_list)){
 }
 dev.off()
 
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/nucleotide1_sigma.pdf"),
+    height = 3, width = 3)
+for(ct_it in  names(read_info_list)){
+  print(plot_covariance_mat(nucleotide1[[ct_it]], names_cats = names_trinucleotide, title = ct_it,
+                            lims=c(-1, 1)))
+}
+dev.off()
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/nucleotide1_sigmanoclust.pdf"),
+    height = 3, width = 3)
+for(ct_it in  names(read_info_list)){
+  print(plot_covariance_mat(nucleotide1[[ct_it]], names_cats = names_trinucleotide, title = ct_it,
+                            arg_cluster_rows = F, arg_cluster_cols = F, lims=c(-1, 1)))
+}
+dev.off()
+
 betas_nucleotides <- lapply(nucleotide1, function(i) plot_betas(i, return_df = T))
 betas_nucleotides <- lapply(betas_nucleotides, function(i){
   i$LogR <- names_trinucleotide[i$LogR]
@@ -1670,3 +1715,164 @@ rownames(pert_nucleotide1) <- names(nucleotide1)
 pert_nucleotide1
 #dataset_nucleotidesubstitution1 = load_PCAWG(ct = ct, typedata = "nucleotidesubstitution1", path_to_data = "../../data/"),
 ##-----------------------------------------------------------------------------------------------------##
+
+## Differential precision in data
+pdf("../../results/results_TMB/pcawg/reports_per_cancer_type/ternary_plots_highestsigs.pdf", height = 3, width = 7)
+for(ct in enough_samples){
+  ct1 <- read_info_list[[ct]]$dataset_active_sigs$Y[read_info_list[[ct]]$dataset_active_sigs$x[,2] == 0,]
+  ct2 <- read_info_list[[ct]]$dataset_active_sigs$Y[read_info_list[[ct]]$dataset_active_sigs$x[,2] == 1,]
+  sigs_select <- names(sort(colSums(ct1+ct2), decreasing = T)[1:3])
+  par(mfrow=c(1,2), mar=c(0,0,0,0))
+  give_ternary(probs =  rm_na_rows(normalise_rw(ct1[,sigs_select])), add_par = F, opacity = 1, main=paste0('Clonal\n', ct, '\nLarge sigs'),
+               col='black', pch=19, cex=.5)
+  give_ternary(probs =  rm_na_rows(normalise_rw(ct2[,sigs_select])), add_par = F, opacity = 1, main=paste0('Subclonal\n', ct, '\nLarge sigs'),
+               col='black', pch=19, cex=.5)
+  sigs_select <- names(sort(colSums(ct1+ct2), decreasing = F)[1:3])
+  give_ternary(probs =  rm_na_rows(normalise_rw(ct1[,sigs_select])), add_par = F, opacity = 1, main=paste0('Clonal\n', ct, '\nSmall sigs'),
+               col='black', pch=19, cex=.5)
+  give_ternary(probs =  rm_na_rows(normalise_rw(ct2[,sigs_select])), add_par = F, opacity = 1, main=paste0('Subclonal\n', ct, '\nSmall sigs'),
+               col='black', pch=19, cex=.5)
+}
+dev.off()
+
+##-----------------------------------------------------------------------------------------------------##
+## Only using tracksig exposures
+tracksig_exposures <- list()
+fullDM_tracksig <- list()
+diagDM_tracksig <- list()
+
+tracksig_sigs <- list(Bone_Osteosarc = c('SBS2+SBS13', 'SBS3', 'SBS5', 'SBS40'),
+                      Breast_AdenoCA = c('SBS1', 'SBS2+SBS13', 'SBS3', 'SBS5', 'SBS18'),
+                      CNS_GBM = c('SBS1', 'SBS5', 'SBS40'),
+                      CNS_Medullo =c('SBS1', 'SBS5', 'SBS18', 'SBS39', 'SBS40'),        
+                      #CNS-PiloAstro
+                      ColoRect_AdenoCA=c('SBS1', 'SBS5', 'SBS18', 'SBS40', 'SBS44'),
+                      Eso_AdenoCA = c('SBS1', 'SBS2+SBS13', 'SBS3', 'SBS5', 'SBS17a+SBS17b', 'SBS18', 'SBS40'),
+                      Head_SCC = c('SBS1', 'SBS2+SBS13', 'SBS5', 'SBS40'),
+                      Kidney_ChRCC = c('SBS1', 'SBS2+SBS13', 'SBS5', 'SBS40'),
+                      Kidney_RCC.clearcell = c('SBS1', 'SBS5', 'SBS40', 'SBS41'),
+                      Kidney_RCC.papillary = c('SBS1', 'SBS5', 'SBS40', 'SBS41'),
+                      Liver_HCC = c('SBS4', 'SBS5', 'SBS12', 'SBS16', 'SBS29', 'SBS40'),
+                      Lung_SCC = c('SBS2+SBS13', 'SBS4', 'SBS5'),
+                      Lymph_BNHL = c('SBS5', 'SBS9', 'SBS17a+SBS17b', 'SBS40'),
+                      Lymph_CLL = c('SBS1', 'SBS5', 'SBS9', 'SBS40'),
+                      Ovary_AdenoCA = c('SBS1', 'SBS2+SBS13', 'SBS3', 'SBS5', 'SBS40'), 
+                      Panc_AdenoCA = c('SBS1', 'SBS2+SBS13', 'SBS3', 'SBS5', 'SBS17a+SBS17b', 'SBS18', 'SBS40'),
+                      Panc_Endocrine = c('SBS1', 'SBS3', 'SBS5', 'SBS8', 'SBS30', 'SBS36'),
+                      Prost_AdenoCA = c('SBS1', 'SBS3', 'SBS5', 'SBS18', 'SBS40'),
+                      Skin_Melanoma.cutaneous=c('SBS5', 'SBS7a+SBS7b+SBS7c+SBS7d'),
+                      Stomach_AdenoCA = c('SBS1', 'SBS5', 'SBS17a+SBS17b', 'SBS18', 'SBS40'),
+                      Thy_AdenoCA= c('SBS1', 'SBS2+SBS13', 'SBS5', 'SBS40'),
+                      Uterus_AdenoCA = c('SBS1', 'SBS2+SBS13', 'SBS5', 'SBS40', 'SBS44'))
+
+vector_to_amalgamate_list <- function(i){
+ sapply(i, function(j){
+   if(grepl('[+]', j)){
+     strsplit(j, '[+]')[[1]]
+   }else{
+     j
+   }
+ }) 
+}
+
+enough_samples <- enough_samples[enough_samples != 'CNS-PiloAstro']
+for(ct in enough_samples){
+  tracksig_exposures[[ct]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                         subset_signatures = unlist(sapply(tracksig_sigs[[gsub('-', '_', ct)]], function(i) strsplit(i, '[+]'))))
+  tracksig_exposures[[ct]] <- give_amalgamated_exposures_TMBobj(tracksig_exposures[[ct]],
+                                   vector_to_amalgamate_list(tracksig_sigs[[gsub('-', '_', ct)]]))
+  colnames(tracksig_exposures[[ct]]$Y) <- tracksig_sigs[[gsub('-', '_', ct)]]
+  
+  # amalgamate if needed
+  fullDM_tracksig[[ct]] <- wrapper_run_TMB(object = tracksig_exposures[[ct]],
+                                          model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+  saveRDS(fullDM_tracksig[[ct]],
+          paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/particular_runs/", ct, 'fullRE_DMDL_tracksig', '.RDS'))
+
+  diagDM_tracksig[[ct]] <- wrapper_run_TMB(object = tracksig_exposures[[ct]],
+                                           model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+  saveRDS(diagDM_tracksig[[ct]],
+          paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/particular_runs/", ct, 'diagRE_DMDL_tracksig', '.RDS'))
+
+}
+
+ff <- list.files('../../data/pcawg_robjects_cache/tmb_results/nlminb/particular_runs/')
+ff <- ff[grepl('tracksig', ff)]
+ff
+
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/tracksig_betas.pdf"), height = 3)
+for(ct in enough_samples){
+  plot_betas(fullDM_tracksig[[ct]], names_cats = vector_cats_to_logR(colnames(tracksig_exposures[[ct]]$Y)),
+             title = ct)
+}
+dev.off()
+
+effect_size3_SP_tracksig <- sapply(enough_samples, function(ct){
+  .xx <- tracksig_exposures[[ct]]
+  try(give_totalperturbation_TMBobj_sigaverage(.xx, addone=T))
+})
+
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/tracksig_exposures.pdf"), height = 3)
+for(ct in enough_samples){
+  give_barplot_from_obj(tracksig_exposures[[ct]], legend_on = T, legend_bottom = T, plot=F, title =ct, only_normalised = T, nrow_plot = 1,
+                        levels_signatures=sigs_cosmic, arg_title='')
+}
+dev.off()
+
+########################################################################
+source("../3_analysis/helper/pcawg.colour.palette.R")
+
+tracksig_pvls <- sapply(fullDM_tracksig, wald_TMB_wrapper)
+tracksig_pvlsdiag <- sapply(diagDM_tracksig, wald_TMB_wrapper)
+tracksig_pvls['Thy-AdenoCA'] <- tracksig_pvlsdiag['Thy-AdenoCA']
+tracksig_pvls['CNS-Medullo'] <- tracksig_pvlsdiag['CNS-Medullo']
+tracksig_pvls <- p.adjust(tracksig_pvls)
+
+tracksig = read.csv("../../data/restricted/tracksig/changepoints_stats_tracksig.csv", stringsAsFactors = FALSE)
+tracksig = tracksig %>% group_by(type) %>%
+  dplyr::summarize(count = n(),bool_changepoints=sum(n_changepoints > 0)) %>%
+  mutate(tracksig_frac= bool_changepoints/count)
+tracksig = cbind.data.frame(tracksig_pvls,
+                            tracksig[match(names(tracksig_pvls), tracksig$type),],
+                            effect_size3_SP=effect_size3_SP_tracksig[match(names(tracksig_pvls), names(effect_size3_SP_tracksig))])
+tracksig$ct = rownames(tracksig)
+tracksig$minpvals = -log2(tracksig$tracksig_pvls)
+
+pcawg_palette <- pcawg.colour.palette(gsub("\\..*", "", tracksig$ct), scheme = "tumour.subtype")
+names(pcawg_palette) <- tracksig$ct
+
+tikzDevice::tikz("../../code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/tracksig_comparison_tracksigsigs_pval.tex", height = 3, width = 3)
+ggplot(tracksig, aes(x=-log2(tracksig_pvls), y=tracksig_frac, label=ct, size=count))+
+  geom_point(aes(col=ct))+geom_label_repel(size=3, col='black', max.overlaps = 2)+
+  labs(x='-log2 p-value', y='Fraction of TrackSig samples\nwith some changepoint')+
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  theme_bw()+theme(legend.position = "bottom")+guides(col='none')+labs(size='N. obs')
+dev.off()
+
+tikzDevice::tikz("../../code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/tracksig_comparison_tracksigsigs_effectsize.tex", height = 3, width = 3)
+ggplot(tracksig, aes(x=effect_size3_SP, y=tracksig_frac, label=ct))+
+  geom_point(aes(size=minpvals,  col=ct))+geom_label_repel(size=3, max.overlaps = 4)+
+  labs(x='Effect size', y='Fraction of TrackSig samples\nwith some changepoint', col="")+theme_bw()+
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  # guides(col=guide_legend(ncol=4), size=FALSE)+
+  guides(col='none')+labs(size='N. obs')
+dev.off()
+
+ggplot(tracksig, aes(x=effect_size3_SP, y=-log2(tracksig_pvls), label=ct, col=ct))+
+  geom_point(aes(size=minpvals))+geom_label_repel(max.overlaps = 5)+
+  labs(x='Effect size', y='Fraction of TrackSig samples with some changepoint', col="")+theme_bw()+
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=4), size=FALSE)
+
+ggplot(tracksig, aes(x=-log2(tracksig_pvls), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+
+  geom_label_repel(max.overlaps = 4, size=3, col='black')+
+  labs(x='-log2 p-value of\n diagRE DMDL', y='Fraction of TrackSig samples\n with some changepoint')+
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  # scale_x_continuous(trans = "log2")+
+  theme_bw()+theme(legend.position = "bottom")+guides(col=FALSE)+labs(size='N. obs')
+
+ggplot(tracksig, aes(x=-log2(tracksig_pvls), y=tracksig_frac, label=ct, size=count))+geom_point(aes(col=ct))+
+  geom_label_repel(size=3, col='black', max.overlaps = 4)+
+  labs(x='-log2 p-value of\n diagRE DMDL (nonexo)', y='Fraction of TrackSig samples\n with some changepoint')+
+  scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  theme_bw()+theme(legend.position = "bottom")+guides(col=FALSE)+labs(size='N. obs')
