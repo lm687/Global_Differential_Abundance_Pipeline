@@ -20,6 +20,7 @@ datasetgeneration2_dict = {'GenerationC': 'generationC', 'GenerationCnorm': 'gen
  'generationHnormtwolambdas': 'generationG', 'GenerationMixture1': 'generationMixture1',\
  'GenerationJnormTwoLambdasOneChangingBeta': 'generationG',\
  'GenerationJnormBTwoLambdasOneChangingBeta': 'GenerationJnormBTwoLambdasOneChangingBeta',\
+ 'GenerationPois': 'GenerationPois',\
  'GenerationMixturePCAWG': 'GenerationMixturePCAWG', 'GenerationMixturefewersignaturesPCAWG': 'GenerationMixturefewersignaturesPCAWG',\
  'GenerationMixturefewersignaturespairedPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
  'GenerationMixturefewersignaturespairedstomachPCAWG': 'GenerationMixturefewersignaturespairedstomachPCAWG',\
@@ -68,6 +69,7 @@ for j in ['CNSGBMPCAWG', 'CNSMedulloPCAWG', 'CNSPiloAstroPCAWG',\
 numreplicates = {'GenerationJnorm': 1, 'GenerationJnorm2': 4, 'GenerationJnorm3': 4, 'GenerationMixture1': 2,\
 'GenerationK': 1,\
 'GenerationJnormTwoLambdasOneChangingBeta': 2, 'GenerationJnormBTwoLambdasOneChangingBeta': 6, 'GenerationMixturePCAWG': 1,\
+'GenerationPois': 6,\
 'GenerationMixturefewersignaturesPCAWG': 20, 'GenerationMixturefewersignaturespairedPCAWG': 20,\
 'GenerationMixturefewersignaturespairedstomachPCAWG': 20, 'GenerationMixturefewersignaturespairedKidneyRCCPCAWG': 20,\
 'GenerationMixturefewersignaturespairedBoneOsteosarcPCAWG': 20, 'GenerationMixturefewersignaturespairedBreastAdenoCAPCAWG': 20,\
@@ -303,6 +305,14 @@ rule all:
       # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
       # datasetgeneration=['GenerationJnormTwoLambdasOneChangingBeta', 'GenerationJnormBTwoLambdasOneChangingBeta'],\
       # model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      #-------
+      ## simulation with poisson
+      # expand("../results/results_TMB/simulated_datasets/mixed_effects_models_multiple/{datasetgeneration}/{datasetgeneration}_{model}/{datasetgeneration}_{model}_results_info.txt",\
+      # datasetgeneration=['GenerationPois'],\
+      # model=['fullREM', 'diagREDM', 'fullREDMsinglelambda', 'diagREDMsinglelambda'])
+      # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+      # datasetgeneration=[ 'GenerationPois'])
+      #-------
       # expand("../data/assessing_models_simulation/inference_results/TMB/{optimiser}/multiple_{datasetgeneration}_{n}_{nlambda}_{lmbda}_{d}_{beta_intensity}_{model}_{fixed_beta_intercept}_{fixed_beta_slope}_{sdRE_input}_dataset{itnum}.RDS",\
       # datasetgeneration="GenerationJnormTwoLambdasOneChangingBeta",\
       # n=config["simulation_n_"+datasetgeneration2_dict['GenerationJnormTwoLambdasOneChangingBeta']],\
@@ -395,17 +405,19 @@ rule all:
      #  datasetgeneration=['GenerationMixturefewersignaturespairedObsNmObsDM'+x for x in ['CNSGBMPCAWG',\
      #  'ColoRectAdenoCAPCAWG', 'EsoAdenoCAPCAWG', 'HeadSCCPCAWG', 'KidneyChRCCPCAWG', 'KidneyRCCpapillaryPCAWG',\
      #  'LungSCCPCAWG', 'LymphBNHLPCAWG', 'LymphCLLPCAWG', 'OvaryAdenoCAPCAWG', 'PancAdenoCAPCAWG', 'PancEndocrinePCAWG']])
+     # expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
+     #  datasetgeneration=[ y+x for x in [#'CNSGBMPCAWG'
+     #  # 'ColoRectAdenoCAPCAWG'
+     #  # , 
+     #  'EsoAdenoCAPCAWG', 'HeadSCCPCAWG', 'KidneyChRCCPCAWG', 'LungSCCPCAWG'
+     #  ]\
+     #   for y in [
+     #   # 'GenerationMixturefewersignaturespairedObsNmInvPCAWG',
+     #   # 'GenerationMixturefewersignaturespairedObsNmPoissonSigPCAWG'
+     #  'GenerationMixturefewersignaturespairedObsNmGaussianVarPCAWG'
+     #  ]])
      expand("../data/assessing_models_simulation/summaries_synthetic_DA/{datasetgeneration}.RDS",\
-      datasetgeneration=[ y+x for x in [#'CNSGBMPCAWG'
-      # 'ColoRectAdenoCAPCAWG'
-      # , 
-      'EsoAdenoCAPCAWG', 'HeadSCCPCAWG', 'KidneyChRCCPCAWG', 'LungSCCPCAWG'
-      ]\
-       for y in [
-       # 'GenerationMixturefewersignaturespairedObsNmInvPCAWG',
-       # 'GenerationMixturefewersignaturespairedObsNmPoissonSigPCAWG'
-      'GenerationMixturefewersignaturespairedObsNmGaussianVarPCAWG'
-      ]])
+      datasetgeneration=[ 'GenerationMixturefewersignaturespairedObsNmGaussianVarPCAWGProstAdenoCAPCAWG'])
 # "/Users/morril01/Documents/PhD/GlobalDA/data/restrictsummaries_synthetic_DAed/pcawg/annovar_annotation/02917220-6a7a-46a1-8656-907e96bef88e.consensus.20160830.somatic.snv_mnv.vcf.annovar"
 # expand(['/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/annovar_annotation/'+x.strip('.gz')+'.annovar' for x in listdir('/Users/morril01/Documents/PhD/GlobalDA/data/restricted/pcawg/pcawg_restricted_snv/') if re.search('.gz$', x)])
 

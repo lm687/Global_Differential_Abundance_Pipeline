@@ -40,7 +40,8 @@ for(generation in c(
   #                   'GenerationMixturefewersignaturespairedCNSGBMPCAWG',
   #                   'GenerationMixturefewersignaturespairedObsNmPancEndocrinePCAWG',
   #                   'GenerationMixturefewersignaturespairedObsNmUterusAdenoCAPCAWG',
-  'GenerationJnormBTwoLambdasOneChangingBeta'
+  # 'GenerationJnormBTwoLambdasOneChangingBeta'
+  'GenerationPois'
   # 'GenerationMixturefewersignaturespairedObsNmObsDMOvaryAdenoCAPCAWG',
   # 'GenerationMixturefewersignaturespairedObsNmObsDMLungSCCPCAWG',
   # 'GenerationMixturefewersignaturespairedObsNmObsDMKidneyRCCpapillaryPCAWG',
@@ -169,7 +170,7 @@ for(generation in c(
   varying_betashape_adj$beta_gamma_shape <- signif(varying_betashape_adj$beta_gamma_shape, 2)
   
   title_x <- 'Percentage of mixture'
-  if(generation %in% c("GenerationJnormBTwoLambdasOneChangingBeta")){
+  if(generation %in% c("GenerationJnormBTwoLambdasOneChangingBeta", "GenerationPois")){
     title_x <- 'Gamma'
   }
   

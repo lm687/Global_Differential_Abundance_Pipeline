@@ -35,6 +35,17 @@ rownames(sigs_cosmic0) <- paste0(substr(sigs_cosmic0$SubType, 1, 1),'[',
 sigs_cosmic0 <- sigs_cosmic0[-c(1,2)];
 sigs_cosmic <- colnames(sigs_cosmic0)
 
+source("../3_analysis/helper/pcawg.colour.palette.R")
+pcawg_palette <- pcawg.colour.palette(x = gsub("\\..*", "", names(read_info_list)),  scheme = "tumour.subtype")
+names(pcawg_palette) <- names(read_info_list)
+
+nucleotide_colours_logR <- c('C$>$A/T$>$G'= '#3cb371', 'C$>$G/T$>$G'= '#90ee90', 'C$>$T/T$>$G'= '#66cdaa',
+  'T$>$A/T$>$G'= '#cd5c5c', 'T$>$C/T$>$G'= '#f4a460')
+nucleotide_colours <- c('C>A' = '#3cb371', 'C>G'= '#90ee90', 'C>T'= '#66cdaa',
+                        'T>A'= '#cd5c5c', 'T>C'= '#f4a460', 'T>G'='red')
+nucleotide_colours_dollar <- c('C$>$A' = '#3cb371', 'C$>$G'= '#90ee90', 'C$>$T'= '#66cdaa',
+                        'T$>$A'= '#cd5c5c', 'T$>$C'= '#f4a460', 'T$>$G'='red')
+
 ##-----------------------------------------------------------------------------------------------------##
 
 ##-----------------------------------------------------------------------------------------------------##
@@ -183,6 +194,66 @@ betas_df_to_softmax <- function(df_betas){
   .x
 }
 
+
+give_boxplot_normalised_for_sig <- function(TMB_obj, sig){
+  if(length(sig) == 1){
+    ggplot(reshape2::melt(split(normalise_rw(TMB_obj$Y[,sig]), f  = TMB_obj$x[,2])),
+           aes(x=L1, y=value))+geom_boxplot(outlier.shape = NA)+geom_jitter()+theme_bw()+ggtitle(sig)+
+      labs(x='Group', y='Exposure')
+  }
+}
+
+##-----------------------------------------------------------------------------------------------------##
+
+# if(opt$model == "fullREM"){
+# TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp",  "-std=gnu++17")
+# dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
+# # }else if(opt$model == "diagREM"){
+# TMB::compile("2_inference_TMB/mm_multinomial/diagRE_ME_multinomial.cpp",  "-std=gnu++17")
+# dyn.load(dynlib("2_inference_TMB/mm_multinomial/diagRE_ME_multinomial"))
+# mod_model_name = "diagRE_M"
+# # }else if(opt$model == "fullREDM"){
+TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial.cpp",  "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial"))
+# mod_model_name = "fullRE_DM"
+# }else if(opt$model == "diagREDM"){
+TMB::compile("../2_inference_TMB/mm_multinomial/diagRE_ME_dirichletmultinomial.cpp",  "-std=gnu++17")
+dyn.load(dynlib("../2_inference_TMB/mm_multinomial/diagRE_ME_dirichletmultinomial"))
+# mod_model_name = "diagRE_DM"
+# # }else if(opt$model =="fullREDMsinglelambda"){
+# TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
+# dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
+# mod_model_name = "fullREDMsinglelambda"
+# # use_nlminb=T
+# # }else if(opt$model =="diagREDMsinglelambda"){
+# TMB::compile("2_inference_TMB/mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
+# dyn.load(dynlib("2_inference_TMB/mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
+# mod_model_name = "diagREDMsinglelambda"
+# # use_nlminb=T
+# # }else if(opt$model =="FEDMsinglelambda"){
+# TMB::compile("2_inference_TMB/mm_multinomial/FE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
+# dyn.load(dynlib("2_inference_TMB/mm_multinomial/FE_dirichletmultinomial_single_lambda"))
+# mod_model_name = "FEDMsinglelambda"
+# # }else if(opt$model =="fullREDMnoscaling"){
+# TMB::compile("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomialnoscaling.cpp",  "-std=gnu++17")
+# dyn.load(dynlib("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomialnoscaling"))
+# mod_model_name = "fullREDMnoscaling"
+
+fullRE_DMDL_features <- list()
+amalgamated_extra <- list()
+fullRE_DMDL_extra <- list()
+diagRE_DMDL_extra <- list()
+mutsigexposures <- list()
+fullDM_MSE <- list()
+fullDM_MSE_nonexo <- list()
+diagDM_MSE <- list()
+diagDM_MSE_nonexo <- list()
+new_sigs <- list()
+fullDM_newsigs <- list()
+fits_sigs <- list()
+
+##-----------------------------------------------------------------------------------------------------##
+
 ##-----------------------------------------------------------------------------------------------------##
 ## reports for all ct
 for(ct in enough_samples){
@@ -257,56 +328,6 @@ dev.off()
 
 ##-----------------------------------------------------------------------------------------------------##
 
-##-----------------------------------------------------------------------------------------------------##
-
-# if(opt$model == "fullREM"){
-# TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial.cpp",  "-std=gnu++17")
-# dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_multinomial"))
-# # }else if(opt$model == "diagREM"){
-# TMB::compile("2_inference_TMB/mm_multinomial/diagRE_ME_multinomial.cpp",  "-std=gnu++17")
-# dyn.load(dynlib("2_inference_TMB/mm_multinomial/diagRE_ME_multinomial"))
-# mod_model_name = "diagRE_M"
-# # }else if(opt$model == "fullREDM"){
-TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial.cpp",  "-std=gnu++17")
-dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomial"))
-# mod_model_name = "fullRE_DM"
-# }else if(opt$model == "diagREDM"){
-TMB::compile("../2_inference_TMB/mm_multinomial/diagRE_ME_dirichletmultinomial.cpp",  "-std=gnu++17")
-dyn.load(dynlib("../2_inference_TMB/mm_multinomial/diagRE_ME_dirichletmultinomial"))
-# mod_model_name = "diagRE_DM"
-# # }else if(opt$model =="fullREDMsinglelambda"){
-# TMB::compile("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
-# dyn.load(dynlib("../2_inference_TMB/mm_multinomial/fullRE_dirichletmultinomial_single_lambda"))
-# mod_model_name = "fullREDMsinglelambda"
-# # use_nlminb=T
-# # }else if(opt$model =="diagREDMsinglelambda"){
-# TMB::compile("2_inference_TMB/mm_multinomial/diagRE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
-# dyn.load(dynlib("2_inference_TMB/mm_multinomial/diagRE_dirichletmultinomial_single_lambda"))
-# mod_model_name = "diagREDMsinglelambda"
-# # use_nlminb=T
-# # }else if(opt$model =="FEDMsinglelambda"){
-# TMB::compile("2_inference_TMB/mm_multinomial/FE_dirichletmultinomial_single_lambda.cpp",  "-std=gnu++17")
-# dyn.load(dynlib("2_inference_TMB/mm_multinomial/FE_dirichletmultinomial_single_lambda"))
-# mod_model_name = "FEDMsinglelambda"
-# # }else if(opt$model =="fullREDMnoscaling"){
-# TMB::compile("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomialnoscaling.cpp",  "-std=gnu++17")
-# dyn.load(dynlib("2_inference_TMB/mm_multinomial/fullRE_ME_dirichletmultinomialnoscaling"))
-# mod_model_name = "fullREDMnoscaling"
-
-fullRE_DMDL_features <- list()
-amalgamated_extra <- list()
-fullRE_DMDL_extra <- list()
-diagRE_DMDL_extra <- list()
-mutsigexposures <- list()
-fullDM_MSE <- list()
-fullDM_MSE_nonexo <- list()
-diagDM_MSE <- list()
-diagDM_MSE_nonexo <- list()
-new_sigs <- list()
-fullDM_newsigs <- list()
-fits_sigs <- list()
-
-##-----------------------------------------------------------------------------------------------------##
 ## Bone-Osteosarc
 ct <- "Bone-Osteosarc"
 ## in https://www.nature.com/articles/s41588-019-0390-2 they show two pops, one with and one without SBS3
@@ -1000,7 +1021,7 @@ dev.off()
 
 ##-----------------------------------------------------------------------------------------------------##
 
-ct <- "Liver-HCC"  
+ct <- "Liver-HCC"
 
 
 colnames(dataset_subset$Y)
@@ -1031,6 +1052,124 @@ print(cowplot::plot_grid(
                      nrow=1),
   nrow=2, rel_heights = c(2, 1)))
 dev.off()
+
+new_sigs[[ct]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                       subset_signatures = c('SBS1', 'SBS4', 'SBS5', 'SBS6', 'SBS12', 'SBS16', 'SBS19', 'SBS22', 'SBS29', 'SBS30', 'SBS40'))
+
+diagDM_newsigs[[ct]] <- wrapper_run_TMB(object = new_sigs[[ct]],
+                                        model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[ct]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[ct]]$Y)))
+
+## comparison of betas between two tmb runs
+
+
+compare_betas_tmb(tmb_obj_1 = read_info_list[[ct]]$diagRE_DMDL_SP,
+                  names_cats1 = (colnames(read_info_list[[ct]]$dataset_active_sigs$Y)),
+                  tmb_obj_2 = diagDM_newsigs[[ct]] ,
+                  names_cats2 = (colnames(new_sigs[[ct]]$Y)))
+
+## removing SBS5, which is found in low abundance
+new_sigs[[paste0(ct, '_2')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                       subset_signatures = c('SBS1', 'SBS4', 'SBS6', 'SBS12', 'SBS16', 'SBS19', 'SBS22', 'SBS29', 'SBS30', 'SBS40'))
+
+diagDM_newsigs[[paste0(ct, '_2')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_2')]],
+                                        model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_2')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_2')]]$Y)))
+
+## removing SBS40
+new_sigs[[paste0(ct, '_4')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c('SBS1', 'SBS4', 'SBS5', 'SBS6', 'SBS12', 'SBS16', 'SBS19', 'SBS22', 'SBS29', 'SBS30'))
+
+diagDM_newsigs[[paste0(ct, '_4')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_4')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_4')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_4')]]$Y)))
+
+## further to SBS5, removing SBS40
+new_sigs[[paste0(ct, '_3')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c('SBS1', 'SBS4', 'SBS6', 'SBS12', 'SBS16', 'SBS19', 'SBS22',
+                                                                           'SBS29', 'SBS30'))
+
+diagDM_newsigs[[paste0(ct, '_3')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_3')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_3')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_3')]]$Y)))
+
+## removing SBS6 and SBS40
+new_sigs[[paste0(ct, '_5')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c('SBS1', 'SBS4', 'SBS5', 'SBS12', 'SBS16', 'SBS19', 'SBS22', 'SBS29', 'SBS30'))
+
+rbind(compare_signaturefit_to_data(read_info_list[[ct]]$dataset_active_sigs, read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                             signature_defs = sigs_cosmic0),
+      compare_signaturefit_to_data(new_sigs[[paste0(ct, '_5')]], read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                   signature_defs = sigs_cosmic0))
+
+par(mfrow=c(1,2))
+compare_signaturefit_to_data(read_info_list[[ct]]$dataset_active_sigs, read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                             signature_defs = sigs_cosmic0, plot = T)
+compare_signaturefit_to_data(new_sigs[[paste0(ct, '_5')]], read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                             signature_defs = sigs_cosmic0, plot = T)
+
+
+fullDM_newsigs[[paste0(ct, '_5')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_5')]],
+                                                      model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+saveRDS(object = fullDM_newsigs[[paste0(ct, '_5')]], file = paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/particular_runs/", ct, 'fullRE_DMDL_subset5', '.RDS'))
+
+diagDM_newsigs[[paste0(ct, '_5')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_5')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_5')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)),
+           sort_by_slope = T, title = paste0(ct, ' (subset of signatures)'))
+ggsave(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_subset_no_SBS40.pdf"),
+       onefile=FALSE, height = 3, width = 5)
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_allsigsdiagREDM.tex"),
+                 height = 1.8, width = 5.5)
+plot_betas(read_info_list[[ct]]$diagRE_DMDL_SP, names_cats =  vector_cats_to_logR(colnames(read_info_list[[ct]]$dataset_active_sigs$Y)),
+           sort_by_slope = T, title = paste0(ct, ' (subset)'))
+dev.off()
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_subset_no_SBS40.tex"),
+                 height = 1.8, width = 3)
+plot_betas(diagDM_newsigs[[paste0(ct, '_5')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)),
+           sort_by_slope = T, title = paste0(ct, ' (subset)'))
+dev.off()
+
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betasfullREDMDL_subset_no_SBS40.tex"),
+                 height = 1.8, width = 3)
+plot_betas(fullDM_newsigs[[paste0(ct, '_5')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)),
+           sort_by_slope = T, title = paste0(ct, ' (subset)'))
+dev.off()
+
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_barplot_subset_no_SBS40.pdf"),
+       onefile=FALSE, height = 3, width = 5)
+give_barplot_from_obj(new_sigs[[paste0(ct, '_5')]], only_normalised = T, levels_signatures=sigs_cosmic, nrow_plot = 1,
+                      title = '', title_facets = c(NA, NA, 'Clonal', 'Subclonal'))
+dev.off()
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_barplot_subset_no_SBS40.tex"),
+                 height = 1.8, width = 3)
+give_barplot_from_obj(new_sigs[[paste0(ct, '_5')]], only_normalised = T, levels_signatures=sigs_cosmic, nrow_plot = 1,
+                      title = '', title_facets = c(NA, NA, 'Clonal', 'Subclonal'))
+dev.off()
+
+
+compare_betas_tmb(tmb_obj_1 = diagDM_newsigs[[paste0(ct, '_4')]],
+                  names_cats1 = colnames(new_sigs[[paste0(ct, '_4')]]$Y),
+                  tmb_obj_2 = diagDM_newsigs[[paste0(ct, '_5')]],
+                  names_cats2 = colnames(new_sigs[[paste0(ct, '_5')]]$Y),
+                  names_groups = c('No SBS40', 'No SBS40, no SBS6'))
+
+compare_betas_tmb(tmb_obj_1 = diagDM_newsigs[[paste0(ct, '_3')]],
+                  names_cats1 = colnames(new_sigs[[paste0(ct, '_3')]]$Y),
+                  tmb_obj_2 = diagDM_newsigs[[paste0(ct, '_5')]],
+                  names_cats2 = colnames(new_sigs[[paste0(ct, '_5')]]$Y),
+                  names_groups = c('No SBS40, no SBS5', 'No SBS40, no SBS6'))
+
+compare_betas_tmb(tmb_obj_1 = read_info_list[[ct]]$diagRE_DMDL_SP,
+                  names_cats1 = colnames(read_info_list[[ct]]$dataset_active_sigs$Y),
+                  tmb_obj_2 = fullDM_newsigs[[paste0(ct, '_5')]],
+                  names_cats2 = colnames(new_sigs[[paste0(ct, '_5')]]$Y),
+                  names_groups = c('Original signatures', 'Subset'), include_missing_as_inf = T)+
+  guides(alpha='none')
 
 ##-----------------------------------------------------------------------------------------------------##
 
@@ -1117,6 +1256,7 @@ ct <- "Lymph-CLL"
 
 ct <- "Ovary-AdenoCA"
 hypermut <- unique(names(select_self(sort(rowSums(read_info_list[[ct]]$dataset_active_sigs$Y)) > 10000)))
+hypermutv2 <- unique(names(select_self(sort(rowSums(read_info_list[[ct]]$dataset_active_sigs$Y)) > 25000)))
 
 amalgamated_extra[[ct]] <- (give_amalgamated_exposures_TMBobj(give_subset_samples_TMBobj( read_info_list[[ct]]$dataset_active_sigs, samples_to_remove = hypermut),
                                                               list_groupings = c(list(c('SBS3', 'SBS26'),
@@ -1151,6 +1291,321 @@ print(cowplot::plot_grid(
   nrow=5, rel_heights = c(1.5,0.5, 0.5, 0.5, 1)))
 dev.off()
 
+
+plot_betas(read_info_list[[ct]]$diagRE_DMDL_SP, vector_cats_to_logR(colnames(read_info_list[[ct]]$dataset_active_sigs$Y)),
+           sort_by_slope = T)
+
+## no SBS40
+new_sigs[[paste0(ct, '_1')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13", "SBS18", "SBS26", "SBS35", "SBS39", "SBS41"))
+
+diagDM_newsigs[[paste0(ct, '_1')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_1')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_1')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_1')]]$Y)), sort_by_slope = T)
+
+## no SBS40, SBS41
+new_sigs[[paste0(ct, '_2')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13", "SBS18", "SBS26", "SBS35", "SBS39"))
+
+diagDM_newsigs[[paste0(ct, '_2')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_2')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_2')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_2')]]$Y)), sort_by_slope = T)
+
+## no SBS26, SBS40, SBS41
+new_sigs[[paste0(ct, '_3')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13", "SBS18", "SBS35", "SBS39"))
+
+diagDM_newsigs[[paste0(ct, '_3')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_3')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_3')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_3')]]$Y)), sort_by_slope = T)
+
+## no SBS26, SBS35, SBS40, SBS41
+new_sigs[[paste0(ct, '_4')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13", "SBS18", "SBS39"))
+
+diagDM_newsigs[[paste0(ct, '_4')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_4')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_4')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_4')]]$Y)), sort_by_slope = T)
+
+## no SBS26, SBS35, SBS39, SBS40, SBS41
+new_sigs[[paste0(ct, '_5')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13", "SBS18"))
+
+diagDM_newsigs[[paste0(ct, '_5')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_5')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+fullDM_newsigs[[paste0(ct, '_5')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_5')]],
+                                                      model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+
+plot_betas(diagDM_newsigs[[paste0(ct, '_5')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)), sort_by_slope = T)
+plot_betas(fullDM_newsigs[[paste0(ct, '_5')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)), sort_by_slope = T)
+
+## no SBS18, SBS26, SBS35, SBS39, SBS40, SBS41
+new_sigs[[paste0(ct, '_6')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13"))
+
+diagDM_newsigs[[paste0(ct, '_6')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_6')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+fullDM_newsigs[[paste0(ct, '_6')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_6')]],
+                                                      model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+
+## no SBS8, SBS18, SBS26, SBS35, SBS39, SBS40, SBS41
+new_sigs[[paste0(ct, '_7')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS13"))
+
+diagDM_newsigs[[paste0(ct, '_7')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_7')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+fullDM_newsigs[[paste0(ct, '_7')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_7')]],
+                                                      model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+
+## different baseline
+give_all_baselines <- function(dataset_arg){
+  lapply(1:ncol(dataset_arg$Y), function(i){
+    if(i == 1){
+      .xx <- c((i+1):ncol(dataset_arg$Y) ,i )
+    }else if(i == ncol(dataset_arg$Y)){
+      .xx <- c(1:(i-1), i )
+    }else{
+      .xx <- c(1:(i-1), (i+1):ncol(dataset_arg$Y) ,i )
+    }
+    resort_columns(dataset_arg, .xx)
+  })
+}
+
+all_datasets_ov_subset <- give_all_baselines(dataset_arg = new_sigs[[paste0(ct, '_7')]])
+all_datasets_ov_subset_TMB <-lapply(all_datasets_ov_subset, function(i){
+  wrapper_run_TMB(object = i, model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+  })
+sapply(all_datasets_ov_subset_TMB, wald_TMB_wrapper) ## all consistent
+
+
+# no sbs18
+plot_betas(diagDM_newsigs[[paste0(ct, '_6')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_6')]]$Y)), sort_by_slope = T)
+plot_betas(fullDM_newsigs[[paste0(ct, '_6')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_6')]]$Y)), sort_by_slope = T)
+
+## no sbs8
+plot_betas(diagDM_newsigs[[paste0(ct, '_7')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_7')]]$Y)), sort_by_slope = T)
+plot_betas(fullDM_newsigs[[paste0(ct, '_7')]], names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_7')]]$Y)), sort_by_slope = T)
+
+saveRDS(fullDM_newsigs[[paste0(ct, '_5')]],
+        file = paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/particular_runs/", ct, 'fullRE_DMDL_subset5', '.RDS'))
+saveRDS(diagDM_newsigs[[paste0(ct, '_5')]],
+        file = paste0("../../data/pcawg_robjects_cache/tmb_results/nlminb/particular_runs/", ct, 'diagRE_DMDL_subset5', '.RDS'))
+
+
+# pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_subset.pdf"), onefile=FALSE, height = 3, width = 5)
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_subset.tex"), onefile=FALSE, height = 2, width = 5.5)
+grid.arrange(plot_betas(diagDM_newsigs[[paste0(ct, '_5')]],
+                        names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)),
+                        sort_by_slope = T, title = 'diagREDMDL'),
+             plot_betas(fullDM_newsigs[[paste0(ct, '_5')]],
+                        names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)),
+                        sort_by_slope = T, title = 'fullREDMDL'), nrow=1)
+dev.off()
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_subset_fullREDM.tex"), onefile=FALSE, height = 1.8, width = 2.8)
+plot_betas(fullDM_newsigs[[paste0(ct, '_5')]],
+          names_cats =  vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)),
+          sort_by_slope = T, title = NULL)
+dev.off()
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_betas_subset_allsigsdiagREDM.tex"), onefile=FALSE, height = 1.8, width = 4)
+plot_betas(read_info_list[[ct]]$diagRE_DMDL_SP,
+           names_cats =  vector_cats_to_logR(colnames(read_info_list[[ct]]$dataset_active_sigs$Y)),
+           sort_by_slope = T, title = NULL)
+dev.off()
+
+
+compare_signaturefit_to_data(read_info_list[[ct]]$dataset_active_sigs,
+                             read_info_list[[ct]]$dataset_nucleotidesubstitution3, sigs_cosmic0)
+compare_signaturefit_to_data(new_sigs[[paste0(ct, paste0('_5'))]],
+                             read_info_list[[ct]]$dataset_nucleotidesubstitution3, sigs_cosmic0)
+compare_signaturefit_to_data(new_sigs[[paste0(ct, paste0('_6'))]],
+                             read_info_list[[ct]]$dataset_nucleotidesubstitution3, sigs_cosmic0)
+compare_signaturefit_to_data(new_sigs[[paste0(ct, paste0('_7'))]],
+                             read_info_list[[ct]]$dataset_nucleotidesubstitution3, sigs_cosmic0)
+
+give_barplot_from_obj(new_sigs[[paste0(ct, '_5')]], levels_signatures=sigs_cosmic, legend_on = T, legend_bottom = T)
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_barplot_subset.tex"),
+                 height = 1.8, width = 2.5)
+give_barplot_from_obj(new_sigs[[paste0(ct, '_5')]], only_normalised = T, levels_signatures=sigs_cosmic, nrow_plot = 1,
+                      title = '', title_facets = c(NA, NA, 'Cl', 'Scl'))
+dev.off()
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_barplot_allsigs.tex"),
+                 height = 1.8, width = 2.5)
+give_barplot_from_obj(read_info_list[[ct]]$dataset_active_sigs, only_normalised = T, levels_signatures=sigs_cosmic, nrow_plot = 1,
+                      title = '', title_facets = c(NA, NA, 'Cl', 'Scl'))
+dev.off()
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_changes_in_beta.tex"),
+                 height = 2.5, width = 4.5)
+compare_betas_tmb(tmb_obj_1 = read_info_list[[ct]]$diagRE_DMDL_SP,
+                  names_cats1 = colnames(read_info_list[[ct]]$dataset_active_sigs$Y),
+                  tmb_obj_2 = diagDM_newsigs[[paste0(ct, '_5')]],
+                  names_cats2 = colnames(new_sigs[[paste0(ct, '_5')]]$Y),
+                  names_groups = c('Original signatures', 'Subset'), include_missing_as_inf = T)+
+  guides(alpha='none')
+dev.off()
+
+compare_betas_tmb(tmb_obj_1 = fullDM_newsigs[[paste0(ct, '_5')]],
+                  names_cats1 = colnames(new_sigs[[paste0(ct, '_5')]]$Y),
+                  tmb_obj_2 = diagDM_newsigs[[paste0(ct, '_5')]],
+                  names_cats2 = colnames(new_sigs[[paste0(ct, '_5')]]$Y),
+                  names_groups = c('Original signatures', 'Subset'), include_missing_as_inf = T)+
+  guides(alpha='none')
+
+plot_lambdas(diagDM_newsigs[[paste0(ct, '_2')]])
+plot_lambdas(diagDM_newsigs[[paste0(ct, '_3')]])
+plot_lambdas(diagDM_newsigs[[paste0(ct, '_4')]])
+plot_lambdas(fullDM_newsigs[[paste0(ct, '_5')]])
+
+hypermut
+
+dataset_extra[[paste0(ct, '_nucleotidesubstitution1nonhypermutated')]] <- give_subset_samples_TMBobj( read_info_list[[ct]]$dataset_nucleotidesubstitution1, samples_to_remove = hypermutv2)
+dim(dataset_extra[[paste0(ct, '_nucleotidesubstitution1nonhypermutated')]]$Y)
+dim(read_info_list[[ct]]$dataset_nucleotidesubstitution1$Y)
+fullDM_newsigs[[paste0(ct, '_nucleotidesubstitution1nonhypermutated')]] <- wrapper_run_TMB(object = dataset_extra[[paste0(ct, '_nucleotidesubstitution1nonhypermutated')]],
+                                                                                           model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+
+## the hypermutated sample is not a problem
+grid.arrange(plot_betas(nucleotide1[[ct]], names_cats = names_trinucleotide, title = 'all samples'),
+             plot_betas(fullDM_newsigs[[paste0(ct, '_nucleotidesubstitution1nonhypermutated')]], names_cats = names_trinucleotide, title = 'no hypermutated sample'))
+give_barplot_from_obj(read_info_list[[ct]]$dataset_nucleotidesubstitution1, only_normalised = F, nrow_plot = 1, scale_color_manual_vec = nucleotide_colours)
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_nucleotidebetas.tex"),
+                 height = 2, width = 3)
+plot_betas(nucleotide1[[ct]], names_cats = gsub(">", "$>$", names_trinucleotide), title = NULL)
+dev.off()
+
+plot_lambdas(nucleotide1[[ct]])
+
+
+tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_nucleotidebarplot.tex"),
+                 height = 2, width = 3)
+give_barplot_from_obj(rename_Y_dollar(read_info_list[[ct]]$dataset_nucleotidesubstitution1), only_normalised = T, nrow_plot = 1, legend_on = F,
+                      legend_bottom = T, scale_color_manual_vec = nucleotide_colours_dollar, title_facets = c(NA, NA, 'Clonal', 'Subclonal'))
+dev.off()
+
+for(ct in enough_samples){
+  cat(ct, '\n')
+  tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_sigma.tex"),
+                   height = 3.5, width = 3.5)
+  plot_covariance_mat(nucleotide1[[ct]], names_cats =  gsub(">", "$>$", names_trinucleotide), title = '',
+                            lims=c(-1, 1))
+  dev.off()
+}
+for(ct in enough_samples){
+  cat(ct, '\n')
+  tikzDevice::tikz(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/", ct, "_sigmanocluster.tex"),
+                   height = 3.5, width = 3.5)
+  plot_covariance_mat(nucleotide1[[ct]], names_cats =  gsub(">", "$>$", names_trinucleotide), title = '',
+                      lims=c(-1, 1), arg_cluster_rows = F, arg_cluster_cols = F)
+  dev.off()
+}
+ct <- "Ovary-AdenoCA"
+
+
+## adding MMR signatures: SBS6 and SBS20, as in theory MMR is important in ov cancer, but were not included in PCAWG
+new_sigs[[paste0(ct, '_newsigs1')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS13", "SBS18", "SBS6", "SBS20"))
+diagDM_newsigs[[paste0(ct, '_newsigs1')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_newsigs1')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+fullDM_newsigs[[paste0(ct, '_newsigs1')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_newsigs1')]],
+                                                      model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+
+give_barplot_from_obj(new_sigs[[paste0(ct, '_newsigs1')]])
+plot_betas(diagDM_newsigs[[paste0(ct, '_newsigs1')]], names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_newsigs1')]]$Y)), sort_by_slope = T)
+
+## only adding SBS6, not SBS20 (as there is none in ovarian cancer)
+new_sigs[[paste0(ct, '_newsigs2')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                            subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5", 'SBS6', "SBS13", "SBS18"))
+
+give_barplot_from_obj(new_sigs[[paste0(ct, '_newsigs2')]])
+diagDM_newsigs[[paste0(ct, '_newsigs2')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_newsigs2')]],
+                                                             model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+### which good, below!
+plot_betas(diagDM_newsigs[[paste0(ct, '_newsigs2')]], names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_newsigs2')]]$Y)), sort_by_slope = T)
+
+## adding SBS8
+new_sigs[[paste0(ct, '_newsigs3')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                            subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5", "SBS8", "SBS13", "SBS18", "SBS6", "SBS20"))
+diagDM_newsigs[[paste0(ct, '_newsigs3')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_newsigs3')]],
+                                                             model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_newsigs3')]], sort_by_slope = T,
+           names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_newsigs3')]]$Y)))
+
+## adding SBS8, no 20
+new_sigs[[paste0(ct, '_newsigs4')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                            subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5", "SBS8", "SBS13", "SBS18", "SBS6"))
+diagDM_newsigs[[paste0(ct, '_newsigs4')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_newsigs4')]],
+                                                             model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+fullDM_newsigs[[paste0(ct, '_newsigs4')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_newsigs4')]],
+                                                             model = "fullRE_DM", use_nlminb=T, smart_init_vals=F)
+
+plot_betas(diagDM_newsigs[[paste0(ct, '_newsigs4')]], sort_by_slope = T,
+           names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_newsigs4')]]$Y)))
+plot_betas(fullDM_newsigs[[paste0(ct, '_newsigs4')]], sort_by_slope = T,
+           names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_newsigs4')]]$Y)))
+
+plot_covariance_mat(fullDM_newsigs[[paste0(ct, '_newsigs4')]], names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_newsigs4')]]$Y)))
+
+plot_covariance_mat(fullDM_newsigs[[paste0(ct, '_5')]],
+                    names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5')]]$Y)))
+fullDM_newsigs[[paste0(ct, '_5')]]
+
+new_sigs[[paste0(ct, '_5wSBS36')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                     subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8",  "SBS13", "SBS36", "SBS18"))
+
+diagDM_newsigs[[paste0(ct, '_5wSBS36')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_5wSBS36')]],
+                                                      model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_5wSBS36')]], sort_by_slope = T,
+           names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5wSBS36')]]$Y)))
+
+
+new_sigs[[paste0(ct, '_5wSBS36noSBS13')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                           subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8", "SBS36", "SBS18"))
+
+diagDM_newsigs[[paste0(ct, '_5wSBS36noSBS13')]] <- wrapper_run_TMB(object = new_sigs[[paste0(ct, '_5wSBS36noSBS13')]],
+                                                            model = "diagRE_DM", use_nlminb=T, smart_init_vals=F)
+plot_betas(diagDM_newsigs[[paste0(ct, '_5wSBS36noSBS13')]], sort_by_slope = T,
+           names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5wSBS36noSBS13')]]$Y)))
+
+grid.arrange(plot_betas(diagDM_newsigs[[paste0(ct, '_5wSBS36')]], sort_by_slope = T,
+                        names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5wSBS36')]]$Y))),
+plot_betas(diagDM_newsigs[[paste0(ct, '_5wSBS36noSBS13')]], sort_by_slope = T,
+           names_cats = vector_cats_to_logR(colnames(new_sigs[[paste0(ct, '_5wSBS36noSBS13')]]$Y)))
+)
+wald_TMB_wrapper(diagDM_newsigs[[paste0(ct, '_5wSBS36')]])
+wald_TMB_wrapper(diagDM_newsigs[[paste0(ct, '_5wSBS36noSBS13')]])
+make_rownames_unique <- function(i){
+  rownames(i)[duplicated(rownames(i))] <- paste0(rownames(i)[duplicated(rownames(i))], '_2')
+  i
+}
+
+## https://media.springernature.com/lw685/springer-static/image/art%3A10.1186%2Fs12967-022-03259-0/MediaObjects/12967_2022_3259_Fig3_HTML.png?as=webp
+new_sigs[[paste0(ct, '_trying_to_stratify')]] <- extract_sigs_TMB_obj(dataset_obj_trinucleotide=read_info_list[[ct]]$dataset_nucleotidesubstitution3,
+                                                                  subset_signatures = c("SBS1",  "SBS2",  "SBS3",  "SBS5",  "SBS8", "SBS13", "SBS24", "SBS30", "SBS32", "SBS36", "SBS35", "SBS39", "SBS41"))
+createBarplot(normalise_rw(make_rownames_unique(new_sigs[[paste0(ct, '_trying_to_stratify')]]$Y)), order_labels = rownames(make_rownames_unique(new_sigs[[paste0(ct, '_trying_to_stratify')]]$Y))[order(normalise_rw(make_rownames_unique(new_sigs[[paste0(ct, '_trying_to_stratify')]]$Y))[,'SBS3'])])
+
+
+rownames(new_sigs[[paste0(ct, '_5')]]$Y)[duplicated(rownames(new_sigs[[paste0(ct, '_5')]]$Y))] <- paste0(rownames(new_sigs[[paste0(ct, '_5')]]$Y)[duplicated(rownames(new_sigs[[paste0(ct, '_5')]]$Y))], '_2')
+rownames(read_info_list[[ct]]$dataset_active_sigs$Y)[duplicated(rownames(read_info_list[[ct]]$dataset_active_sigs$Y))] <- paste0(rownames(read_info_list[[ct]]$dataset_active_sigs$Y)[duplicated(rownames(read_info_list[[ct]]$dataset_active_sigs$Y))], '_2')
+
+hclust_ov <- hclust(dist(as(compositions::clr(normalise_rw(new_sigs[[paste0(ct, '_5')]]$Y)), 'matrix')))
+hclust_ov$labels_old <- hclust_ov$labels
+hclust_ov$labels = ifelse(grepl("_2", hclust_ov$labels), '*', '.')
+plot(hclust_ov)
+
+createBarplot(normalise_rw(new_sigs[[paste0(ct, '_5')]]$Y[hclust_ov$labels_old,]))
+createBarplot(normalise_rw(new_sigs[[paste0(ct, '_5')]]$Y), order_labels = rownames(new_sigs[[paste0(ct, '_5')]]$Y)[order(normalise_rw(new_sigs[[paste0(ct, '_5')]]$Y)[,'SBS3'])])
+
+createBarplot(normalise_rw(read_info_list[[ct]]$dataset_active_sigs$Y), order_labels = rownames(read_info_list[[ct]]$dataset_active_sigs$Y)[order(normalise_rw(read_info_list[[ct]]$dataset_active_sigs$Y)[,'SBS3'])])
+createBarplot(normalise_rw(read_info_list[[ct]]$dataset_active_sigs_MSE$Y), order_labels = rownames(read_info_list[[ct]]$dataset_active_sigs_MSE$Y)[order(normalise_rw(read_info_list[[ct]]$dataset_active_sigs_MSE$Y)[,'SBS3'])])
+
+new_sigs_5_ov_stratify <- split_matrix_in_half(normalise_rw(new_sigs[[paste0(ct, '_5')]]$Y))
+pheatmap::pheatmap(new_sigs_5_ov_stratify[[2]]-new_sigs_5_ov_stratify[[1]])
+pheatmap::pheatmap(as(compositions::clr(new_sigs_5_ov_stratify[[2]]), 'matrix')-as(compositions::clr(new_sigs_5_ov_stratify[[1]]), 'matrix'))
 
 ##-----------------------------------------------------------------------------------------------------##
 
@@ -1480,9 +1935,6 @@ print(cowplot::plot_grid(
 dev.off()
 
 ##-----------------------------------------------------------------------------------------------------##
-source("../3_analysis/helper/pcawg.colour.palette.R")
-pcawg_palette <- pcawg.colour.palette(x = gsub("\\..*", "", names(read_info_list)),  scheme = "tumour.subtype")
-names(pcawg_palette) <- names(read_info_list)
 sbs2_sbs8 <- lapply(read_info_list, function(i) try(normalise_rw(i$dataset_active_sigs$Y)[,c('SBS2', 'SBS8')]))
 sbs13_sbs8 <- lapply(read_info_list, function(i) try(normalise_rw(i$dataset_active_sigs$Y)[,c('SBS13', 'SBS8')]))
 head(melt(sapply(sbs2_sbs8[sapply(sbs2_sbs8, typeof) == "double"], function(i) i[,1]/i[,2])))
@@ -1654,6 +2106,10 @@ betas_nucleotides <- lapply(betas_nucleotides, function(i){
   i
 })
 
+plot_betas(nucleotide1$`Ovary-AdenoCA`, names_cats = names_trinucleotide)
+give_barplot_from_obj(read_info_list$`Ovary-AdenoCA`$dataset_nucleotidesubstitution1, only_normalised = F, nrow_plot = 1)
+give_barplot_from_obj(read_info_list$`Ovary-AdenoCA`$dataset_nucleotidesubstitution1, only_normalised = T, nrow_plot = 1)
+
 betas_nucleotides_slopes <- do.call('cbind', lapply(betas_nucleotides, function(i) i%>% filter(type_beta == 'Slope' ) %>% select(Estimate)))
 rownames(betas_nucleotides_slopes) <- names_trinucleotide
 betas_nucleotides_intercepts <- do.call('cbind', lapply(betas_nucleotides, function(i) i%>% filter(type_beta == 'Intercept' ) %>% select(Estimate)))
@@ -1669,6 +2125,7 @@ betas_nucleotides_slopes_cors <- outer(1:nrow(betas_nucleotides_slopes),
                                        1:nrow(betas_nucleotides_slopes), Vectorize(function(i,j){
   cor(x = unlist(betas_nucleotides_slopes[i,]), y = unlist(betas_nucleotides_slopes[j,]))
 }))
+
 
 library(ComplexHeatmap)
 rownames(betas_nucleotides_slopes_cors) <- colnames(betas_nucleotides_slopes_cors) <- gsub(">", "$>$", rownames(betas_nucleotides_slopes))
@@ -1689,7 +2146,8 @@ ggplot(melt(as(betas_nucleotides_slopes, 'matrix')), aes(x=Var2, col=Var1, y=val
   geom_hline(yintercept = 0, lty='dashed')+theme_bw()+geom_line(aes(group=Var1))+
   theme_bw()+theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1))+
   theme(axis.title.x = element_blank(), legend.position = "bottom", legend.title = element_blank())+
-  labs(y='Beta slope')+guides(col=guide_legend(nrow=2,byrow=TRUE))
+  labs(y='Beta slope')+guides(col=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values = nucleotide_colours_logR)
 dev.off()
 library(GGally)
 ggpairs(data.frame(t(betas_nucleotides_slopes)))
@@ -1876,3 +2334,350 @@ ggplot(tracksig, aes(x=-log2(tracksig_pvls), y=tracksig_frac, label=ct, size=cou
   labs(x='-log2 p-value of\n diagRE DMDL (nonexo)', y='Fraction of TrackSig samples\n with some changepoint')+
   scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
   theme_bw()+theme(legend.position = "bottom")+guides(col=FALSE)+labs(size='N. obs')
+
+##--------------------------------------------------------------------------------------##
+### Small signatures: how small are they?
+
+## SBS17a, SBS17b in bone osteosarcoma
+ct
+
+colnames(read_info_list[[ct]]$dataset_active_sigs$Y)
+
+## in both cases there are some signatures
+split_matrix_in_half(read_info_list[[ct]]$dataset_active_sigs$Y[,c('SBS17a', 'SBS17b')])
+
+
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/normalised_exposures_per_ct.pdf"), height = 3)
+for(ct in enough_samples){
+  print(do.call('grid.arrange', c(grobs=lapply(colnames(read_info_list[[ct]]$dataset_active_sigs$Y), function(sig_it){
+  give_boxplot_normalised_for_sig(read_info_list[[ct]]$dataset_active_sigs, sig = sig_it)
+  }), main='dsad')))
+}
+dev.off()
+
+give_boxplot_normalised_for_sig(read_info_list[[ct]]$dataset_active_sigs, sig = 'SBS17b')
+
+do.call('grid.arrange', c(grobs=lapply(colnames(read_info_list[[ct]]$dataset_nucleotidesubstitution1$Y), function(sig_it){
+  give_boxplot_normalised_for_sig(read_info_list[[ct]]$dataset_nucleotidesubstitution1, sig = sig_it)
+})))
+
+##--------------------------------------------------------------------------------------##
+pdf(paste0("../../results/results_TMB/pcawg/reports_per_cancer_type/betas_all_sorted.pdf"), height = 3)
+for(ct in enough_samples){
+  plot_betas(TMB_obj = read_info_list[[ct]]$diagRE_DMDL_SP, sort_by_slope = T, title = ct,
+             vector_cats_to_logR(colnames(read_info_list[[ct]]$dataset_active_sigs$Y)))
+}
+dev.off()
+
+all_diagREDMDL_betas <- lapply(enough_samples, function(ct){
+  plot_betas(TMB_obj = read_info_list[[ct]]$diagRE_DMDL_SP,
+             names_cats= vector_cats_to_logR(colnames(read_info_list[[ct]]$dataset_active_sigs$Y)),
+             return_df=T, plot=F, only_slope = T, line_zero=F, add_confint = T)
+})
+all_diagREDMDL_betas <- lapply(all_diagREDMDL_betas, function(i) cbind(i, numerator_LogR = gsub("/.*", "", i$LogR)))
+
+all_diagREDMDL_betas_softmax <- lapply(all_diagREDMDL_betas,
+                                       function(i) cbind.data.frame(Estimate=softmax(c(i$Estimate[i$type_beta == 'Slope'], 0)),
+                                                        sig=c(i$numerator_LogR[i$type_beta == 'Slope'],
+                                                              strsplit(i$LogR[1], '/')[[1]][2])))
+
+names_sigs_unique <- gtools::mixedsort(unique(do.call('rbind', all_diagREDMDL_betas_softmax)$sig))
+increases_matrix <- outer(names_sigs_unique, names_sigs_unique, Vectorize(function(sig_it1, sig_it2){
+  mean(as.numeric(sapply(all_diagREDMDL_betas_softmax, function(j) j[j$sig == sig_it1,'Estimate'] > j[j$sig == sig_it2,'Estimate'] )), 
+      na.rm = T)
+}))
+num_ct_in_common_increases_matrix <- outer(names_sigs_unique, names_sigs_unique, Vectorize(function(sig_it1, sig_it2){
+  sum(!is.na(as.numeric(sapply(all_diagREDMDL_betas_softmax, function(j) j[j$sig == sig_it1,'Estimate'] > j[j$sig == sig_it2,'Estimate'] ))))
+}))
+colnames(increases_matrix) <- rownames(increases_matrix) <- names_sigs_unique
+pheatmap_increases_matrix <- pheatmap::pheatmap(increases_matrix)
+pheatmap_increases_matrix
+# increases_matrix[upper.tri(increases_matrix)] <- NaN
+increases_matrix_melt <- melt(increases_matrix)
+increases_matrix_melt$size= melt(num_ct_in_common_increases_matrix)$value
+increases_matrix_melt$Var1 = factor(increases_matrix_melt$Var1, levels=pheatmap_increases_matrix$tree_row$labels[pheatmap_increases_matrix$tree_row$order])
+increases_matrix_melt$Var2 = factor(increases_matrix_melt$Var2, levels=pheatmap_increases_matrix$tree_col$labels[pheatmap_increases_matrix$tree_row$order])
+# increases_matrix_melt <- increases_matrix_melt[as.numeric(increases_matrix_melt$Var1) > as.numeric(increases_matrix_melt$Var2),]
+increases_matrix_melt <- increases_matrix_melt[!is.na(increases_matrix_melt$value),]
+
+increases_matrix_melt[(increases_matrix_melt$Var1 == '7c') & (increases_matrix_melt$Var2 == '38'),]
+increases_matrix_melt[(increases_matrix_melt$Var2 == '7c') & (increases_matrix_melt$Var1 == '38'),]
+
+increases_matrix_melt$Var1 <- factor(paste0('SBS', increases_matrix_melt$Var1), levels=paste0('SBS', levels(increases_matrix_melt$Var1)))
+increases_matrix_melt$Var2 <- factor(paste0('SBS', increases_matrix_melt$Var2), levels=paste0('SBS', levels(increases_matrix_melt$Var2)))
+ggplot(increases_matrix_melt,
+       aes(x=Var1, y=Var2, col=value,size=size))+geom_point()+theme_bw()+ # shape=(value>0.5), 
+  scale_color_viridis() + theme(legend.position = "bottom", legend.box="vertical")+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Fraction of higher coefficients')
+ggsave("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/comparison_order_coefficients_heatmap.pdf",
+       height = 8, width = 7)
+
+pairs(t(increases_matrix[c('1', '5', '40'),]))
+
+all_diagREDMDL_betas_softmax_allsigs <- data.frame(t(sapply(all_diagREDMDL_betas_softmax, function(i) i[match(names_sigs_unique, i$sig,),'Estimate'])), ct=enough_samples)
+colnames(all_diagREDMDL_betas_softmax_allsigs) <- c(paste0('SBS', names_sigs_unique), 'ct')
+
+all_diagREDMDL_betas_softmax_1_5_40 <- t(sapply(all_diagREDMDL_betas_softmax, function(i) i[match(names_sigs_unique, i$sig,),'Estimate']))
+colnames(all_diagREDMDL_betas_softmax_1_5_40) <- paste0('SBS', names_sigs_unique)
+all_diagREDMDL_betas_softmax_1_5_40 <- data.frame(all_diagREDMDL_betas_softmax_1_5_40, ct=enough_samples)
+pairs(all_diagREDMDL_betas_softmax_1_5_40)
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs1sbs5_and_apobec_softmax_anno.tex",
+                 height=2.5, width=2.5)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS1, y=SBS5, col=ct, label=substr(ct, 1, 3), group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point(color='black', size=2)+ geom_point()+ geom_label_repel()+
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", col='black', size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.03, vjust=2, hjust=-.4)+
+  labs(x='Beta slope of SBS1', y='Beta slope of SBS5')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs1sbs5_and_apobec_softmax_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS1, y=SBS5, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.38, vjust=1, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS1', y='Beta slope of SBS5')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs13sbs8_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS13, y=SBS8, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.25, vjust=1, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS13', y='Beta slope of SBS8')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs2sbs8_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS2, y=SBS8, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.25, vjust=1, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS2', y='Beta slope of SBS8')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs2sbs18_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40[!is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS2) | is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS18),],
+       aes(x=SBS2, y=SBS18, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.1, vjust=1, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS2', y='Beta slope of SBS18')+guides(col='none')
+dev.off()
+
+ggplot(all_diagREDMDL_betas_softmax_1_5_40[!is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS3) | is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS8),],
+       aes(x=SBS3, y=SBS8, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.1, vjust=1, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS3', y='Beta slope of SBS8')+guides(col='none')
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs40sbs5_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS5, y=SBS40, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.45, vjust=1, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS5', y='Beta slope of SBS40')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs3sbs18_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40[!is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS3) | is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS18),],
+       aes(x=SBS3, y=SBS18, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.1, vjust=0.2, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS3', y='Beta slope of SBS18')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs3sbs2_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40[!is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS3) | is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS2),],
+       aes(x=SBS3, y=SBS2, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.1, vjust=0.2, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS3', y='Beta slope of SBS2')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs2sbs13_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS2, y=SBS13, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.25, vjust=0.3, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS2', y='Beta slope of SBS13')+guides(col='none')
+dev.off()
+
+tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs17asbs17b_noanno.tex",
+                 height=2.2, width=2.2)
+ggplot(all_diagREDMDL_betas_softmax_1_5_40[!is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS17a) | is.na(all_diagREDMDL_betas_softmax_1_5_40$SBS17b),],
+       aes(x=SBS17a, y=SBS17b, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+  geom_point(color='black', size=2)+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.15, vjust=0.2, hjust=-.02, size=3.5, label.sep='\n')+
+  labs(x='Beta slope of SBS17a', y='Beta slope of SBS17b')+guides(col='none')
+dev.off()
+
+ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS2, y=SBS8, col=ct, group=1))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ 
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm", col='black', size=0.2)+
+  ggpubr::stat_cor(method = "pearson", label.x = 0, label.y = 0.03, vjust=2, hjust=-.4)+
+  # labs(x='Beta slope of SBS1', y='Beta slope of SBS5')+
+  guides(col='none')
+
+# tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs1sbs5_and_apobec_softmax_anno_SBS40.tex",
+#                  height=2.5, width=2.5)
+# ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS1, y=SBS40, col=ct, label=substr(ct, 1, 3)))+
+#   geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+#   theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+#   geom_smooth(method = "lm")+
+#   ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+#   labs(x='Beta slope of SBS1', y='Beta slope of SBS40')+guides(col='none')
+# dev.off()
+# 
+# tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_sbs1sbs5_and_apobec_softmax_anno_SBS40_2.tex",
+#                  height=2.5, width=2.5)
+# ggplot(all_diagREDMDL_betas_softmax_1_5_40, aes(x=SBS5, y=SBS40, col=ct, label=substr(ct, 1, 3)))+
+#   geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+#   theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+#   geom_smooth(method = "lm")+
+#   ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+#   labs(x='Beta slope of SBS5', y='Beta slope of SBS40')+guides(col='none')
+# dev.off()
+# 
+# tikzDevice::tikz("/Users/morril01/Documents/PhD/GlobalDA/code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_SBS17.tex",
+#                  height=2.5, width=2.5)
+# ggplot(all_diagREDMDL_betas_softmax_allsigs, aes(x=SBS17a, y=SBS17b, col=ct, label=substr(ct, 1, 3)))+
+#   geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+#   theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+#   geom_smooth(method = "lm")+
+#   ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+#   labs(x='Beta slope of SBS17a', y='Beta slope of SBS17b')+guides(col='none')
+# dev.off()
+
+ggplot(all_diagREDMDL_betas_softmax_allsigs, aes(x=SBS8, y=SBS13, col=ct, label=substr(ct, 1, 3)))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  # labs(x='Beta slope of SBS17a', y='Beta slope of SBS17b')+
+  guides(col='none')
+
+ggplot(all_diagREDMDL_betas_softmax_allsigs, aes(x=SBS8, y=SBS26, col=ct, label=substr(ct, 1, 3)))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  # labs(x='Beta slope of SBS17a', y='Beta slope of SBS17b')+
+  guides(col='none')
+
+ggplot(all_diagREDMDL_betas_softmax_allsigs, aes(x=SBS8, y=SBS18, col=ct, label=substr(ct, 1, 3)))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  # labs(x='Beta slope of SBS17a', y='Beta slope of SBS17b')+
+  guides(col='none')
+
+ggplot(all_diagREDMDL_betas_softmax_allsigs, aes(x=SBS3, y=SBS13, col=ct, label=substr(ct, 1, 3)))+
+  geom_abline(slope = 1, intercept = 0, lty='dashed')+ geom_point()+ geom_label_repel()+
+  theme_bw()+ scale_color_manual(values = pcawg_palette)+theme(legend.position = "bottom")+
+  geom_smooth(method = "lm")+
+  ggpubr::stat_cor(method = "pearson", label.x = 1.1, label.y = Inf, vjust=2, hjust=1)+
+  # labs(x='Beta slope of SBS17a', y='Beta slope of SBS17b')+
+  guides(col='none')
+
+all_diagREDMDL_betas_softmax_allsigs_v2 <- all_diagREDMDL_betas_softmax_allsigs
+rownames(all_diagREDMDL_betas_softmax_allsigs_v2) <- all_diagREDMDL_betas_softmax_allsigs_v2$ct
+all_diagREDMDL_betas_softmax_allsigs_v2 <- all_diagREDMDL_betas_softmax_allsigs_v2[,(colnames(all_diagREDMDL_betas_softmax_allsigs_v2) != 'ct')]
+
+
+###------ correlation of signatures ------###
+all_diagREDMDL_betas_softmax_allsigs_v2_cors <- outer(1:ncol(all_diagREDMDL_betas_softmax_allsigs_v2), 1:ncol(all_diagREDMDL_betas_softmax_allsigs_v2),
+                                                      Vectorize(function(i,j){
+  if( sum(!is.na(all_diagREDMDL_betas_softmax_allsigs_v2[,i]) & !is.na(all_diagREDMDL_betas_softmax_allsigs_v2[,j])) <=2){
+    NA ## if there are 2 or fewer points in common. if there are 2 the correlation is possible but always 1
+  }else{
+    try(cor(x = unlist(all_diagREDMDL_betas_softmax_allsigs_v2[,i]), y = unlist(all_diagREDMDL_betas_softmax_allsigs_v2[,j]), use = "pairwise.complete.obs"))
+  }
+}))
+colnames(all_diagREDMDL_betas_softmax_allsigs_v2_cors) <- rownames(all_diagREDMDL_betas_softmax_allsigs_v2_cors) <- colnames(all_diagREDMDL_betas_softmax_allsigs_v2)
+rm_cols_cor_sigs <- !rowSums(is.na(all_diagREDMDL_betas_softmax_allsigs_v2_cors)) == ncol(all_diagREDMDL_betas_softmax_allsigs_v2_cors)
+rm_rows_cor_sigs <- !colSums(is.na(all_diagREDMDL_betas_softmax_allsigs_v2_cors)) == nrow(all_diagREDMDL_betas_softmax_allsigs_v2_cors)
+all_diagREDMDL_betas_softmax_allsigs_v2_cors <- all_diagREDMDL_betas_softmax_allsigs_v2_cors[rm_cols_cor_sigs,]
+all_diagREDMDL_betas_softmax_allsigs_v2_cors <- all_diagREDMDL_betas_softmax_allsigs_v2_cors[,rm_rows_cor_sigs]
+
+all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust <- hclust(dist(all_diagREDMDL_betas_softmax_allsigs_v2_cors))
+pheatmap::pheatmap(all_diagREDMDL_betas_softmax_allsigs_v2_cors)
+
+num_common_sigs <- outer(1:ncol(all_diagREDMDL_betas_softmax_allsigs_v2), 1:ncol(all_diagREDMDL_betas_softmax_allsigs_v2), Vectorize(function(i,j){
+  try(sum(!is.na(unlist(all_diagREDMDL_betas_softmax_allsigs_v2[,i])+unlist(all_diagREDMDL_betas_softmax_allsigs_v2[,j]))))}))
+colnames(num_common_sigs) <- rownames(num_common_sigs) <- colnames(all_diagREDMDL_betas_softmax_allsigs_v2)
+num_common_sigs <- num_common_sigs[rm_cols_cor_sigs,]
+num_common_sigs <- num_common_sigs[,rm_rows_cor_sigs]
+
+cors_softmax_melt_all_sigs <- cbind.data.frame(cors_softmax=melt(all_diagREDMDL_betas_softmax_allsigs_v2_cors),
+                                      num_common_sigs=melt(num_common_sigs))
+
+cors_softmax_meltv2_all_sigs <- cors_softmax_melt_all_sigs[!is.na(cors_softmax_melt_all_sigs$cors_softmax.value),]
+ggplot(cors_softmax_meltv2_all_sigs, aes(x=factor(num_common_sigs.Var1, levels = all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$labels[all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$order]),
+                                         y=factor(num_common_sigs.Var2, levels=all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$labels[all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$order]),
+                                         col=cors_softmax.value, size=num_common_sigs.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+ggsave("../../code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/comparison_order_coefficients_heatmap_all_sigs.pdf", height=5.5, width = 5.2)
+
+tikzDevice::tikz("../../code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/comparison_order_coefficients_heatmap_all_sigs.tex", height=6.5, width = 6)
+ggplot(cors_softmax_meltv2_all_sigs, aes(x=factor(num_common_sigs.Var1, levels = all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$labels[all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$order]),
+                                         y=factor(num_common_sigs.Var2, levels=all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$labels[all_diagREDMDL_betas_softmax_allsigs_v2_cors_hclust$order]),
+                                         col=cors_softmax.value, size=num_common_sigs.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+dev.off()
+
+###------ correlation of samples ------###
+all_diagREDMDL_betas_softmax_allsigs_v2_corssamps <- outer(1:nrow(all_diagREDMDL_betas_softmax_allsigs_v2), 1:nrow(all_diagREDMDL_betas_softmax_allsigs_v2),
+                                                      Vectorize(function(i,j){
+                                                        if( sum(!is.na(all_diagREDMDL_betas_softmax_allsigs_v2[i,]) & !is.na(all_diagREDMDL_betas_softmax_allsigs_v2[j,])) <=2){
+                                                          NA ## if there are 2 or fewer points in common. if there are 2 the correlation is possible but always 1
+                                                        }else{
+                                                          try(cor(x = unlist(all_diagREDMDL_betas_softmax_allsigs_v2[i,]), y = unlist(all_diagREDMDL_betas_softmax_allsigs_v2[j,]), use = "pairwise.complete.obs"))
+                                                        }
+                                                      }))
+colnames(all_diagREDMDL_betas_softmax_allsigs_v2_corssamps) <- rownames(all_diagREDMDL_betas_softmax_allsigs_v2_corssamps) <- rownames(all_diagREDMDL_betas_softmax_allsigs_v2)
+all_diagREDMDL_betas_softmax_allsigs_v2_corssamps_hclust <- hclust(dist(all_diagREDMDL_betas_softmax_allsigs_v2_corssamps))
+
+num_common_sigssamps <- outer(1:nrow(all_diagREDMDL_betas_softmax_allsigs_v2), 1:nrow(all_diagREDMDL_betas_softmax_allsigs_v2), Vectorize(function(i,j){
+  try(sum(!is.na(unlist(all_diagREDMDL_betas_softmax_allsigs_v2[i,])+unlist(all_diagREDMDL_betas_softmax_allsigs_v2[j,]))))}))
+colnames(num_common_sigssamps) <- rownames(num_common_sigssamps) <- colnames(all_diagREDMDL_betas_softmax_allsigs_v2_corssamps)
+cors_softmax_melt_all_sigs_samps <- cbind.data.frame(cors_softmax=melt(all_diagREDMDL_betas_softmax_allsigs_v2_corssamps),
+                                               num_common_sigs=melt(num_common_sigssamps))
+cors_softmax_melt_all_sigs_samps <- cors_softmax_melt_all_sigs_samps[!is.na(cors_softmax_melt_all_sigs_samps$cors_softmax.value),]
+
+ggplot(cors_softmax_melt_all_sigs_samps, aes(x=factor(num_common_sigs.Var1, levels = all_diagREDMDL_betas_softmax_allsigs_v2_corssamps_hclust$labels[all_diagREDMDL_betas_softmax_allsigs_v2_corssamps_hclust$order]),
+                                         y=factor(num_common_sigs.Var2, levels=all_diagREDMDL_betas_softmax_allsigs_v2_corssamps_hclust$labels[all_diagREDMDL_betas_softmax_allsigs_v2_corssamps_hclust$order]),
+                                         col=cors_softmax.value, size=num_common_sigs.value))+
+  geom_point()+scale_color_viridis() + theme_bw()+theme(legend.position = "bottom", legend.box="vertical")+
+  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+  labs(x='',y='', size='Number of signatures in common', col='Pearson correlation')
+ggsave("../../code/2_inference_TMB/summary_TMB_PCAWG_SP_files/figure-latex/correlations_from_beta_slopes_softmax2_all_sigs.pdf", height=6, width = 5.7)

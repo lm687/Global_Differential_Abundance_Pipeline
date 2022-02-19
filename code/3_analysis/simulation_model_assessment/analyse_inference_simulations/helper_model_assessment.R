@@ -1,8 +1,15 @@
-give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datasets, pvals_data_frame_arg=pvals_data_frame){
+give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datasets,
+                                             pvals_data_frame_arg=pvals_data_frame, single_pval=F){
   if(two_var){
     do.call('rbind', apply(expand.grid(sapply(var, function(i) unique(unlist(sapply(datasets_arg, `[`, i))))), 1, function(vars_it){
       .pvals <- pvals_data_frame_arg[which(sapply(datasets_arg, '[', var[1]) == vars_it[[1]] & sapply(datasets_arg, '[', var[2]) == vars_it[[2]]),]
-      .res_all_subset = put_vals_in_table(.pvals)
+      if(single_pval){
+        .res_all_subset = summarise_DA_detection(true = .pvals$true, predicted = .pvals$test <= 0.05)
+        .res_all_subset <- t(cbind.data.frame(.res_all_subset))
+        rownames(.res_all_subset) <- 'test'
+      }else{
+        .res_all_subset = put_vals_in_table(.pvals)
+      }
       .return <- cbind.data.frame(.res_all_subset, VAR1=vars_it[1], VAR2=vars_it[2], model=rownames(.res_all_subset))
       colnames(.return)[(ncol(.return)-2)] <- var[1]
       colnames(.return)[(ncol(.return)-1)] <- var[2]
@@ -11,7 +18,13 @@ give_accuracies_with_varying_var <- function(var, two_var=F, datasets_arg=datase
   }else{
     do.call('rbind', lapply(unique(unlist(sapply(datasets_arg, `[`, var))), function(vars_it){
       .pvals <- pvals_data_frame_arg[which(sapply(datasets_arg, '[', var) == vars_it),]
-      .res_all_subset = put_vals_in_table(.pvals)
+      if(single_pval){
+        .res_all_subset = (summarise_DA_detection(true = .pvals$true, predicted = .pvals$test <= 0.05))
+        .res_all_subset <- t(cbind.data.frame(.res_all_subset))
+        rownames(.res_all_subset) <- 'test'
+      }else{
+        .res_all_subset = put_vals_in_table(.pvals)
+      }
       .return <- cbind.data.frame(.res_all_subset, d=vars_it, model=rownames(.res_all_subset))
       colnames(.return)[(ncol(.return)-1)] <- var
       return(.return)

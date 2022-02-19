@@ -19,7 +19,7 @@ if(local){
   # generation = "GenerationInoREtwolambdas"
   # generation = "generationHnormtwolambdas"
   # generation = "GenerationMixture1"
-  generation = "GenerationJnormTwoLambdasOneChangingBeta"
+  # generation = "GenerationJnormTwoLambdasOneChangingBeta"
   # generation = "GenerationJnormBTwoLambdasOneChangingBeta"
   # generation = "GenerationMixturePCAWG"
   # generation = "GenerationMixturefewersignaturesPCAWG"
@@ -42,6 +42,8 @@ if(local){
   # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMHeadSCCPCAWG'
   # generation <- 'GenerationMixturefewersignaturespairedObsNmObsDMKidneyChRCCPCAWG'
   # generation <- 'GenerationMixtureallsignaturespairedObsNmCNSGBMPCAWG'
+  # generation <- 'GenerationPois'
+  generation <- 'GenerationMixturefewersignaturespairedObsNmGaussianVarPCAWGProstAdenoCAPCAWG'
   ##########################################
   # multiple_runs = F
   ## single replicate
@@ -158,6 +160,8 @@ joint_df = cbind.data.frame(fullRE_M=runs_fullREM,
                                                 rownames(runs_diagREDMSL)),],
                             diagRE_DM=runs_diagREDM[match(rownames(runs_fullREM),
                                                 rownames(runs_diagREDM)),])
+joint_df$names <- sapply(1:nrow(joint_df), function(i) gsub(paste0(joint_df[i,]$fullRE_M.idx_within_dataset, "$"), "", rownames(joint_df)[i]))
+joint_df$names <- gsub("[.]$", "", joint_df$names)
 
 sort(unique(gsub("\\..*","",rownames(joint_df))))
 
@@ -246,8 +250,12 @@ length(datasets_files)
 # to accomodate for multiple runs
 # datasets_files = datasets_files[match(unique(sapply(rownames(joint_df), function(i) strsplit(i, "_dataset")[[1]][1])), ## what it used to be
 #                                       gsub("_dataset.RDS", "", basename(datasets_files)))]
-datasets_files = datasets_files[match((sapply(rownames(joint_df[joint_df$fullRE_M.idx_within_dataset == 1,]), function(i) strsplit(i, "_dataset")[[1]][1])), ## new version
-                                      (gsub("_dataset[0-9]+.RDS", "", basename(datasets_files))))]
+# stop('Problem with getting the same dataset twice. check analysis_aignle_cat_change.R to see how I did it for the updated version')
+# datasets_files = datasets_files[match((sapply(rownames(joint_df[joint_df$fullRE_M.idx_within_dataset == 1,]), function(i) strsplit(i, "_dataset")[[1]][1])), ## new version
+#                                       (gsub("_dataset[0-9]+.RDS", "", basename(datasets_files))))] ## commented out on 20220218
+cat('Matching files\n')
+datasets_files = datasets_files[match(unique(joint_df$names),
+                                      gsub(".RDS", "", basename(datasets_files)))]
 length(datasets_files)
 
 datasets = lapply(datasets_files, readRDS)
@@ -267,7 +275,9 @@ if((generation %in% c("GenerationMixturePCAWG", "GenerationMixturefewersignature
     stop('Are you sure you are using probabilities beta_gamma_shape for and not log-ratios?\n')
   }
 }
-names(datasets) = unique(gsub("_dataset.RDS", "", basename(datasets_files)))
+# stop('Below: it shoud not be <unique()>')
+# names(datasets) = unique(gsub("_dataset.RDS", "", basename(datasets_files))) ## commeted out on 20220218
+names(datasets) = gsub("_dataset.RDS", "", basename(datasets_files))
 
 DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
@@ -1109,6 +1119,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   #       rownames(runs_fullREM0)),], aes(x=idx, y=beta_est))+geom_point()+facet_wrap(.~idx_within_dataset)
   # })
   # 
+  cat('Plotting weighted accuracy of converged\n')
   try({
   a <- ggplot(varying_n_all_converged, aes(x=n, y = WeightedAccuracy, col=model, group=model))+
     geom_point()+geom_line()+theme_bw()+
@@ -1125,6 +1136,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   })
   
   ## save results for tests
+  cat('Saving objects\n')
   
   object_save <- list(generation=generation,
                       DA_bool=DA_bool,
@@ -1167,6 +1179,8 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   sort_first_col_by_second <- function(x) unlist(x[order(x[,2], decreasing = T),1])
   sort_first_col_by_second(varying_n %>% dplyr::group_by(model) %>% dplyr::summarise(median(WeightedAccuracy)))
   # 
+  
+  cat('Boxplots of weighted accuracy by n\n')
   ggplot(varying_n, aes(x=factor(model,
                                  levels=sort_first_col_by_second(varying_n %>%
                                          dplyr::group_by(model) %>%
@@ -1177,6 +1191,7 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_n_boxplot.pdf"),
          height = 3.0, width = 4)
 
+  cat('Boxplots of weighted accuracy by d\n')
   ggplot(varying_d, aes(x=factor(model,
                                  levels=sort_first_col_by_second(varying_d %>%
                                                                    dplyr::group_by(model) %>%
@@ -1187,102 +1202,146 @@ if(sum(!is.na(DA_bool_all_converged))>0){
   ggsave(paste0(flder_out, generation, "/summaries/weightedaccuracy_with_d_boxplot.pdf"),
          height = 3.0, width = 4)
   
-  if(generation %in% c("GenerationJnormTwoLambdasOneChangingBeta", "GenerationJnormBTwoLambdasOneChangingBeta")){
-  ##'  only for GenerationJnormTwoLambdasOneChangingBeta: looking at individual betas
-  ##'  we want to see if there are more false negatives in samples where the beta_i is lower
-  ggplot(data = runs_diagREDM[runs_diagREDM$beta_true != 0,c('beta_true', 'pvals_adj')],
-         aes(x=beta_true, y=pvals_adj))+geom_point()+theme_bw()
-  runs_diagREDM$beta_est
-
-
-  ## this should be normalised by the abundance of the last category which serves as baseline
-  ## reminder: it is always the first log-ratio which is not different from zero
-  table(runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]$beta_true)
-  table(runs_diagREDM[runs_diagREDM$idx_within_dataset != 1,]$beta_true)
-
-  only_logR_with_change <- runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]
-
-  plot(density(only_logR_with_change$beta_true))
-
-  ##' I would expectL for the same beta gamma shape (or, equivalently, the same beta slope true)
-  ##' there are more false negatives the lower beta intercept true
-  ggplot(data = only_logR_with_change,
-         aes(x=beta_true, y=beta_intercept_true, col=pvals_adj))+geom_point()+theme_bw()
-
-  ggplot(data = only_logR_with_change,
-         aes(x=beta_true, y=beta_intercept_true, col=pvals_adj < 0.05))+geom_point()+theme_bw()
-  ## there is no trend in GenerationJnormTwoLambdasOneChangingBeta
-
-  only_logR_with_change$cut_beta_intercept_true <- cut(only_logR_with_change$beta_intercept_true, breaks = seq(-1, 1, length.out = 10))
-  only_logR_with_change_summarised <- only_logR_with_change %>% group_by(beta_true, cut_beta_intercept_true) %>%
-    dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
-  ggplot(data = only_logR_with_change,
-         aes(x=factor(beta_true), y=cut_beta_intercept_true,
-             col=pvals_adj < 0.05))+geom_point()+theme_bw()
-  ggplot(data = only_logR_with_change,
-         aes(x=beta_true, y=cut_beta_intercept_true,
-             col=pvals_adj < 0.05))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")
-  ggplot(data = only_logR_with_change_summarised,
-         aes(x=factor(beta_true), y=cut_beta_intercept_true,
-             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw() ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
-
-  ## we compute the absolute abundance (in proportion) of the first category
-  idx_dataset_it = 1
-
-  abundances_in_prob <- lapply(unique(runs_diagREDM$idx), function(idx_dataset_it){
-    softmax(c(runs_diagREDM[runs_diagREDM$idx == idx_dataset_it,]$beta_intercept_true, 0)) ## abundance of first cat
-  })
-
-  abundances_first_cat <- sapply(abundances_in_prob, `[`, 1)
-  abundances_last_cat <- sapply(abundances_in_prob, function(i) i[length(i)]) ## not used
-
-  length(abundances_first_cat)
-  dim(only_logR_with_change)
-  only_logR_with_change$abundance_first_cat <- abundances_first_cat
-  only_logR_with_change$cut_abundances_first_cat <- cut(only_logR_with_change$abundance_first_cat,
-                                                        breaks = seq(0, max(only_logR_with_change$abundance_first_cat), length.out = 4))
-  only_logR_with_change$cut_abundances_first_catV2 <- cut(only_logR_with_change$abundance_first_cat,
-                                                          breaks = quantile(only_logR_with_change$abundance_first_cat, probs = c(0, 0.25, 0.5, 0.75, 1)), include.lowest = T)
-  sum(is.na(only_logR_with_change$cut_abundances_first_catV2)) ## should be 0
+  if(generation %in% c("GenerationJnormTwoLambdasOneChangingBeta", "GenerationJnormBTwoLambdasOneChangingBeta", "GenerationPois")){
+    ##'  only for GenerationJnormTwoLambdasOneChangingBeta: looking at individual betas
+    ##'  we want to see if there are more false negatives in samples where the beta_i is lower
+    cat('Plotting single category changes\n')
+    
+    ggplot(data = runs_diagREDM[runs_diagREDM$beta_true != 0,c('beta_true', 'pvals_adj')],
+           aes(x=beta_true, y=pvals_adj))+geom_point()+theme_bw()
+    runs_diagREDM$beta_est
   
-  only_logR_with_change_summarised_2 <- only_logR_with_change %>%
-    group_by(beta_true, cut_abundances_first_cat) %>%
-    dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
-
-  only_logR_with_change_summarised_V2 <- only_logR_with_change %>%
-    group_by(beta_true, cut_abundances_first_catV2) %>%
-    dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
   
-  ggplot(data = only_logR_with_change,
-         aes(x=factor(beta_true), y=abundances_first_cat,
-             col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    ## this should be normalised by the abundance of the last category which serves as baseline
+    ## reminder: it is always the first log-ratio which is not different from zero
+    table(runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]$beta_true)
+    table(runs_diagREDM[runs_diagREDM$idx_within_dataset != 1,]$beta_true)
+  
+    # only_logR_with_change <- runs_diagREDM[runs_diagREDM$idx_within_dataset == 1,]
+    cat('Creating<only_logR_with_change>\n')
+    only_logR_with_change <- cbind(joint_df[,grepl('diagRE_DM.', colnames(joint_df))], names=joint_df$names)
+    colnames(only_logR_with_change) <- gsub("diagRE_DM.", "", colnames(only_logR_with_change))
+    sum(only_logR_with_change$idx_within_dataset == 1)
+    length(unique(only_logR_with_change$idx))
+    length(unique(only_logR_with_change$names))
+    only_logR_with_change <- only_logR_with_change[only_logR_with_change$idx_within_dataset == 1,]
+    # only_logR_with_change <- only_logR_with_change[!(is.na(only_logR_with_change$names)),]
+    dim(only_logR_with_change)
+    length(datasets)
+    sum(is.na(only_logR_with_change$names))
+    names(datasets)[!(gsub(".RDS", "", names(datasets)) %in% only_logR_with_change$names)]
+    only_logR_with_change$names[!(only_logR_with_change$names %in% gsub(".RDS", "", names(datasets)))]
+    # plot(density(only_logR_with_change$beta_true))
+  
+    ##' I would expectL for the same beta gamma shape (or, equivalently, the same beta slope true)
+    ##' there are more false negatives the lower beta intercept true
+    cat('Plotting <only_logR_with_change>\n')
+    ggplot(data = only_logR_with_change,
+           aes(x=beta_true, y=beta_intercept_true, col=pvals_adj))+geom_point()+theme_bw()
+  
+    ggplot(data = only_logR_with_change,
+           aes(x=beta_true, y=beta_intercept_true, col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    ggplot(data = only_logR_with_change,
+           aes(x=factor(beta_true), y=beta_intercept_true, col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    
+    cat('Adding softmax to <only_logR_with_change>\n')
+    
+    only_logR_with_change$abundance_first_cat[!is.na(only_logR_with_change$names)] = sapply(datasets[(gsub(".RDS", "", names(datasets)) %in% only_logR_with_change$names)], function(i) softmax(c(i$beta[1,],0))[1])
+    only_logR_with_change$cut_beta_intercept_true <- cut(only_logR_with_change$beta_intercept_true, breaks = seq(-1, 1, length.out = 10))
+    only_logR_with_change_summarised <- only_logR_with_change %>% group_by(beta_true, cut_beta_intercept_true) %>%
+      dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+    ggplot(data = only_logR_with_change,
+           aes(x=factor(beta_true), y=cut_beta_intercept_true,
+               col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    ggplot(data = only_logR_with_change,
+           aes(x=beta_true, y=cut_beta_intercept_true,
+               col=pvals_adj < 0.05))+geom_point()+theme_bw()+scale_x_continuous(trans = "log2")
+    ggplot(data = only_logR_with_change_summarised,
+           aes(x=factor(beta_true), y=cut_beta_intercept_true,
+               fill=mean_pvals_adj_signif))+geom_tile()+theme_bw() ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+    # ggplot(data = only_logR_with_change,
+    #        aes(x=factor(beta_true), y=softmax_intercept,
+    #            col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    # ggplot(data = only_logR_with_change,
+    #        aes(x=factor(beta_true), y=cut_beta_intercept_true_softmax,
+    #            col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    
+    ## we compute the absolute abundance (in proportion) of the first category
 
-  tikz(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
-       height = 3.5, width = 6)
-  ggplot(data = only_logR_with_change_summarised_2,
-         aes(x=factor(beta_true), y=cut_abundances_first_cat,
-             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
-    scale_fill_jcolors_contin(palette = "pal2")+
-    labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
-  # ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
-  dev.off()
-
-  ggplot(data = only_logR_with_change_summarised_2,
-         aes(x=factor(beta_true), y=cut_abundances_first_cat,
-             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
-    scale_fill_jcolors_contin(palette = "pal3")+
-    labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
-  ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvals.pdf"),
+    # abundances_in_prob <- lapply(unique(runs_diagREDM$idx), function(idx_dataset_it){
+    #   softmax(c(runs_diagREDM[runs_diagREDM$idx == idx_dataset_it,]$beta_intercept_true, 0)) ## abundance of first cat
+    # })
+    # 
+    # abundances_first_cat <- sapply(abundances_in_prob, `[`, 1)
+    # abundances_last_cat <- sapply(abundances_in_prob, function(i) i[length(i)]) ## not used
+    # 
+    # length(abundances_first_cat)
+    # dim(only_logR_with_change)
+    # only_logR_with_change$abundance_first_cat <- abundances_first_cat
+    only_logR_with_change$cut_abundances_first_cat <- cut(only_logR_with_change$abundance_first_cat,
+                                                          breaks = seq(0, max(only_logR_with_change$abundance_first_cat, na.rm = T), length.out = 4))
+    only_logR_with_change$cut_abundances_first_catV2 <- cut(only_logR_with_change$abundance_first_cat,
+                                                            breaks = quantile(only_logR_with_change$abundance_first_cat, probs = c(0, 0.25, 0.5, 0.75, 1), na.rm = T), include.lowest = T)
+    sum(is.na(only_logR_with_change$cut_abundances_first_catV2)) ## should be 0
+    
+    only_logR_with_change_summarised_2 <- only_logR_with_change %>%
+      group_by(beta_true, cut_abundances_first_cat) %>%
+      dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+    only_logR_with_change_summarised_2 <- only_logR_with_change_summarised_2[!is.na(only_logR_with_change_summarised_2$cut_abundances_first_cat),]
+    
+    only_logR_with_change_summarised_V2 <- only_logR_with_change %>%
+      group_by(beta_true, cut_abundances_first_catV2) %>%
+      dplyr::summarise(mean_pvals_adj_signif = mean(pvals_adj < 0.05))
+    only_logR_with_change_summarised_V2 <- only_logR_with_change_summarised_V2[!is.na(only_logR_with_change_summarised_V2$cut_abundances_first_catV2),]
+    
+    if(F){
+      .xxxidx <- which(grepl('multiple_GenerationJnormBTwoLambdasOneChangingBeta_20_100_80_6_0.01_NA_NA_NA_dataset1', names(datasets)))
+      names(datasets)[.xxxidx]
+      datasets[[.xxxidx]]$beta
+      runs_diagREDM[grepl("multiple_GenerationJnormBTwoLambdasOneChangingBeta_20_100_80_6_0.01_NA_NA_NA_dataset11", rownames(runs_diagREDM)),]
+      
+      a1 <- readRDS(paste0("../../../../data/assessing_models_simulation/inference_results/TMB/nlminb/multiple_GenerationJnormBTwoLambdasOneChangingBeta_20_100_80_6_0.01_diagREDM_NA_NA_NA_dataset1.RDS"))
+      plot_betas(a1) ## this is differentially abundant but not because of the actually DA run
+      createBarplot(give_dummy_rownames(give_dummy_colnames(normalise_rw(datasets[[.xxxidx]]$W))))
+      
+    }
+    
+    ggplot(data = only_logR_with_change,
+           aes(x=factor(beta_true), y=abundance_first_cat,
+               col=pvals_adj < 0.05))+geom_point()+theme_bw()
+    ggplot(data = only_logR_with_change,
+           aes(x=factor(beta_true), y=abundance_first_cat,
+               col=pvals_adj < 0.05))+geom_point()+theme_bw()+facet_wrap(.~n)
+    ggplot(data = only_logR_with_change,
+           aes(x=factor(beta_true), y=abundance_first_cat,
+               col=pvals_adj < 0.05))+geom_point()+theme_bw()+facet_wrap(.~d)
+    
+    tikz(paste0(flder_out, generation, "/summaries/intercept_and_pvals.tex"),
          height = 3.5, width = 6)
- 
-  ## different categorisation
-  ggplot(data = only_logR_with_change_summarised_V2,
-         aes(x=factor(beta_true), y=cut_abundances_first_catV2,
-             fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
-    scale_fill_jcolors_contin(palette = "pal3")+
-    labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
-  ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvalsV2.pdf"),
-         height = 3.5, width = 6)
+    ggplot(data = only_logR_with_change_summarised_2,
+           aes(x=factor(beta_true), y=cut_abundances_first_cat,
+               fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+      scale_fill_jcolors_contin(palette = "pal2")+
+      labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+    # ## in GenerationJnormBTwoLambdasOneChangingBeta it doesn't depend on the intercept either
+    dev.off()
+  
+    ggplot(data = only_logR_with_change_summarised_2,
+           aes(x=factor(beta_true), y=cut_abundances_first_cat,
+               fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+      scale_fill_jcolors_contin(palette = "pal3")+
+      labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+    ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvals.pdf"),
+           height = 3.5, width = 6)
+   
+    ## different categorisation
+    ggplot(data = only_logR_with_change_summarised_V2,
+           aes(x=factor(beta_true), y=cut_abundances_first_catV2,
+               fill=mean_pvals_adj_signif))+geom_tile()+theme_bw()+
+      scale_fill_jcolors_contin(palette = "pal3")+
+      labs(fill='Fraction of runs of DA', x='Beta slope of changing logR', y='Discretised abundance of DA category')
+    ggsave(paste0(flder_out, generation, "/summaries/intercept_and_pvalsV2.pdf"),
+           height = 3.5, width = 6)
   
   }
   # 

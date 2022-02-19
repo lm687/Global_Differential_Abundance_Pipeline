@@ -886,6 +886,14 @@ simulate_from_DM_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix, i
   return(sim_thetas)
 }
 
+give_dummy_colnames <- function(i){colnames(i) <- paste0('c', 1:ncol(i)); i}
+give_dummy_rownames <- function(i){rownames(i) <- paste0('r', 1:nrow(i)); i}
+
+resort_columns <- function(i, order){
+  i$Y = i$Y[,order]
+  i
+}
+
 simulate_from_M_TMB = function(tmb_fit_object, full_RE=T, x_matrix, z_matrix){
   dmin1 = length(python_like_select_name(tmb_fit_object$par.fixed, 'beta'))/2
   if(full_RE){
@@ -1028,12 +1036,16 @@ extract_sigs_TMB_obj <- function(dataset_obj_trinucleotide, subset_signatures){
   return(dataset_obj_new)
 }
 
-compare_signaturefit_to_data <- function(tmb_obj_exposures, tmb_obj_trinucleotide, signature_defs, only_cosim=F){
+compare_signaturefit_to_data <- function(tmb_obj_exposures, tmb_obj_trinucleotide, signature_defs, only_cosim=F, plot=F){
   require(lsa)
   signature_defs
   signature_defs <- signature_defs[match( colnames(tmb_obj_trinucleotide$Y), rownames(signature_defs)),]
   
   reconstructed_trinuc <- as(tmb_obj_exposures$Y, 'matrix') %*% t(as(signature_defs[,colnames(tmb_obj_exposures$Y)], 'matrix'))
+  
+  if(plot){
+    plot(unlist(tmb_obj_trinucleotide$Y), unlist(reconstructed_trinuc))
+  }
   
   if(only_cosim){
     cossim <- ( lsa::cosine(x = normalise_rw(colSums(tmb_obj_trinucleotide$Y)), y = normalise_rw(colSums(reconstructed_trinuc))))
@@ -1348,11 +1360,21 @@ is_slope = function(v){
   bool_isbetaslope
 }
 
-give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, plot=T, ...){
-  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle('Early raw')
-  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle('Late raw')
-  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle('Early normalised')
-  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T, ...)+ggtitle('Late normalised')
+give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2, only_normalised=F, title=NULL, plot=T, title_facets=NULL, scale_color_manual_vec=NULL, ...){
+  if(is.null(title_facets)){
+    title_facets <- c('Early raw', 'Late raw', 'Early normalised', 'Late normalised')
+  }
+  a <- createBarplot(obj$Y[obj$x[,2] == 0,], remove_labels = T, ...)+ggtitle(title_facets[1])
+  b <- createBarplot(obj$Y[obj$x[,2] == 1,], remove_labels = T, ...)+ggtitle(title_facets[2])
+  c <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 0,]), remove_labels = T, ...)+ggtitle(title_facets[3])
+  d <- createBarplot(normalise_rw(obj$Y[obj$x[,2] == 1,]), remove_labels = T, ...)+ggtitle(title_facets[4])
+  if(!is.null(scale_color_manual_vec)){
+    cat('Adding colour scale\n')
+    a <- a+scale_fill_manual(values=scale_color_manual_vec)
+    b <- b+scale_fill_manual(values=scale_color_manual_vec)
+    c <- c+scale_fill_manual(values=scale_color_manual_vec)
+    d <- d+scale_fill_manual(values=scale_color_manual_vec)
+  }
   if(!legend_on){
     a <- a+guides(fill=F)
     b <- b+guides(fill=F)
@@ -1378,6 +1400,11 @@ give_barplot_from_obj <- function(obj, legend_on=F, legend_bottom=F, nrow_plot=2
       cowplot::as_grob(grid.arrange(a, b, c, d, top=title, nrow=nrow_plot))
     }
   }
+}
+
+rename_Y_dollar <- function(dataset_obj){
+  colnames(dataset_obj$Y) <- gsub(">", "$>$", colnames(dataset_obj$Y))
+  dataset_obj
 }
 
 give_ranked_plot_simulation = function(tmb_fit_object, data_object, print_plot = T, nreps = 1, model, integer_overdispersion_param){
@@ -1572,7 +1599,7 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     plt <- plt +
       geom_point()+
       geom_errorbar(aes(ymin=`Estimate`-`Std. Error`, ymax=`Estimate`+`Std. Error`), width=.1)+
-      ggtitle('Slopes')+facet_wrap(.~type_beta, scales = "free")
+      facet_wrap(.~type_beta, scales = "free") #ggtitle('Slopes')
     
     if(theme_bw){
       plt <- plt + theme_bw()
@@ -1621,6 +1648,39 @@ plot_betas <- function(TMB_obj, names_cats=NULL, rotate_axis=T, theme_bw=T, remo
     }
   }
 }
+
+compare_betas_tmb <- function(tmb_obj_1, names_cats1, tmb_obj_2, names_cats2, names_groups=c('Group 1', 'Group 2'),
+                              include_missing_as_inf=F){
+  betas1 <- softmax(cbind(matrix(python_like_select_name(tmb_obj_1$par.fixed, 'beta'),  nrow=2), 0))
+  betas2 <- softmax(cbind(matrix(python_like_select_name(tmb_obj_2$par.fixed, 'beta'), nrow=2), 0))
+  betas1
+  colnames(betas1) <- names_cats1
+  colnames(betas2) <- names_cats2
+  
+  if(include_missing_as_inf){
+    betas2 <- betas2[,(match(colnames(betas1), colnames(betas2)))]
+    colnames(betas2) <- colnames(betas1)
+    betas2[is.na(betas2)] <- Inf
+    betas1 <- betas1[,match(colnames(betas2), colnames(betas1))]    
+  }else{
+    betas2 <- betas2[,remove_na(match(colnames(betas1), colnames(betas2)))]
+    betas1 <- betas1[,match(colnames(betas2), colnames(betas1))]
+  }
+  
+  .x <- cbind.data.frame(obj1=melt(betas1),
+                         obj2=melt(betas2))
+  .x$obj1.Var1 <- c('Intercept', 'Slope')[.x$obj1.Var1]
+  .x$col <- (is.infinite(.x$obj1.value) | is.infinite(.x$obj2.value))
+  ggplot(.x, aes(x=obj1.value, y=obj2.value, label=gsub('SBS', '', obj1.Var2),
+                 alpha=1-col))+
+    geom_abline(slope = 1, intercept = 0, lty='dashed')+
+    geom_point()+
+    facet_wrap(.~obj1.Var1, scales = "free")+theme_bw()+geom_label_repel()+
+    labs(x=paste0('Softmax beta ', names_groups[1]),
+         y=paste0('Softmax beta ', names_groups[2]))
+}
+
+remove_na <- function(i) i[!is.na(i)]
 
 nan_to_zero <- function(m){
   m[is.nan(m)] <- 0
@@ -1906,16 +1966,110 @@ split_matrix_in_half <- function(x){
        x[(1+(nrow(x)/2)):nrow(x),])
 }
 
-
-give_min_pert <- function(idx_sp, list_runs=diagRE_DMDL_nonexo_SP, logR_names_vec=logR_nonexo_notsorted_SP){
-  .betas_SP <- data.frame(plot_betas(list_runs[[idx_sp]], names_cats= logR_names_vec[[idx_sp]],
-                                     return_df=T, plot=F))
+createBarplot <- function(matrix_exposures, angle_rotation_axis = 0, order_labels=NULL,
+                          remove_labels=FALSE, levels_signatures=NULL, includeMelt=NULL,
+                          Melt=NULL, verbose=TRUE, arg_title='Signature'){
+  #' error due to it not being a matrix:  
+  #'    No id variables; using all as measure variables
+  #'    Rerun with Debug
+  #'    Error in `[.data.frame`(.mat, , "Var1") : undefined columns selected \\
+  #' (use tomatrix())
   
-  .slopes_minpert_SP <- .betas_SP %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
-  # print(.slopes_minpert_SP)
-  ## check if the CI of the betas touches this median value
-  .summary_betas_slope_SP <- python_like_select_rownames(summary(list_runs[[idx_sp]]), 'beta')[c(F,T),]
-  nrow(.summary_betas_slope_SP)
+  
+  if(is.null(colnames(matrix_exposures))) stop('columns must have names')
+  require(reshape2)
+  require(ggplot2)
+  library(RColorBrewer)
+  if(verbose){
+    cat(paste0('Creating plot... it might take some time if the data are large. Number of samples: ', nrow(matrix_exposures), '\n'))
+  }
+  
+  if( (!is.null(order_labels) & typeof(order_labels) == "logical")){if(!order_labels){cat('WARNING: Order labels is either a vector with desired order or NULL, not bool')}}
+  
+  if(!is.null(levels_signatures)){
+    library(ggthemes)
+    ggthemes_data$economist
+  }else{
+    levels_signatures <- colnames(matrix_exposures)
+  }
+  n <- 60
+  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+  col_vector = unique(unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals))))
+  col_vector <- c(col_vector[c(T,F)], col_vector[c(F,T)])
+  
+  myColors <- col_vector[1:length(levels_signatures)]
+  names(myColors) <- levels_signatures
+  myColors <- myColors[levels_signatures %in% unique(colnames(matrix_exposures))]
+  if(is.null(order_labels)) order_labels = rownames(matrix_exposures)
+  if(!is.null(includeMelt)){
+    cat('For whatever reason sometimes the melt does not work. Here it is passed as argument.')
+    .mat <- Melt
+  }else{
+    .mat <- melt(matrix_exposures)
+  }
+  .mat[,'Var1'] <- factor(.mat[,'Var1'], levels=order_labels)
+  .mat[,'Var2'] <- factor(.mat[,'Var2'], levels=levels_signatures)
+  ###rownames(.mat) <- rownames(matrix_exposures) ### new
+  
+  if(!remove_labels){
+    if(!is.null(levels_signatures)){
+      ggplot(.mat, aes(x=Var1, y=value, fill=factor(Var2, levels=levels_signatures[levels_signatures %in% unique(colnames(matrix_exposures))])))+
+        geom_bar(stat = 'identity')+
+        theme(axis.text.x = element_text(angle = angle_rotation_axis, hjust = 1))+
+        #theme(axis.title.x=element_blank(),
+        #      axis.text.x=element_blank(),
+        #      axis.ticks.x=element_blank())+
+        guides(fill=guide_legend(title=arg_title))+
+        scale_fill_manual(name = "grp",values = myColors)
+    }else{
+      ggplot(.mat, aes(x=Var1, y=value, fill=factor(Var2, levels=levels_signatures)))+
+        geom_bar(stat = 'identity')+
+        theme(axis.text.x = element_text(angle = angle_rotation_axis, hjust = 1))+
+        #theme(axis.title.x=element_blank(),
+        #      axis.text.x=element_blank(),
+        #      axis.ticks.x=element_blank())+
+        guides(fill=guide_legend(title=arg_title))
+    }
+  }else{
+    if(!is.null(levels_signatures)){
+      ggplot(.mat, aes(x=Var1, y=value, fill=factor(Var2, levels=levels_signatures)))+
+        geom_bar(stat = 'identity')+
+        theme(axis.text.x = element_text(angle = angle_rotation_axis, hjust = 1))+
+        theme(axis.title.x=element_blank(),
+              axis.text.x=element_blank(),
+              axis.ticks.x=element_blank())+
+        guides(fill=guide_legend(title=arg_title))+
+        scale_fill_manual(name = "grp",values = myColors)
+    }else{
+      ggplot(.mat, aes(x=Var1, y=value, fill=factor(Var2, levels=levels_signatures)))+
+        geom_bar(stat = 'identity')+
+        theme(axis.text.x = element_text(angle = angle_rotation_axis, hjust = 1))+
+        theme(axis.title.x=element_blank(),
+              axis.text.x=element_blank(),
+              axis.ticks.x=element_blank())+
+        guides(fill=guide_legend(title=arg_title))
+    }
+  }
+}
+
+give_min_pert <- function(idx_sp, list_runs=diagRE_DMDL_nonexo_SP, logR_names_vec=logR_nonexo_notsorted_SP,
+                          df_betas=NULL){
+  
+  if(!is.null(df_betas)){
+    ## get betas from df
+    .summary_betas_slope_SP <- df_betas
+    .slopes_minpert_SP <- .summary_betas_slope_SP[,1]
+  }else{
+    ## get betas from TMB output
+    .betas_SP <- data.frame(plot_betas(list_runs[[idx_sp]], names_cats= logR_names_vec[[idx_sp]],
+                                       return_df=T, plot=F))
+    
+    .slopes_minpert_SP <- .betas_SP %>% dplyr::filter(type_beta == "Slope") %>% dplyr::select(Estimate) %>% unlist()
+    # print(.slopes_minpert_SP)
+    ## check if the CI of the betas touches this median value
+    .summary_betas_slope_SP <- python_like_select_rownames(summary(list_runs[[idx_sp]]), 'beta')[c(F,T),]
+    nrow(.summary_betas_slope_SP)
+  }
   
   minimal_change_baseline <- median(c(.slopes_minpert_SP, 0))
   # print(.summary_betas_slope_SP)
@@ -1953,8 +2107,13 @@ give_min_pert <- function(idx_sp, list_runs=diagRE_DMDL_nonexo_SP, logR_names_ve
       'FALSE'
     }
   })
-  names(.params_in_ci) <- sapply(logR_names_vec[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
-  .baseline <- strsplit(logR_names_vec[[idx_sp]][[1]], '/')[[1]][2]
+  
+  if(!is.null(df_betas)){
+    .baseline <- NA
+  }else{
+    names(.params_in_ci) <- sapply(logR_names_vec[[idx_sp]], function(i) strsplit(i, '/')[[1]][1])
+    .baseline <- strsplit(logR_names_vec[[idx_sp]][[1]], '/')[[1]][2]
+  }
   return(list(betas_perturbed=.params_in_ci, baseline=.baseline))
 }
 

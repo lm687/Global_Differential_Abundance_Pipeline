@@ -323,6 +323,39 @@ echo "simulation_lambda_GenerationJnormBTwoLambdasOneChangingBeta:
 - 80
 " >> $name_config
 
+##########################################################################################
+#### single change, poisson
+
+echo "\nsimulation_n_GenerationPois:
+- 50
+- 100
+" >> $name_config
+
+echo "beta_gamma_shape_GenerationPois:
+- 0
+- 0.01
+- 0.1
+- 0.2
+- 0.3
+- 0.6
+- 4
+" >> $name_config
+
+echo "simulation_d_GenerationPois:
+- 3
+- 4
+- 5
+- 6
+" >> $name_config
+
+echo "simulation_nlambda_GenerationPois:
+- 100
+" >> $name_config
+
+echo "simulation_lambda_GenerationPois:
+- 80
+" >> $name_config
+
 
 ##########################################################################################
 ##########################################################################################

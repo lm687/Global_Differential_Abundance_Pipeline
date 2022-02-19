@@ -116,6 +116,7 @@ if(opt$dataset_generation == 'GenerationCnorm'){
   }
 }
 
+cat('Matching datasets and runs\n')
 # match
 if(opt$multiple_runs){
   datasets_files = datasets_files[match(gsub(paste0("_", opt$model), "", basename(opt$input_list)),
@@ -145,6 +146,9 @@ if((opt$dataset_generation %in% c("GenerationMixturePCAWG", "GenerationMixturefe
 }
 names(datasets) = gsub(".RDS", "", basename(datasets_files))
 
+print(length(datasets))
+print(length(opt$input_list))
+
 DA_bool = ( sapply(datasets, function(i) i$beta_gamma_shape) > 0 )
 
 runs = lapply(opt$input_list, readRDS)
@@ -157,6 +161,10 @@ names(runs) <- opt$input_list
 #' Convert betas to NA whenever the convergence was not successful
 bool_has_not_converged <- sapply(runs, function(i) try(give_summary_per_sample(i))) != "Good"
 runs[bool_has_not_converged] = NA
+
+cat('Adding slope and intercept to failed runs\n')
+print(which(sapply(runs, typeof) %in% c("logical", "character")))
+
 for(j in which(sapply(runs, typeof) %in% c("logical", "character"))){
   # runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(datasets[[j]]$d-1)))) ## *2 for slope and intercept
   runs[[j]] = list(par.fixed=c(beta=rep(NA, 2*(ncol(datasets[[j]]$W)-1)))) ## *2 for slope and intercept
@@ -167,21 +175,36 @@ pvals_adj = pvals#*length(pvals_M)
 
 table(DA_bool, M=pvals_adj <= 0.05)
 
+if(opt$dataset_generation == 'GenerationPois'){
+  cat('Betas are not in log-ratio space')
+  ## here the betas are not in log-ratios
+  for(j in 1:length(datasets)){
+    datasets[[j]]$effective_d <- datasets[[j]]$d + 1
+  }
+}else{
+  cat('Datasets created with logratios\n')
+  
+  ## the betas are in log-ratios
+  for(j in 1:length(datasets)){
+    datasets[[j]]$effective_d <- datasets[[j]]$d
+  }
+}
+
 if(!is.null(dim(datasets[[1]]$beta))){
   ## if the datasets are created from the DM or M models
   df_beta_recovery = cbind.data.frame(beta_true = unlist(sapply(datasets, function(i) i$beta[2,])),
                                       beta_intercept_true = unlist(sapply(datasets, function(i) i$beta[1,])),
-                                      idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1),
-                                      d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1),
-                                      n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1),
-                                      beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1),
+                                      idx = rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$effective_d))-1),
+                                      d =  rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$effective_d))-1),
+                                      n =  rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$effective_d))-1),
+                                      beta_gamma_shape =  rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$effective_d))-1),
                                       beta_est = unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
                                       beta_intercept_est = unlist(sapply(runs, function(i) select_intercept(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))),
                                       beta_stderr = unlist(sapply(runs, give_stderr)),
                                       beta_intercept_stderr = unlist(sapply(runs, give_stderr, only_slopes=F)[c(T,F)]),
-                                      pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1),
-                                      DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1),
-                                      idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$d-1))))
+                                      pvals_adj=rep(pvals_adj, unlist(sapply(datasets, function(i) i$effective_d))-1),
+                                      DA_bool=rep(DA_bool, unlist(sapply(datasets, function(i) i$effective_d))-1),
+                                      idx_within_dataset=unlist(sapply(datasets, function(i) 1:(i$effective_d-1))))
   
   df_beta_recovery$bool_zero_true_beta = factor(df_beta_recovery$beta_true == 0, levels=c(TRUE, FALSE))
   df_beta_recovery$converged = sapply(sapply(runs, '[', 'pdHess'), function(i) if(is.null((i))){FALSE}else{i})[df_beta_recovery$idx]
@@ -192,35 +215,12 @@ if(!is.null(dim(datasets[[1]]$beta))){
 }else{
   ## if they are created with perturbation, or similar methods
   cat('Model simulated non-parametrically\n')
-# 
-#   cat('Length of cbind elements\n')  
-#   print(unlist(sapply(datasets, function(i) rep(NA, i$d-1))) %>% length)
-#   print(rep(1:length(datasets) , unlist(sapply(datasets, function(i) i$d))-1) %>% length)
-#   print(rep(unlist(sapply(datasets, function(i) i$d)), unlist(sapply(datasets, function(i) i$d))-1) %>% length)
-#   print(rep(unlist(sapply(datasets, function(i) i$n)), unlist(sapply(datasets, function(i) i$d))-1) %>% length)
-#   print(rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1) %>% length)
-#   print(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))) %>% length)
-#   print(unlist(sapply(runs, give_stderr)) %>% length)
-#   print(rep(pvals_adj, unlist(sapply(datasets, function(i) i$d))-1) %>% length)
-#   print(rep(DA_bool, unlist(sapply(datasets, function(i) i$d))-1) %>% length)
-#   print(unlist(sapply(datasets, function(i) 1:(i$d-1))) %>% length)
-  
-  # cat('Length of datasets and runs\n')
-  # print(length(datasets))
-  # print(length(runs))
-  
+
   cat('d-1\n')
-  print(as.vector(sapply(datasets, function(i) length(rep(NA, i$d-1)))))
+  print(as.vector(sapply(datasets, function(i) length(rep(NA, i$effective_d-1)))))
   cat('give_stderr\n')
-  # print(give_stderr(runs[[1]]))
   print(as.vector(sapply(runs, function(i) length(give_stderr(i)))))
-  print(names(runs)[(as.vector(sapply(datasets, function(i) length(rep(NA, i$d-1))))) != (as.vector(sapply(runs, function(i) length(give_stderr(i)))))])
-  # print(as.vector(sapply(runs[1:4], function(i) length(give_stderr(i)))))
-  # print(cbind(sapply(datasets, function(i) length(rep(NA, i$d-1))),
-  #             sapply(datasets, function(i) length(give_stderr(i)))))
-  
-  # print(rep(unlist(sapply(datasets, function(i) i$beta_gamma_shape)), unlist(sapply(datasets, function(i) i$d))-1))
-  # print(unlist(sapply(runs, function(i) select_slope_2(python_like_select_name(i$par.fixed, "beta"), verbatim = FALSE))))
+  print(names(runs)[(as.vector(sapply(datasets, function(i) length(rep(NA, i$effective_d-1))))) != (as.vector(sapply(runs, function(i) length(give_stderr(i)))))])
   
   make.names_allowing_hyphen <- function(i){
     for(j in unique(i)){

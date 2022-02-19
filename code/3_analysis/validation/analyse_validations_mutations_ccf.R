@@ -1,3 +1,4 @@
+rm(list = ls())
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 library(reshape2)
@@ -21,72 +22,93 @@ read_annotation <- read_annotation[sapply(read_annotation, typeof) != "character
 # kegg_pathway_name <- 'KEGG MMR'
 # kegg_pathway_name <- 'KEGG BER'
 # kegg_pathway_name <- 'KEGG NER'
-# kegg_pathway_name <- 'KEGG NHEJ'
-kegg_pathway_name <- 'TP53'
-single_gene <- F
-if(kegg_pathway_name == 'KEGG HRD'){
-  kegg <- read.table("../../../data/other/KEGG/KEGG_HOMOLOGOUS_RECOMBINATION.txt", sep = "\t")
-}else if(kegg_pathway_name == 'KEGG MMR'){
-  kegg <- read.table("../../../data/other/KEGG/KEGG_MISMATCH_REPAIR.txt", sep = "\t")
-}else if(kegg_pathway_name == 'KEGG BER'){
-  kegg <- read.table("../../../data/other/KEGG/KEGG_BASE_EXCISION_REPAIR.txt", sep = "\t")
-}else if(kegg_pathway_name == 'KEGG NER'){
-  kegg <- read.table("../../../data/other/KEGG/KEGG_NUCLEOTIDE_EXCISION_REPAIR.txt", sep = "\t")
-}else if(kegg_pathway_name == 'KEGG NHEJ'){
-  kegg <- read.table("../../../data/other/KEGG/KEGG_NON_HOMOLOGOUS_END_JOINING.txt", sep = "\t")
-}else if(kegg_pathway_name == 'TP53'){
-  kegg <- 'TP53'
-  single_gene <- T
-}else{
+kegg_pathway_name <- 'KEGG NHEJ'
+# kegg_pathway_name <- 'TP53'
+c( 'KEGG MMR', 'KEGG BER', 'KEGG NER', 'TP53')
+
+
+for(kegg_pathway_name in c('POLD1')){
   
-}
-
-if(single_gene){
-  kegg <- 'CCNE1'
-  kegg_pathway_name <- kegg
+  single_gene <- F
+  if(kegg_pathway_name == 'KEGG HRD'){
+    kegg <- read.table("../../../data/other/KEGG/KEGG_HOMOLOGOUS_RECOMBINATION.txt", sep = "\t")
+  }else if(kegg_pathway_name == 'KEGG MMR'){
+    kegg <- read.table("../../../data/other/KEGG/KEGG_MISMATCH_REPAIR.txt", sep = "\t")
+  }else if(kegg_pathway_name == 'KEGG BER'){
+    kegg <- read.table("../../../data/other/KEGG/KEGG_BASE_EXCISION_REPAIR.txt", sep = "\t")
+  }else if(kegg_pathway_name == 'KEGG NER'){
+    kegg <- read.table("../../../data/other/KEGG/KEGG_NUCLEOTIDE_EXCISION_REPAIR.txt", sep = "\t")
+  }else if(kegg_pathway_name == 'KEGG NHEJ'){
+    kegg <- read.table("../../../data/other/KEGG/KEGG_NON_HOMOLOGOUS_END_JOINING.txt", sep = "\t")
+  }else if(kegg_pathway_name %in% c('TP53', 'POLD1')){
+    kegg <- kegg_pathway_name
+    single_gene <- T
+  }else{
+    stop('Incorrect kegg/gene')
+  }
+  
   keggname_out <- gsub(" ", "", kegg_pathway_name)
+  
+  # if(single_gene){
+  #   kegg <- 'CCNE1'
+  #   kegg_pathway_name <- kegg
+  #   keggname_out <- gsub(" ", "", kegg_pathway_name)
+  # }
+  
+  if(!single_gene) kegg <- kegg$V1[-c(1:2)] ## first two lines are annotation
+  GOI <- lapply(read_annotation, function(i) i[i$gene_symbol %in% kegg,])
+  
+  GOI_len <- sapply(GOI, length)
+  table(GOI_len)
+  
+  GOI_muts <- GOI[GOI_len> 0]
+  
+  GOI_muts_NS <- sapply(GOI_muts, function(i) i[i$CONSEQUENCE == "nonsynonymous",])
+  GOI_muts_NS_ccf <- lapply(GOI_muts_NS, function(i) data.frame(i)[,c('ccf', 'gene_symbol')])
+  # length(GOI_muts_NS_ccf)
+  # hist(unlist(GOI_muts_NS_ccf))
+  
+  GOI_muts_NS_ccf_melt <- cbind.data.frame(sample=rep(basename(names(GOI_muts_NS_ccf)), sapply(GOI_muts_NS_ccf, nrow)),
+                                            ccf=do.call('rbind', GOI_muts_NS_ccf))
+  rownames(GOI_muts_NS_ccf_melt) <- NULL
+  GOI_muts_NS_ccf_melt$ct <- metadata$histology_detailed[match(gsub("_mutation_ccf.txt", "", GOI_muts_NS_ccf_melt$sample),
+                                                                metadata$samplename)]
+  head(GOI_muts_NS_ccf_melt)
+  
+  metadata
+  
+  GOI_muts_NS_ccf_melt_dplyr <- GOI_muts_NS_ccf_melt %>% group_by(ct) %>% summarise(median(ccf.ccf))
+  
+  GOI_muts_NS_ccf_melt <- GOI_muts_NS_ccf_melt[GOI_muts_NS_ccf_melt$ct %in% enough_samples,]
+  
+  unique(GOI_muts_NS_ccf_melt$ct) %in% GOI_muts_NS_ccf_melt_dplyr$ct
+  GOI_muts_NS_ccf_melt <- GOI_muts_NS_ccf_melt[!(is.na(GOI_muts_NS_ccf_melt$ct)),]
+  ggplot(GOI_muts_NS_ccf_melt, aes(x=factor(ct, levels=GOI_muts_NS_ccf_melt_dplyr$ct[order(GOI_muts_NS_ccf_melt_dplyr$`median(ccf.ccf)`)]),
+                                    y=ccf.ccf,col=ccf.gene_symbol, group=ct))+geom_boxplot()+geom_jitter(alpha=0.2)+theme_bw()+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+    labs(x='', y= paste0('CCF of non-synonymous ', kegg_pathway_name, ' mutation'), col='Gene')
+  ggsave(paste0("../../../results/validation/NS_", keggname_out, "_ccf.pdf"), height = 4.5)
+  
+  GOI_muts_NS_ccf_melt$ccf_lim <- sapply(GOI_muts_NS_ccf_melt$ccf.ccf, function(i) min(i, 1))
+  GOI_muts_NS_ccf_melt_dplyr_lim <- GOI_muts_NS_ccf_melt %>% group_by(ct) %>% summarise(med=median(ccf_lim, na.rm = T),
+                                                                                        mean=mean(ccf_lim, na.rm = T))
+  ggplot(GOI_muts_NS_ccf_melt, aes(x=factor(ct, levels=GOI_muts_NS_ccf_melt_dplyr$ct[order(GOI_muts_NS_ccf_melt_dplyr$`median(ccf.ccf)`)]),
+                                    y=ccf_lim, col=ccf.gene_symbol, group=ct))+geom_boxplot()+geom_jitter(alpha=0.2)+theme_bw()+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+    labs(x='', y= paste0('CCF of non-synonymous ', kegg_pathway_name, ' mutation'), col='Gene')
+  ggsave(paste0("../../../results/validation/NS_",keggname_out, "_ccf_lim1.pdf"), height = 4.5)
+  
+  
+  ggplot(GOI_muts_NS_ccf_melt, aes(x=factor(ct, levels=GOI_muts_NS_ccf_melt_dplyr_lim$ct[order(GOI_muts_NS_ccf_melt_dplyr_lim$mean)]),
+                                   y=ccf_lim, group=ct))+geom_boxplot()+geom_jitter(alpha=0.2)+theme_bw()+
+    theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
+    labs(x='', y= paste0('CCF of non-synonymous\n', kegg_pathway_name, ' mutation'), col='Gene')
+  ggsave(paste0("../../../results/validation/NS_",keggname_out, "_ccf_lim1_nocolour.pdf"), height = 4.5)
+  
+  saveRDS(list(GOI_muts_NS=GOI_muts_NS, GOI_muts_NS_ccf_melt=GOI_muts_NS_ccf_melt),
+          paste0("../../../data/other/KEGG/KEGG_", keggname_out, ".RDS"))
+
 }
-
-if(!single_gene) kegg <- kegg$V1[-c(1:2)] ## first two lines are annotation
-GOI <- lapply(read_annotation, function(i) i[i$gene_symbol %in% kegg,])
-
-GOI_len <- sapply(GOI, length)
-table(GOI_len)
-
-GOI_muts <- GOI[GOI_len> 0]
-
-GOI_muts_NS <- sapply(GOI_muts, function(i) i[i$CONSEQUENCE == "nonsynonymous",])
-GOI_muts_NS_ccf <- lapply(GOI_muts_NS, function(i) data.frame(i)[,c('ccf', 'gene_symbol')])
-length(GOI_muts_NS_ccf)
-hist(unlist(GOI_muts_NS_ccf))
-
-GOI_muts_NS_ccf_melt <- cbind.data.frame(sample=rep(basename(names(GOI_muts_NS_ccf)), sapply(GOI_muts_NS_ccf, nrow)),
-                                          ccf=do.call('rbind', GOI_muts_NS_ccf))
-rownames(GOI_muts_NS_ccf_melt) <- NULL
-GOI_muts_NS_ccf_melt$ct <- metadata$histology_detailed[match(gsub("_mutation_ccf.txt", "", GOI_muts_NS_ccf_melt$sample),
-                                                              metadata$samplename)]
-head(GOI_muts_NS_ccf_melt)
-
-metadata
-
-GOI_muts_NS_ccf_melt_dplyr <- GOI_muts_NS_ccf_melt %>% group_by(ct) %>% summarise(median(ccf.ccf))
-
-GOI_muts_NS_ccf_melt <- GOI_muts_NS_ccf_melt[GOI_muts_NS_ccf_melt$ct %in% enough_samples,]
-
-unique(GOI_muts_NS_ccf_melt$ct) %in% GOI_muts_NS_ccf_melt_dplyr$ct
-GOI_muts_NS_ccf_melt <- GOI_muts_NS_ccf_melt[!(is.na(GOI_muts_NS_ccf_melt$ct)),]
-ggplot(GOI_muts_NS_ccf_melt, aes(x=factor(ct, levels=GOI_muts_NS_ccf_melt_dplyr$ct[order(GOI_muts_NS_ccf_melt_dplyr$`median(ccf.ccf)`)]),
-                                  y=ccf.ccf,col=ccf.gene_symbol, group=ct))+geom_boxplot()+geom_jitter(alpha=0.2)+theme_bw()+
-  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
-  labs(x='', y= paste0('CCF of non-synonymous ', kegg_pathway_name, ' mutation'), col='Gene')
-ggsave(paste0("../../../results/validation/NS_", keggname_out, "_ccf.pdf"), height = 4.5)
-
-GOI_muts_NS_ccf_melt$ccf_lim <- sapply(GOI_muts_NS_ccf_melt$ccf.ccf, function(i) min(i, 1))
-ggplot(GOI_muts_NS_ccf_melt, aes(x=factor(ct, levels=GOI_muts_NS_ccf_melt_dplyr$ct[order(GOI_muts_NS_ccf_melt_dplyr$`median(ccf.ccf)`)]),
-                                  y=ccf_lim, col=ccf.gene_symbol, group=ct))+geom_boxplot()+geom_jitter(alpha=0.2)+theme_bw()+
-  theme(axis.text.x=element_text(angle = 45, hjust = 1, vjust=1))+
-  labs(x='', y= paste0('CCF of non-synonymous ', kegg_pathway_name, ' mutation'), col='Gene')
-ggsave(paste0("../../../results/validation/NS_",keggname_out, "_ccf_lim1.pdf"), height = 4.5)
 
 GOI_muts_NS_ccf_melt[is.na(GOI_muts_NS_ccf_melt$ct),]
 
