@@ -1,6 +1,9 @@
 ## Ignored folders
 The data folder `data/` is restricted and therefore not available
 
+## P-value correction
+Unless otherwise specified, in the DA assessment plots of adjusted p-values the adjustment has been done using the Holm method. Bonferroni-adjusted p-values are also available as plots in many cases. For the PCAWG dataset, the p-values have been adjusted using the FDR.
+
 ## Environment
 To set up the environment, run
 ```
